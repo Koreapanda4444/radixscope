@@ -3,7 +3,7 @@ from functools import partial
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths, Qt
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPalette
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -218,6 +218,8 @@ def create_application() -> QApplication:
     application.setApplicationName("RadixScope")
     application.setOrganizationName("Koreapanda4444")
     application.setApplicationVersion(__version__)
+    icon = Path(__file__).resolve().parents[1] / "assets/radixscope.svg"
+    application.setWindowIcon(QIcon(str(icon)))
     return application
 
 

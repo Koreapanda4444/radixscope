@@ -31,6 +31,7 @@ radixscope = "radixscope.cli:main"
 radixscope-gui = "radixscope.gui:main"
 
 [project.optional-dependencies]
+desktop-build = ["PySide6>=6.8,<7", "pyinstaller>=6.22.3,<7"]
 gui = ["PySide6>=6.8,<7"]
 dev = [
     "build>=1,<2",
@@ -48,7 +49,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-radixscope = ["py.typed"]
+radixscope = ["py.typed", "assets/*.svg"]
 
 [tool.ruff]
 target-version = "py311"
