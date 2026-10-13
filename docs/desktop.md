@@ -7,6 +7,15 @@ to switch workspaces. Enter in the main input field runs the calculation. Result
 selected or copied with **Copy result**. Invalid input clears the previous result
 and displays the error above the output.
 
+## Running and cancelling calculations
+
+Each workspace runs its calculation in a separate process. The window remains responsive
+while the status reads Calculating. Cancel terminates that process and clears pending output.
+Changing an input or option also cancels its active calculation and invalidates the old result.
+Only successful, current results enter recent history. Closing the application terminates active
+calculations. Desktop result transfer is limited to 8 MiB; reduce input or trace steps if reached.
+The command line retains its synchronous behavior.
+
 ## Conversion
 
 Choose Number for digits in a selected source base, or Expression for exact mixed-base
@@ -36,6 +45,12 @@ are decimal counts. `shr` is arithmetic for signed values, while `lshr` always f
 with zero. Arithmetic results show both the exact result and overflow flag alongside
 the explicitly wrapped value. The byte preview preserves width and selected endian order.
 
+Result bits are editable by clicking a button or focusing it and pressing Space.
+Positions run from most significant to least significant, with at most 32 bits per page.
+Editing a result changes the input to its raw pattern in the current base and selects Inspect,
+so the previous arithmetic operation is not applied again. The numeric and byte report updates
+immediately. Changing other input controls invalidates the editor; Run loads the new result.
+
 ## IEEE 754
 
 Encode accepts exact expressions, NaN and infinity. Decode interprets raw digits in
@@ -45,6 +60,11 @@ rational value when finite, classification, separated bit fields, hex and endian
 Signed-zero controls apply to encoding zero. NaN controls become available for `nan`
 or `-nan`; unchecking Quiet NaN requires a nonzero payload. Disabled encoding controls
 are ignored during raw decoding. Changing modes keeps the input text for editing.
+
+The bit editor labels and colors sign, exponent and fraction fields. Binary64 uses two pages.
+Editing switches to Decode and replaces the input with the edited raw pattern in the selected
+base. Classification, exact value, hex, endian bytes and NaN metadata update together.
+Raw edits preserve every bit, including signed zero and signaling NaN payloads.
 
 ## Preferences and recent history
 

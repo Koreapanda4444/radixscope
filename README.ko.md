@@ -2,13 +2,18 @@
 
 한국어 | [English](README.md)
 
-RadixScope 2.0.0은 정확한 수를 2~36진법 사이에서 변환하고, 고정 비트 정수와
+RadixScope 2.1.0은 정확한 수를 2~36진법 사이에서 변환하고, 고정 비트 정수와
 IEEE 754 부동소수점의 비트 표현을 확인하는 도구입니다. 명령줄 인터페이스와
 PySide6 데스크톱 앱을 제공합니다.
 
 ## 설치와 실행
 
-Python 3.11 이상이 필요합니다. 저장소를 내려받은 폴더에서 실행하세요.
+Windows x64에서는 성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)의
+`RadixScope-windows-x64` 산출물을 내려받으면 됩니다. 산출물 ZIP을 풀고, 안에 있는
+`RadixScope-2.1.0-windows-x64.zip`도 푼 다음 `RadixScope/RadixScope.exe`를 실행하세요.
+`_internal`을 포함한 폴더 전체를 함께 유지해야 합니다. Python과 Qt가 포함되어 있습니다.
+
+소스나 휠을 설치할 때는 Python 3.11 이상이 필요합니다. 저장소를 내려받은 폴더에서 실행하세요.
 
 ```sh
 python -m pip install ".[gui]"
@@ -43,6 +48,9 @@ radixscope ieee decode 3F800000 --width 32
 - 빅 엔디언·리틀 엔디언 바이트, 엄격한 ASCII 변환과 출력 가능 문자 미리보기
 - 비정규수, 부호 있는 0, NaN을 포함하는 binary32·binary64 인코딩과 디코딩
 - 네 가지 데스크톱 작업 화면, 결과 복사, 테마, 옵션 저장, 개수 제한이 있는 최근 기록
+- 별도 프로세스에서 계산하고 취소하거나 입력 변경 시 이전 작업 중단
+- 정수·IEEE 754 비트 편집과 숫자·바이트 표현의 동기화
+- Python을 별도로 설치하지 않고 실행하는 Windows x64 데스크톱 ZIP
 
 IEEE 인코딩은 정확한 유리수를 목적 형식으로 직접 반올림하며, 가장 가까운 값 중
 동률이면 짝수를 선택합니다. 원시 비트 디코딩은 NaN 페이로드와 시그널링 비트를 보존합니다.
@@ -65,7 +73,7 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 - [명령줄 사용법](docs/ko/cli.md)
 - [데스크톱 앱 사용법](docs/ko/desktop.md)
 - [숫자 처리 명세](docs/ko/specification.md)
-- [2.0.0 릴리스 노트](docs/ko/releases/2.0.0.md)
+- [2.1.0 릴리스 노트](docs/ko/releases/2.1.0.md)
 
 정확한 진법 변환 결과의 순환 주기는 매우 길 수 있습니다. 명령줄의 정확한 출력에는
 길이 제한이 없으므로 출력 자릿수를 제한하려면 `--precision`을 지정하세요.
@@ -77,8 +85,8 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 
 ```sh
 python -m pip install -e ".[dev]"
-python -m ruff check src tests scripts
-python -m mypy src tests scripts
+python -m ruff check src tests scripts packaging
+python -m mypy src tests scripts packaging
 python -m pytest --cov=radixscope --cov-report=term-missing
 python -m build
 python scripts/verify_distribution.py
@@ -88,3 +96,6 @@ python scripts/verify_distribution.py
 Qt 테스트는 화면 없는 offscreen 플랫폼을 사용합니다. Quality 워크플로는 휠과 소스
 아카이브를 빌드하고, 독립된 환경에서 설치를 검증한 뒤 패키지를 산출물로 저장합니다.
 PyPI 자동 게시는 설정되어 있지 않습니다.
+Windows 데스크톱 작업은 독립 실행 ZIP도 빌드하고 검증합니다. Windows에서 직접 빌드하려면
+`python -m pip install -e ".[desktop-build]"`로 설치한 뒤
+`python scripts/build_desktop.py`, `python scripts/verify_desktop.py`를 순서대로 실행하세요.

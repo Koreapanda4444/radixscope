@@ -2,13 +2,19 @@
 
 English | [한국어](README.ko.md)
 
-RadixScope 2.0.0 converts exact numbers between bases 2 through 36 and inspects the
+RadixScope 2.1.0 converts exact numbers between bases 2 through 36 and inspects the
 bits behind fixed-width integers and IEEE 754 floating-point values. It provides a
 command line interface and a PySide6 desktop application.
 
 ## Install and run
 
-Python 3.11 or newer is required. From a checkout of this repository:
+For Windows x64, download the `RadixScope-windows-x64` artifact from a successful
+[Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
+Extract the artifact ZIP, then extract the enclosed `RadixScope-2.1.0-windows-x64.zip`
+and run `RadixScope/RadixScope.exe`. Keep the entire folder together, including `_internal`.
+This package includes Python and Qt.
+
+Source and wheel installations require Python 3.11 or newer. From a checkout of this repository:
 
 ```sh
 python -m pip install ".[gui]"
@@ -42,6 +48,9 @@ See the [installation guide](docs/install.md) for package installation and Linux
 - Big-endian and little-endian bytes, strict ASCII codecs and printable previews
 - Binary32 and binary64 encoding and decoding, including subnormals, signed zero and NaNs
 - Four desktop workspaces, clipboard output, themes, saved options and bounded recent history
+- Isolated desktop calculations with cancellation and input-change protection
+- Editable integer and IEEE 754 bits with synchronized numeric and byte representations
+- Windows x64 desktop ZIP that runs without a separate Python installation
 
 IEEE encoding rounds exact rational inputs directly using nearest, ties to even.
 Raw decoding preserves NaN payloads and signaling bits. A host Python float already contains
@@ -62,7 +71,7 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 - [Command line](docs/cli.md)
 - [Desktop application](docs/desktop.md)
 - [Numeric specification](docs/specification.md)
-- [2.0.0 release notes](docs/releases/2.0.0.md)
+- [2.1.0 release notes](docs/releases/2.1.0.md)
 
 Exact expansions can have long periods. CLI exact output is unlimited; choose `--precision`
 for a bounded expansion. Desktop exact conversion displays at most 1000 fractional digits
@@ -74,8 +83,8 @@ or inputs can take substantial time and memory.
 
 ```sh
 python -m pip install -e ".[dev]"
-python -m ruff check src tests scripts
-python -m mypy src tests scripts
+python -m ruff check src tests scripts packaging
+python -m mypy src tests scripts packaging
 python -m pytest --cov=radixscope --cov-report=term-missing
 python -m build
 python scripts/verify_distribution.py
@@ -84,3 +93,6 @@ python scripts/verify_distribution.py
 Tests run on Ubuntu and Windows with Python 3.11, 3.12 and 3.13. Qt tests use the
 offscreen platform. Quality runs build a wheel and source archive, verify an isolated
 installation and retain the packages as workflow artifacts. No PyPI publishing is configured.
+The Windows desktop job also builds and verifies the standalone ZIP. To reproduce that build
+on Windows, install `python -m pip install -e ".[desktop-build]"`, then run
+`python scripts/build_desktop.py` and `python scripts/verify_desktop.py`.

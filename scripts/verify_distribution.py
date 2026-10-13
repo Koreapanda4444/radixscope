@@ -7,6 +7,8 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
+from radixscope import __version__
+
 
 def invoke(
     arguments: list[str], directory: Path, environment: dict[str, str]
@@ -19,17 +21,21 @@ def invoke(
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    wheel = root / "dist" / "radixscope-2.0.0-py3-none-any.whl"
-    archive = root / "dist" / "radixscope-2.0.0.tar.gz"
+    wheel = root / "dist" / f"radixscope-{__version__}-py3-none-any.whl"
+    archive = root / "dist" / f"radixscope-{__version__}.tar.gz"
     with ZipFile(wheel) as package:
         names = package.namelist()
         assert "radixscope/py.typed" in names
         assert "radixscope/gui/app.py" in names
         assert "radixscope/core/ieee754.py" in names
+        assert "radixscope/calculations.py" in names
+        assert "radixscope/assets/radixscope.svg" in names
     with tarfile.open(archive, "r:gz") as source:
         names = source.getnames()
-        assert "radixscope-2.0.0/docs/install.md" in names
-        assert "radixscope-2.0.0/docs/releases/2.0.0.md" in names
+        assert f"radixscope-{__version__}/docs/install.md" in names
+        assert f"radixscope-{__version__}/docs/releases/{__version__}.md" in names
+        assert f"radixscope-{__version__}/docs/ko/releases/{__version__}.md" in names
+        assert f"radixscope-{__version__}/packaging/desktop_entry.py" in names
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
     environment["QT_QPA_PLATFORM"] = "offscreen"
@@ -46,7 +52,7 @@ def main() -> None:
             temporary, environment,
         )
         version = invoke([str(cli), "--version"], temporary, environment)
-        assert version.stdout.strip() == "RadixScope 2.0.0"
+        assert version.stdout.strip() == f"RadixScope {__version__}"
         converted = invoke(
             [str(cli), "convert", "FF", "--from", "16", "--to", "10", "--json"],
             temporary, environment,
@@ -59,15 +65,12 @@ def main() -> None:
         assert missing_gui.returncode == 2 and "[gui]" in missing_gui.stderr
         invoke([str(python), "-m", "pip", "install", f"{wheel}[gui]"], temporary, environment)
         code = (
-            "from PySide6.QtCore import QTimer; "
-            "from radixscope.gui.app import create_application; "
-            "from radixscope.gui import main; "
-            "app = create_application(); "
-            "QTimer.singleShot(100, app.quit); "
-            "assert main() == 0"
+            "from pathlib import Path; "
+            "from radixscope.desktop_smoke import run; "
+            "assert run(Path('desktop-verification.json')) == 0"
         )
         invoke([str(python), "-c", code], temporary, environment)
-    print("Wheel/source contents, isolated CLI installation and installed GUI startup passed")
+    print("Wheel/source contents, isolated CLI installation and installed GUI calculations passed")
 
 
 if __name__ == "__main__":

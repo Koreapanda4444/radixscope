@@ -2,7 +2,17 @@
 
 [한국어 README](../../README.ko.md) | [English](../install.md)
 
-Python 3.11 이상이 필요합니다. Windows에서는 `python` 대신 `py`를 사용할 수 있습니다.
+소스·휠 설치에는 Python 3.11 이상이 필요합니다. Windows에서는 `python` 대신 `py`를
+사용할 수 있습니다. 아래 데스크톱 ZIP은 Python을 별도로 설치하지 않아도 됩니다.
+
+## Windows 데스크톱 ZIP
+
+성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)에서
+`RadixScope-windows-x64` 산출물을 내려받으세요. 산출물 ZIP과 그 안의
+`RadixScope-2.1.0-windows-x64.zip`을 풀고 `RadixScope/RadixScope.exe`를 실행합니다.
+Python과 Qt가 포함되어 있어서 Python이나 pip를 별도로 설치할 필요가 없습니다.
+`_internal` 폴더는 실행 파일 옆에 유지해야 하며, 업데이트는 새 폴더에 압축을 풀어서 합니다.
+설정은 Python으로 설치한 앱과 같은 사용자별 앱 데이터 폴더에 저장합니다.
 
 ## 저장소에서 설치
 
@@ -32,12 +42,12 @@ GitHub Actions에서 성공한 [Quality 실행](https://github.com/Koreapanda444
 열고 패키지 산출물을 내려받은 다음 ZIP을 풉니다. 휠 파일이 있는 폴더에서 실행하세요.
 
 ```sh
-python -m pip install "radixscope-2.0.0-py3-none-any.whl[gui]"
+python -m pip install "radixscope-2.1.0-py3-none-any.whl[gui]"
 radixscope-gui
 ```
 
 명령줄만 필요하면 `[gui]`를 생략합니다. 배포 파일은 Python 패키지이므로 Python이
-필요하며, 독립 실행형 Windows 실행 파일은 포함하지 않습니다.
+필요합니다. 독립 실행형 데스크톱 ZIP은 위에서 설명한 별도 산출물입니다.
 
 ## Linux 데스크톱 라이브러리
 
@@ -66,3 +76,17 @@ python -m radixscope.gui
 `Koreapanda4444/RadixScope/state.json`에 저장합니다.
 
 사용 방법은 [데스크톱 안내](desktop.md)와 [명령줄 안내](cli.md)를 참고하세요.
+
+## 데스크톱 ZIP 직접 빌드
+
+Windows x64에서 Python 3.12로 실행합니다.
+
+```sh
+python -m pip install -e ".[desktop-build]"
+python scripts/build_desktop.py
+python scripts/verify_desktop.py
+```
+
+ZIP은 `dist/`에 생성합니다. 검증은 공백·유니코드가 있는 임시 경로에 압축을 풀고,
+실제 GUI·계산 프로세스·비트 편집·취소를 확인합니다.
+개발용 검증 옵션은 `RadixScope.exe --smoke-test OUTPUT.json`입니다.

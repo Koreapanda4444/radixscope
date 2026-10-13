@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 class BitEditor(QWidget):
     pattern_changed = Signal(object)
-    page_size = 64
+    page_size = 32
 
     def __init__(self) -> None:
         super().__init__()

@@ -2,6 +2,15 @@
 
 English | [한국어](ko/install.md)
 
+## Windows desktop ZIP
+
+Open a successful [Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)
+and download the `RadixScope-windows-x64` artifact. Extract that ZIP and the enclosed
+`RadixScope-2.1.0-windows-x64.zip`. Launch `RadixScope/RadixScope.exe` from the extracted folder.
+The application includes its own Python and Qt; no pip installation is needed.
+Keep `_internal` beside the executable, and extract a newer package into a new folder when updating.
+Preferences stay in the same per-user application data directory used by the Python installation.
+
 ## From a checkout
 
 ```sh
@@ -29,12 +38,12 @@ Open a successful Quality run in GitHub Actions, download its package artifact a
 the ZIP. Then run from the directory containing the wheel:
 
 ```sh
-python -m pip install "radixscope-2.0.0-py3-none-any.whl[gui]"
+python -m pip install "radixscope-2.1.0-py3-none-any.whl[gui]"
 radixscope-gui
 ```
 
 Omit `[gui]` when only the command line is needed. These are Python distributions;
-they require Python and do not bundle a standalone Windows executable.
+they require Python. The standalone desktop ZIP is a separate artifact described above.
 
 ## Linux desktop libraries
 
@@ -61,3 +70,17 @@ python -m radixscope.gui
 The 2.0.0 rewrite replaces the old Base-Converter modules. It does not import old
 configuration or history files. New preferences and recent inputs live in Qt's
 per-user application data directory under `Koreapanda4444/RadixScope/state.json`.
+
+## Building the desktop ZIP
+
+On Windows x64, use Python 3.12 and run:
+
+```sh
+python -m pip install -e ".[desktop-build]"
+python scripts/build_desktop.py
+python scripts/verify_desktop.py
+```
+
+The ZIP appears in `dist/`. Verification extracts it into a temporary path containing spaces
+and Unicode, then checks the actual GUI, calculation processes, bit editors and cancellation.
+The development smoke switch is `RadixScope.exe --smoke-test OUTPUT.json`.
