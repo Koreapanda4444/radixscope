@@ -217,8 +217,7 @@ NaN은 부호, quiet 비트, 페이로드를 유지하며 `nan_payload`는 quiet
 페이로드를 보존하려면 원시 패턴을 사용하세요.
 
 형식 정의는 [Oracle 수치 계산 안내](https://docs.oracle.com/cd/E19422-01/819-3693/ncg_math.html)를
-따릅니다. 디코딩 회귀 테스트는 고정 시드로 생성한 비트 패턴을 Python의 IEEE 형식
-[`struct` 디코더](https://docs.python.org/3/library/struct.html)와 비교합니다.
+따릅니다.
 
 ## IEEE 754 인코딩
 

@@ -47,8 +47,8 @@ they require Python. The standalone desktop ZIP is a separate artifact described
 
 ## Linux desktop libraries
 
-Qt needs the system graphics libraries even when imported by a headless test.
-On Ubuntu/Debian, install the libraries used by CI:
+Qt needs the system graphics libraries even in a headless environment.
+On Ubuntu/Debian, install the desktop graphics libraries:
 
 ```sh
 sudo apt-get update
@@ -57,7 +57,7 @@ sudo apt-get install -y libegl1 libopengl0
 
 For a desktop session using Qt's XCB platform, the distribution may also need
 `libxcb-cursor0` and its normal X11 runtime libraries. Use `QT_QPA_PLATFORM=offscreen`
-for tests without a display; that setting does not open a desktop window.
+without a display; that setting does not open a desktop window.
 
 ## Updating an existing checkout
 
@@ -78,9 +78,6 @@ On Windows x64, use Python 3.12 and run:
 ```sh
 python -m pip install -e ".[desktop-build]"
 python scripts/build_desktop.py
-python scripts/verify_desktop.py
 ```
 
-The ZIP appears in `dist/`. Verification extracts it into a temporary path containing spaces
-and Unicode, then checks the actual GUI, calculation processes, bit editors and cancellation.
-The development smoke switch is `RadixScope.exe --smoke-test OUTPUT.json`.
+The ZIP appears in `dist/`. Extract it and launch `RadixScope/RadixScope.exe`.

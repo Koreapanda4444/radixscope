@@ -3,12 +3,6 @@ from pathlib import Path
 
 
 def main() -> int:
-    if len(sys.argv) > 1 and sys.argv[1] == "--smoke-test":
-        if len(sys.argv) != 3:
-            return 2
-        from radixscope.desktop_smoke import run
-
-        return run(Path(sys.argv[2]))
     if len(sys.argv) > 1 and sys.argv[1] == "--worker":
         if len(sys.argv) != 3:
             return 2

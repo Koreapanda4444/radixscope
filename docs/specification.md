@@ -217,8 +217,6 @@ NaN retains its sign, quiet bit and payload; `nan_payload` excludes the quiet bi
 host-float convenience; use the raw pattern to preserve signaling NaNs and payloads.
 
 Format definitions follow the [Oracle numerical computation guide](https://docs.oracle.com/cd/E19422-01/819-3693/ncg_math.html).
-Decode regression tests compare seeded bit patterns against Python's IEEE-format
-[`struct` decoder](https://docs.python.org/3/library/struct.html).
 
 ## IEEE 754 encoding
 

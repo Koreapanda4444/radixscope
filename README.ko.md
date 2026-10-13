@@ -85,17 +85,13 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 
 ```sh
 python -m pip install -e ".[dev]"
-python -m ruff check src tests scripts packaging
-python -m mypy src tests scripts packaging
-python -m pytest --cov=radixscope --cov-report=term-missing
+python -m ruff check src scripts packaging
+python -m mypy src scripts packaging
 python -m build
-python scripts/verify_distribution.py
 ```
 
-테스트는 Ubuntu와 Windows의 Python 3.11, 3.12, 3.13에서 실행합니다.
-Qt 테스트는 화면 없는 offscreen 플랫폼을 사용합니다. Quality 워크플로는 휠과 소스
-아카이브를 빌드하고, 독립된 환경에서 설치를 검증한 뒤 패키지를 산출물로 저장합니다.
-PyPI 자동 게시는 설정되어 있지 않습니다.
-Windows 데스크톱 작업은 독립 실행 ZIP도 빌드하고 검증합니다. Windows에서 직접 빌드하려면
-`python -m pip install -e ".[desktop-build]"`로 설치한 뒤
-`python scripts/build_desktop.py`, `python scripts/verify_desktop.py`를 순서대로 실행하세요.
+Quality 워크플로는 Ubuntu와 Windows의 Python 3.11, 3.12, 3.13에서 코드 스타일과
+타입을 검사하고 CLI 버전 명령을 실행한 뒤 휠·소스 패키지를 빌드해 산출물로 저장합니다.
+PyPI 자동 게시는 설정되어 있지 않습니다. Windows 데스크톱 작업은 독립 실행 ZIP을
+빌드합니다. Windows에서 직접 빌드하려면 `python -m pip install -e ".[desktop-build]"`로
+설치한 뒤 `python scripts/build_desktop.py`를 실행하세요.

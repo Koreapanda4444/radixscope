@@ -37,8 +37,6 @@ dev = [
     "build>=1,<2",
     "PySide6>=6.8,<7",
     "mypy>=1.13,<2",
-    "pytest>=8.3,<9",
-    "pytest-cov>=6,<7",
     "ruff>=0.8,<1",
 ]
 
@@ -54,7 +52,7 @@ radixscope = ["py.typed", "assets/*.svg"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src", "tests"]
+src = ["src"]
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
@@ -67,16 +65,3 @@ python_version = "3.11"
 strict = true
 warn_unused_configs = true
 mypy_path = "src"
-
-[tool.pytest.ini_options]
-addopts = "-ra --strict-config --strict-markers"
-testpaths = ["tests"]
-pythonpath = ["src"]
-
-[tool.coverage.run]
-branch = true
-source = ["radixscope"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true

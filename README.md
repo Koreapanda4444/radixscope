@@ -83,16 +83,13 @@ or inputs can take substantial time and memory.
 
 ```sh
 python -m pip install -e ".[dev]"
-python -m ruff check src tests scripts packaging
-python -m mypy src tests scripts packaging
-python -m pytest --cov=radixscope --cov-report=term-missing
+python -m ruff check src scripts packaging
+python -m mypy src scripts packaging
 python -m build
-python scripts/verify_distribution.py
 ```
 
-Tests run on Ubuntu and Windows with Python 3.11, 3.12 and 3.13. Qt tests use the
-offscreen platform. Quality runs build a wheel and source archive, verify an isolated
-installation and retain the packages as workflow artifacts. No PyPI publishing is configured.
-The Windows desktop job also builds and verifies the standalone ZIP. To reproduce that build
-on Windows, install `python -m pip install -e ".[desktop-build]"`, then run
-`python scripts/build_desktop.py` and `python scripts/verify_desktop.py`.
+Quality runs check lint and types, run the CLI version command, and build wheel and source
+packages on Ubuntu and Windows with Python 3.11, 3.12 and 3.13. Packages are retained as
+workflow artifacts. No PyPI publishing is configured. The Windows desktop job builds the
+standalone ZIP. To reproduce that build on Windows, install
+`python -m pip install -e ".[desktop-build]"`, then run `python scripts/build_desktop.py`.

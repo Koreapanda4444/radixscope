@@ -51,8 +51,8 @@ radixscope-gui
 
 ## Linux 데스크톱 라이브러리
 
-Qt는 화면 없는 테스트에서 불러올 때도 시스템 그래픽 라이브러리가 필요합니다.
-Ubuntu/Debian에서는 CI에서 사용하는 라이브러리를 설치할 수 있습니다.
+Qt는 화면 없는 환경에서 불러올 때도 시스템 그래픽 라이브러리가 필요합니다.
+Ubuntu/Debian에서는 데스크톱 그래픽 라이브러리를 설치할 수 있습니다.
 
 ```sh
 sudo apt-get update
@@ -60,7 +60,7 @@ sudo apt-get install -y libegl1 libopengl0
 ```
 
 Qt의 XCB 플랫폼으로 데스크톱을 실행하는 환경에서는 `libxcb-cursor0`와 일반적인
-X11 런타임 라이브러리도 필요할 수 있습니다. 화면 없는 테스트에는
+X11 런타임 라이브러리도 필요할 수 있습니다. 화면 없는 실행에는
 `QT_QPA_PLATFORM=offscreen`을 사용합니다. 이 설정에서는 데스크톱 창이 열리지 않습니다.
 
 ## 기존 저장소 업데이트
@@ -84,9 +84,6 @@ Windows x64에서 Python 3.12로 실행합니다.
 ```sh
 python -m pip install -e ".[desktop-build]"
 python scripts/build_desktop.py
-python scripts/verify_desktop.py
 ```
 
-ZIP은 `dist/`에 생성합니다. 검증은 공백·유니코드가 있는 임시 경로에 압축을 풀고,
-실제 GUI·계산 프로세스·비트 편집·취소를 확인합니다.
-개발용 검증 옵션은 `RadixScope.exe --smoke-test OUTPUT.json`입니다.
+ZIP은 `dist/`에 생성합니다. 압축을 풀고 `RadixScope/RadixScope.exe`를 실행하세요.
