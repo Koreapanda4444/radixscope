@@ -1,11 +1,17 @@
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QSpinBox
 
-from radixscope.core import ExactValue, FixedWidthInteger, format_integer
+from radixscope.core import (
+    ExactValue,
+    FixedWidthInteger,
+    IEEEFormat,
+    decode_ieee754,
+    format_integer,
+)
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.widgets import Workspace
-from radixscope.reports import integer_report
+from radixscope.reports import ieee_report, integer_report
 
 
 class ProgrammerWorkspace(Workspace):
@@ -107,6 +113,13 @@ class IEEEWorkspace(Workspace):
         self.form.addRow("Signed zero", self.negative_zero)
         self.form.addRow("NaN payload (decimal)", self.payload)
         self.form.addRow("NaN kind", self.quiet)
+        self.bit_editor = BitEditor()
+        self.bit_legend = QLabel("Sign · Exponent · Fraction")
+        self.form.addRow("Bit fields", self.bit_legend)
+        self.form.addRow("Result bits", self.bit_editor)
+        self.bit_editor.pattern_changed.connect(self.edit_bits)
+        self.result_ready.connect(self.show_bits)
+        self.result_invalidated.connect(self.bit_editor.clear)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.input.textChanged.connect(self.update_controls)
         self.run_button.setText("Encode / decode")
@@ -127,3 +140,30 @@ class IEEEWorkspace(Workspace):
 
     def calculate(self) -> None:
         self.start_calculation()
+
+    def show_bits(self, title: str, report: dict[str, object]) -> None:
+        bits = report.get("bits")
+        if isinstance(bits, str) and len(bits) in (32, 64):
+            width = len(bits)
+            fraction_width = IEEEFormat(width).fraction_width
+            fields = {
+                "sign": (width - 1, width - 1),
+                "exponent": (fraction_width, width - 2),
+                "fraction": (0, fraction_width - 1),
+            }
+            self.bit_legend.setText(
+                f"Sign: {width - 1} · Exponent: {width - 2}…{fraction_width} · "
+                f"Fraction: {fraction_width - 1}…0"
+            )
+            self.bit_editor.set_pattern(int(bits, 2), width, fields)
+
+    def edit_bits(self, pattern: int) -> None:
+        value = decode_ieee754(pattern, int(self.bit_width.currentText()))
+        blockers = [QSignalBlocker(widget) for widget in (self.input, self.mode)]
+        self.mode.setCurrentText("decode")
+        self.input.setText(format_integer(ExactValue(pattern), self.base.value()))
+        del blockers
+        self.update_controls()
+        report = ieee_report(value, self.byteorder.currentText())
+        report["input"] = self.input.text()
+        self.set_result(report)

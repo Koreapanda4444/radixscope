@@ -133,3 +133,50 @@ def test_large_integer_bit_editor_pages_preserve_offscreen_bits(qt_app: QApplica
     workspace.bit_editor.page.setValue(1)
     assert workspace.bit_editor.buttons[4095].isChecked()
     workspace.close()
+
+
+def test_ieee_bit_editor_preserves_nan_payload_and_switches_to_raw_decode(
+    qt_app: QApplication,
+) -> None:
+    workspace = IEEEWorkspace()
+    workspace.input.setText("inf")
+    workspace.calculate()
+    wait_for_workspace(workspace, qt_app)
+    assert workspace.bit_editor.field_name(31) == "sign"
+    assert workspace.bit_editor.field_name(23) == "exponent"
+    assert workspace.bit_editor.field_name(22) == "fraction"
+    workspace.bit_editor.buttons[0].click()
+    assert workspace.mode.currentText() == "decode" and workspace.input.text() == "7F800001"
+    assert "classification: nan" in workspace.output.toPlainText()
+    assert "quiet_nan: False" in workspace.output.toPlainText()
+    assert "nan_payload: 1" in workspace.output.toPlainText()
+    workspace.bit_editor.buttons[22].click()
+    assert "quiet_nan: True" in workspace.output.toPlainText()
+    workspace.bit_editor.buttons[31].click()
+    assert "hexadecimal: FFC00001" in workspace.output.toPlainText()
+    assert "nan_payload: 1" in workspace.output.toPlainText()
+    workspace.bit_width.setCurrentText("64")
+    assert workspace.bit_editor.pattern is None
+    workspace.input.setText("7FF0000000000001")
+    workspace.calculate()
+    wait_for_workspace(workspace, qt_app)
+    workspace.bit_editor.buttons[63].click()
+    assert "hexadecimal: FFF0000000000001" in workspace.output.toPlainText()
+    assert "quiet_nan: False" in workspace.output.toPlainText()
+    workspace.close()
+
+
+def test_ieee_bit_editor_crosses_signed_zero_and_subnormal_boundary(qt_app: QApplication) -> None:
+    workspace = IEEEWorkspace()
+    workspace.mode.setCurrentText("decode")
+    workspace.input.setText("80000000")
+    workspace.calculate()
+    wait_for_workspace(workspace, qt_app)
+    workspace.bit_editor.buttons[0].click()
+    assert "classification: subnormal" in workspace.output.toPlainText()
+    assert "sign: 1" in workspace.output.toPlainText()
+    assert "bytes: 80 00 00 01" in workspace.output.toPlainText()
+    workspace.bit_editor.buttons[0].click()
+    assert "classification: zero" in workspace.output.toPlainText()
+    assert "hexadecimal: 80000000" in workspace.output.toPlainText()
+    workspace.close()
