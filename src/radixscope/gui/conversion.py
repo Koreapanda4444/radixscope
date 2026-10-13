@@ -1,15 +1,7 @@
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QSpinBox
 
-from radixscope.core import (
-    RoundingMode,
-    convert_bases,
-    evaluate_expression,
-    parse_number,
-    trace_value,
-    validate_base,
-)
+from radixscope.core import RoundingMode
 from radixscope.gui.widgets import Workspace
-from radixscope.reports import trace_report
 
 
 def base_input(value: int = 10) -> QSpinBox:
@@ -51,6 +43,7 @@ class ConversionWorkspace(Workspace):
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
         self.update_controls()
+        self.bind_inputs()
 
     def update_controls(self) -> None:
         self.source_base.setEnabled(self.mode.currentText() == "Number")
@@ -58,35 +51,7 @@ class ConversionWorkspace(Workspace):
         self.rounding.setEnabled(not self.exact_output.isChecked())
 
     def calculate(self) -> None:
-        try:
-            if self.mode.currentText() == "Expression":
-                value = evaluate_expression(self.input.text())
-            else:
-                value = parse_number(self.input.text(), self.source_base.value())
-            bases = [validate_base(int(part.strip())) for part in self.targets.text().split(",")]
-            if len(set(bases)) != len(bases):
-                raise ValueError("target bases must be unique")
-            incomplete: list[int] = []
-            if self.exact_output.isChecked():
-                outputs: dict[int, str] = {}
-                for base in bases:
-                    trace = trace_value(value, base, max_steps=1000)
-                    outputs[base] = trace.result
-                    if not trace.complete:
-                        incomplete.append(base)
-            else:
-                outputs = convert_bases(
-                    value, bases, self.precision.value(), RoundingMode(self.rounding.currentText())
-                )
-            report: dict[str, object] = {
-                "input": self.input.text(), "exact": str(value),
-                "outputs": {str(base): text for base, text in outputs.items()},
-            }
-            if incomplete:
-                report["display_limit_reached_in_bases"] = incomplete
-            self.set_result(report)
-        except (ValueError, TypeError, ArithmeticError) as error:
-            self.set_error(str(error))
+        self.start_calculation()
 
 
 class TraceWorkspace(Workspace):
@@ -106,13 +71,7 @@ class TraceWorkspace(Workspace):
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
+        self.bind_inputs()
 
     def calculate(self) -> None:
-        try:
-            value = parse_number(self.input.text(), self.source_base.value())
-            trace = trace_value(value, self.target_base.value(), max_steps=self.limit.value())
-            report = trace_report(trace)
-            report["input"] = self.input.text()
-            self.set_result(report)
-        except (ValueError, TypeError, ArithmeticError) as error:
-            self.set_error(str(error))
+        self.start_calculation()

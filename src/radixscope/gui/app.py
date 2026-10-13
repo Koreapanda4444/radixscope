@@ -201,8 +201,13 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(stylesheet)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self.shutdown()
         self.save_preferences()
         super().closeEvent(event)
+
+    def shutdown(self) -> None:
+        for workspace in self.workspaces:
+            workspace.cancel_calculation()
 
 
 def create_application() -> QApplication:
@@ -219,5 +224,6 @@ def create_application() -> QApplication:
 def run() -> int:
     application = create_application()
     window = MainWindow()
+    application.aboutToQuit.connect(window.shutdown)
     window.show()
     return application.exec()

@@ -1,8 +1,5 @@
-import argparse
-
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QSpinBox
 
-from radixscope.cli import run_command
 from radixscope.gui.conversion import base_input
 from radixscope.gui.widgets import Workspace
 
@@ -43,6 +40,7 @@ class ProgrammerWorkspace(Workspace):
         self.input.returnPressed.connect(self.calculate)
         self.operand.returnPressed.connect(self.calculate)
         self.update_controls()
+        self.bind_inputs()
 
     def update_controls(self) -> None:
         operation = self.operation.currentText()
@@ -51,20 +49,7 @@ class ProgrammerWorkspace(Workspace):
         self.operand_label.setText("Shift count (decimal)" if shift else "Operand")
 
     def calculate(self) -> None:
-        operation = self.operation.currentText()
-        args = argparse.Namespace(
-            command="integer", value=self.input.text(), base=self.base.value(),
-            width=self.bit_width.value(), signed=self.signed.isChecked(),
-            pattern=self.pattern.isChecked(), byteorder=self.byteorder.currentText(),
-            op=None if operation == "inspect" else operation,
-            operand=self.operand.text() if self.operand.isEnabled() else None,
-        )
-        try:
-            report = run_command(args)
-            report.update({"input": self.input.text(), "operation": operation})
-            self.set_result(report)
-        except (ValueError, TypeError, ArithmeticError) as error:
-            self.set_error(str(error))
+        self.start_calculation()
 
 
 class IEEEWorkspace(Workspace):
@@ -99,6 +84,7 @@ class IEEEWorkspace(Workspace):
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
         self.update_controls()
+        self.bind_inputs()
 
     def update_controls(self) -> None:
         encoding = self.mode.currentText() == "encode"
@@ -110,17 +96,4 @@ class IEEEWorkspace(Workspace):
         self.input.setPlaceholderText("Exact expression, nan or inf" if encoding else "Raw digits")
 
     def calculate(self) -> None:
-        try:
-            args = argparse.Namespace(
-                command="ieee", mode=self.mode.currentText(), value=self.input.text(),
-                width=int(self.bit_width.currentText()), base=self.base.value(),
-                byteorder=self.byteorder.currentText(),
-                negative_zero=self.negative_zero.isEnabled() and self.negative_zero.isChecked(),
-                payload=int(self.payload.text()) if self.payload.isEnabled() else 0,
-                signaling=self.quiet.isEnabled() and not self.quiet.isChecked(),
-            )
-            report = run_command(args)
-            report["input"] = self.input.text()
-            self.set_result(report)
-        except (ValueError, TypeError, ArithmeticError) as error:
-            self.set_error(str(error))
+        self.start_calculation()

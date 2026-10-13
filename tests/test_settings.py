@@ -8,6 +8,7 @@ from radixscope.gui.app import MainWindow
 from radixscope.gui.conversion import ConversionWorkspace
 from radixscope.gui.preferences import PreferencesDialog
 from radixscope.settings import SettingsStore
+from tests.conftest import wait_for_workspace
 
 
 def test_history_is_bounded_deduplicated_and_round_trips(tmp_path: Path) -> None:
@@ -78,6 +79,7 @@ def test_recent_input_restoration_and_persisted_workspace_options(
     conversion.input.setText("FF")
     conversion.source_base.setValue(16)
     conversion.run_button.click()
+    wait_for_workspace(conversion, qt_app)
     assert window.recent.count() == 1
     conversion.input.setText("0")
     window.recent.setCurrentRow(0)
