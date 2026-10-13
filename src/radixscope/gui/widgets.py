@@ -20,7 +20,7 @@ from radixscope.reports import render_report
 
 
 class Workspace(QWidget):
-    result_ready = Signal(str, dict)
+    result_ready = Signal(str, object)
     result_invalidated = Signal()
 
     def __init__(self, title: str, description: str) -> None:

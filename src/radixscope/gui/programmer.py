@@ -1,7 +1,11 @@
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QSpinBox
 
+from radixscope.core import ExactValue, FixedWidthInteger, format_integer
+from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.widgets import Workspace
+from radixscope.reports import integer_report
 
 
 class ProgrammerWorkspace(Workspace):
@@ -33,6 +37,11 @@ class ProgrammerWorkspace(Workspace):
         self.form.addRow("Operation", self.operation)
         self.form.addRow(self.operand_label, self.operand)
         self.form.addRow("Byte order", self.byteorder)
+        self.bit_editor = BitEditor()
+        self.form.addRow("Result bits", self.bit_editor)
+        self.bit_editor.pattern_changed.connect(self.edit_bits)
+        self.result_ready.connect(self.show_bits)
+        self.result_invalidated.connect(self.bit_editor.clear)
         self.operation.currentIndexChanged.connect(self.update_controls)
         self.run_button.setText("Inspect / calculate")
         self.run_button.setEnabled(True)
@@ -50,6 +59,27 @@ class ProgrammerWorkspace(Workspace):
 
     def calculate(self) -> None:
         self.start_calculation()
+
+    def show_bits(self, title: str, report: dict[str, object]) -> None:
+        bits = report.get("bits")
+        if isinstance(bits, str):
+            width = len(bits)
+            fields = {"sign": (width - 1, width - 1)} if self.signed.isChecked() else {}
+            self.bit_editor.set_pattern(int(bits, 2), width, fields)
+
+    def edit_bits(self, pattern: int) -> None:
+        value = FixedWidthInteger.from_bit_pattern(
+            pattern, self.bit_width.value(), self.signed.isChecked()
+        )
+        blockers = [QSignalBlocker(widget) for widget in (self.input, self.pattern, self.operation)]
+        self.input.setText(format_integer(ExactValue(pattern), self.base.value()))
+        self.pattern.setChecked(True)
+        self.operation.setCurrentText("inspect")
+        del blockers
+        self.update_controls()
+        report = integer_report(value, self.byteorder.currentText())
+        report.update({"input": self.input.text(), "operation": "inspect"})
+        self.set_result(report)
 
 
 class IEEEWorkspace(Workspace):

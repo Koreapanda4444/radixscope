@@ -93,3 +93,43 @@ def test_nan_payload_controls_do_not_leak_into_other_modes(qt_app: QApplication)
     wait_for_workspace(workspace, qt_app)
     assert workspace.error.text() and workspace.output.toPlainText() == ""
     workspace.close()
+
+
+def test_integer_bit_editor_updates_signed_value_and_arithmetic_result(
+    qt_app: QApplication,
+) -> None:
+    workspace = ProgrammerWorkspace()
+    workspace.signed.setChecked(True)
+    workspace.input.setText("127")
+    workspace.operation.setCurrentText("add")
+    workspace.calculate()
+    wait_for_workspace(workspace, qt_app)
+    assert workspace.bit_editor.pattern == 128
+    workspace.bit_editor.buttons[0].click()
+    assert "value: -127" in workspace.output.toPlainText()
+    assert workspace.pattern.isChecked() and workspace.operation.currentText() == "inspect"
+    assert workspace.input.text() == "129"
+    workspace.bit_editor.buttons[7].click()
+    assert "value: 1" in workspace.output.toPlainText()
+    assert "bytes: 01" in workspace.output.toPlainText()
+    workspace.input.setText("bad")
+    assert workspace.bit_editor.pattern is None and not workspace.bit_editor.isEnabled()
+    workspace.close()
+
+
+def test_large_integer_bit_editor_pages_preserve_offscreen_bits(qt_app: QApplication) -> None:
+    workspace = ProgrammerWorkspace()
+    workspace.bit_width.setValue(4096)
+    workspace.input.setText("1")
+    workspace.calculate()
+    wait_for_workspace(workspace, qt_app)
+    assert len(workspace.bit_editor.buttons) == 64
+    workspace.bit_editor.buttons[4095].click()
+    assert workspace.bit_editor.pattern == (1 << 4095) | 1
+    workspace.bit_editor.page.setValue(64)
+    assert 0 in workspace.bit_editor.buttons and len(workspace.bit_editor.buttons) == 64
+    workspace.bit_editor.buttons[0].click()
+    assert workspace.bit_editor.pattern == 1 << 4095
+    workspace.bit_editor.page.setValue(1)
+    assert workspace.bit_editor.buttons[4095].isChecked()
+    workspace.close()
