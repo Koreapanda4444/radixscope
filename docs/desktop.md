@@ -6,6 +6,7 @@ Start with `radixscope-gui` or `python -m radixscope.gui`. Use Ctrl+1 through Ct
 to switch workspaces. Enter in the main input field runs the calculation. Results can be
 selected or copied with **Copy result**. Invalid input clears the previous result
 and displays the error above the output.
+The input area scrolls vertically and horizontally when the window is too small for its controls.
 
 ## Running and cancelling calculations
 
@@ -82,3 +83,5 @@ Preferences are saved on successful calculations, explicit preference changes an
 close. Writes replace the settings file atomically. Unreadable or malformed settings use
 defaults and display a status message. A write failure keeps the previous file and does
 not prevent calculations. The CLI does not read or modify desktop preferences.
+Reading and saving share a 32 MiB settings-file limit, enough for 100 entries containing long inputs.
+An oversized save reports an error and preserves the previous settings file.

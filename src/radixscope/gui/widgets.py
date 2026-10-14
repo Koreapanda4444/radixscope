@@ -5,11 +5,14 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -32,6 +35,14 @@ class Workspace(QWidget):
         self.timer.setInterval(25)
         self.timer.timeout.connect(self.poll_calculation)
         self.form = QFormLayout()
+        self.form.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+        self.form_container = QWidget()
+        self.form_container.setLayout(self.form)
+        self.form_scroll = QScrollArea()
+        self.form_scroll.setWidgetResizable(True)
+        self.form_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.form_scroll.setMinimumHeight(100)
+        self.form_scroll.setWidget(self.form_container)
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
         self.output.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
@@ -60,7 +71,7 @@ class Workspace(QWidget):
         subtitle.setWordWrap(True)
         layout.addWidget(heading)
         layout.addWidget(subtitle)
-        layout.addLayout(self.form)
+        layout.addWidget(self.form_scroll, 2)
         layout.addLayout(actions)
         layout.addWidget(self.error)
         layout.addWidget(self.output, 1)

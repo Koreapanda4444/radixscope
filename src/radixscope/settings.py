@@ -4,6 +4,8 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+MAX_SETTINGS_BYTES = 32 * 1024 * 1024
+
 
 class SettingsStore:
     def __init__(self, path: Path) -> None:
@@ -17,8 +19,8 @@ class SettingsStore:
         if not self.path.exists():
             return
         try:
-            if self.path.stat().st_size > 2 * 1024 * 1024:
-                raise ValueError("settings file exceeds two MiB")
+            if self.path.stat().st_size > MAX_SETTINGS_BYTES:
+                raise ValueError("settings file exceeds 32 MiB")
             data = json.loads(self.path.read_text(encoding="utf-8"))
             if (
                 not isinstance(data, dict)
@@ -71,17 +73,20 @@ class SettingsStore:
         del self.history[self.history_limit:]
 
     def save(self) -> None:
+        content = json.dumps(
+            {"schema": 1, "preferences": self.preferences, "history": self.history},
+            ensure_ascii=False, allow_nan=False, indent=2,
+        ).encode("utf-8")
+        if len(content) > MAX_SETTINGS_BYTES:
+            raise ValueError("settings file exceeds 32 MiB; reduce recent history")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", dir=self.path.parent, suffix=".tmp", delete=False
+                mode="wb", dir=self.path.parent, suffix=".tmp", delete=False
             ) as handle:
                 temporary = Path(handle.name)
-                json.dump(
-                    {"schema": 1, "preferences": self.preferences, "history": self.history},
-                    handle, ensure_ascii=False, allow_nan=False, indent=2,
-                )
+                handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(temporary, self.path)

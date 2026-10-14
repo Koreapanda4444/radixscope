@@ -88,8 +88,12 @@ class MainWindow(QMainWindow):
 
     def show_completed(self, title: str, report: dict[str, object]) -> None:
         workspace = next(workspace for workspace in self.workspaces if workspace.title == title)
-        summary = str(report.get("exact", report.get("value", report.get("classification", ""))))
-        self.store.record(title, workspace.snapshot(), summary)
+        summary = report.get("exact")
+        if summary is None:
+            summary = report.get("value")
+        if summary is None:
+            summary = report.get("classification", "")
+        self.store.record(title, workspace.snapshot(), str(summary))
         self.refresh_history()
         self.statusBar().showMessage(f"{title} complete", 5000)
         self.save_preferences()
