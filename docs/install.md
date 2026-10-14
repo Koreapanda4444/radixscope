@@ -67,8 +67,7 @@ python -m pip install --upgrade ".[gui]"
 python -m radixscope.gui
 ```
 
-The 2.0.0 rewrite replaces the old Base-Converter modules. It does not import old
-configuration or history files. New preferences and recent inputs live in Qt's
+Preferences and recent inputs live in Qt's
 per-user application data directory under `Koreapanda4444/RadixScope/state.json`.
 
 ## Building the desktop ZIP

@@ -6,6 +6,9 @@ RadixScope 2.1.0은 정확한 수를 2~36진법 사이에서 변환하고, 고�
 IEEE 754 부동소수점의 비트 표현을 확인하는 도구입니다. 명령줄 인터페이스와
 PySide6 데스크톱 앱을 제공합니다.
 
+기존 Base-Converter를 2.0에서 RadixScope로 재작성하며 정확한 수 계산, 비트 분석,
+새 데스크톱 앱을 추가했습니다. 이전 앱의 설정과 기록은 가져오지 않습니다.
+
 ## 설치와 실행
 
 Windows x64에서는 성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)의
@@ -73,7 +76,6 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 - [명령줄 사용법](docs/ko/cli.md)
 - [데스크톱 앱 사용법](docs/ko/desktop.md)
 - [숫자 처리 명세](docs/ko/specification.md)
-- [2.1.0 릴리스 노트](docs/ko/releases/2.1.0.md)
 
 정확한 진법 변환 결과의 순환 주기는 매우 길 수 있습니다. 명령줄의 정확한 출력에는
 길이 제한이 없으므로 출력 자릿수를 제한하려면 `--precision`을 지정하세요.

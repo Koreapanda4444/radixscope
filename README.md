@@ -6,6 +6,9 @@ RadixScope 2.1.0 converts exact numbers between bases 2 through 36 and inspects 
 bits behind fixed-width integers and IEEE 754 floating-point values. It provides a
 command line interface and a PySide6 desktop application.
 
+Version 2.0 rewrote Base-Converter as RadixScope, adding exact arithmetic, bit inspection
+and a new desktop app. It does not import the old application's settings or history.
+
 ## Install and run
 
 For Windows x64, download the `RadixScope-windows-x64` artifact from a successful
@@ -71,7 +74,6 @@ print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
 - [Command line](docs/cli.md)
 - [Desktop application](docs/desktop.md)
 - [Numeric specification](docs/specification.md)
-- [2.1.0 release notes](docs/releases/2.1.0.md)
 
 Exact expansions can have long periods. CLI exact output is unlimited; choose `--precision`
 for a bounded expansion. Desktop exact conversion displays at most 1000 fractional digits

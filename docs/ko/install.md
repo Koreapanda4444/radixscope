@@ -71,8 +71,7 @@ python -m pip install --upgrade ".[gui]"
 python -m radixscope.gui
 ```
 
-2.0.0 재작성은 이전 Base-Converter 모듈을 대체합니다. 이전 설정과 기록 파일은
-가져오지 않습니다. 새 설정과 최근 입력은 Qt의 사용자별 앱 데이터 폴더에 있는
+설정과 최근 입력은 Qt의 사용자별 앱 데이터 폴더에 있는
 `Koreapanda4444/RadixScope/state.json`에 저장합니다.
 
 사용 방법은 [데스크톱 안내](desktop.md)와 [명령줄 안내](cli.md)를 참고하세요.

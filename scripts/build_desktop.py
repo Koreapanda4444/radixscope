@@ -90,7 +90,6 @@ def main() -> None:
     for name in ("README.md", "README.ko.md"):
         shutil.copy2(root / name, bundle / name)
     shutil.copytree(root / "docs", bundle / "docs", dirs_exist_ok=True)
-    shutil.copy2(root / "packaging" / "THIRD_PARTY_NOTICES.md", bundle)
     dependencies = {
         name: importlib.metadata.version(name) for name in ("PySide6", "shiboken6", "pyinstaller")
     }
