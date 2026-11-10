@@ -19,6 +19,7 @@ from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, enc
 from radixscope.core.inspection import NumberInspection
 from radixscope.core.neighbors import adjacent_float, float_boundaries
 from radixscope.core.precision import analyze_float_precision
+from radixscope.exports import json_safe
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,7 +30,9 @@ class ReportField:
     @property
     def text(self) -> str:
         if isinstance(self.value, (dict, list)):
-            return json.dumps(self.value, ensure_ascii=False)
+            return json.dumps(json_safe(self.value), ensure_ascii=False)
+        if isinstance(self.value, int) and not isinstance(self.value, bool):
+            return str(ExactValue(self.value))
         return str(self.value)
 
 
@@ -332,10 +335,11 @@ def render_report(report: dict[str, object]) -> str:
     for key, value in report.items():
         if isinstance(value, dict):
             lines.append(f"{key}:")
-            lines.extend(f"  {name}: {item}" for name, item in value.items())
+            lines.extend(f"  {name}: {ReportField(str(name), item).text}"
+                         for name, item in value.items())
         elif isinstance(value, list):
             lines.append(f"{key}:")
-            lines.extend(f"  {json.dumps(item, ensure_ascii=False)}" for item in value)
+            lines.extend(f"  {json.dumps(json_safe(item), ensure_ascii=False)}" for item in value)
         else:
-            lines.append(f"{key}: {value}")
+            lines.append(f"{key}: {ReportField(key, value).text}")
     return "\n".join(lines)

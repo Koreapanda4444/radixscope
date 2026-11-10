@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from radixscope.core.bitfields import inspect_bitfields
 from radixscope.core.byte_inspection import parse_byte_input
 from radixscope.gui.bitfields import BitfieldPanel
 from radixscope.gui.widgets import Workspace
@@ -223,6 +224,23 @@ class ByteInspectorWorkspace(Workspace):
         state = super().snapshot()
         state["bitfields"] = self.bitfields.snapshot()
         return state
+
+    def current_report(self) -> dict[str, object] | None:
+        report = super().current_report()
+        if report is None:
+            return None
+        result = dict(report)
+        try:
+            bits = report["bits"]
+            assert isinstance(bits, str)
+            values = inspect_bitfields(int(bits, 2), len(bits), self.bitfields.field_definitions())
+            result["fields"] = [{"name": value.field.name, "offset": value.field.offset,
+                                 "width": value.field.width, "signed": value.field.signed,
+                                 "value": str(value.integer.exact), "bits": value.integer.bits}
+                                for value in values]
+        except (ValueError, TypeError) as error:
+            result["bitfield_error"] = str(error)
+        return result
 
     def cancel_calculation(self) -> None:
         if hasattr(self, "_refresh"):

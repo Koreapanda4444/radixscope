@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence
@@ -7,6 +8,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QHBoxLayout,
@@ -26,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from radixscope.calculations import CalculationJob
+from radixscope.exports import report_csv, report_json, write_export
 from radixscope.reports import ReportField, StructuredReport, render_report
 
 
@@ -115,6 +118,13 @@ class Workspace(QWidget):
         transfer.addWidget(self._transfer_mode)
         transfer.addWidget(self._transfer_button)
         transfer.addStretch()
+        self._export_format = QComboBox()
+        self._export_format.addItems(["Text", "JSON", "CSV"])
+        self._export_button = QPushButton("Export result")
+        self._export_button.setEnabled(False)
+        self._export_button.clicked.connect(lambda: self.export_report())
+        transfer.addWidget(self._export_format)
+        transfer.addWidget(self._export_button)
         layout = QVBoxLayout(self)
         heading = QLabel(title)
         heading.setObjectName("heading")
@@ -132,6 +142,7 @@ class Workspace(QWidget):
         self.error.clear()
         self._report = report
         self._transfer_button.setEnabled(True)
+        self._export_button.setEnabled(True)
         self.status.setText("Complete")
         self.output.setPlainText(render_report(report) if text is None else text)
         self.report_fields = StructuredReport(report).fields
@@ -164,6 +175,7 @@ class Workspace(QWidget):
     def clear_output(self) -> None:
         self._report = None
         self._transfer_button.setEnabled(False)
+        self._export_button.setEnabled(False)
         self.output.clear()
         self.report_fields = ()
         self.result_table.setRowCount(0)
@@ -254,6 +266,28 @@ class Workspace(QWidget):
                 self._destination.currentText(), self._transfer_mode.currentIndex() == 1,
                 self._report,
             )
+
+    def current_report(self) -> dict[str, object] | None:
+        return self._report
+
+    def export_report(self, format_: str | None = None) -> None:
+        report = self.current_report()
+        if report is None:
+            return
+        selected = (format_ or self._export_format.currentText()).lower()
+        extension = "txt" if selected == "text" else selected
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export result", "", f"{selected.upper()} (*.{extension})"
+        )
+        if not path:
+            return
+        try:
+            content = report_json(report) if selected == "json" else (
+                report_csv(report) if selected == "csv" else render_report(report)
+            )
+            write_export(Path(path), content)
+        except (OSError, ValueError) as error:
+            self.error.setText(f"Could not export result: {error}")
 
     def snapshot(self) -> dict[str, object]:
         state: dict[str, object] = {}

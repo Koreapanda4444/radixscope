@@ -4,7 +4,10 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from radixscope.exports import json_safe
+
 MAX_SETTINGS_BYTES = 32 * 1024 * 1024
+MAX_HISTORY_REPORT_BYTES = 256 * 1024
 
 
 class SettingsStore:
@@ -59,18 +62,50 @@ class SettingsStore:
     def remember_history(self) -> bool:
         return self.preferences.get("remember_history", True) is True
 
-    def record(self, workspace: str, state: dict[str, object], summary: str) -> None:
+    def record(
+        self, workspace: str, state: dict[str, object], summary: str,
+        report: dict[str, object] | None = None,
+    ) -> None:
         if not self.remember_history:
             return
         self.history = [
             entry for entry in self.history
             if entry["workspace"] != workspace or entry["state"] != state
         ]
-        self.history.insert(0, {
+        kind = "Float Comparison" if workspace == "IEEE 754" and state.get("compare") is True else (
+            "Expression" if workspace == "Conversion" and state.get("mode") == "Expression"
+            else workspace
+        )
+        entry: dict[str, object] = {
             "workspace": workspace, "state": dict(state), "summary": summary[:200],
             "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        })
+            "kind": kind,
+        }
+        if report is not None:
+            serialized = json.dumps(json_safe(report), ensure_ascii=False, allow_nan=False)
+            if len(serialized.encode("utf-8")) <= MAX_HISTORY_REPORT_BYTES:
+                entry["report"] = json.loads(serialized)
+        self.history.insert(0, entry)
         del self.history[self.history_limit:]
+
+    def search_history(
+        self, query: str = "", kind: str | None = None,
+    ) -> list[tuple[int, dict[str, object]]]:
+        matches = []
+        needle = query.casefold().strip()
+        for index, entry in enumerate(self.history):
+            category = entry.get("kind", entry["workspace"])
+            if kind is not None and category != kind:
+                continue
+            state = entry["state"]
+            assert isinstance(state, dict)
+            haystack = " ".join(str(value) for value in (
+                entry["workspace"], category, entry["summary"], state.get("input", ""),
+                state.get("other_input", ""),
+            )).casefold()
+            if not needle or needle in haystack:
+                matches.append((index, entry))
+        return matches
 
     def save(self) -> None:
         content = json.dumps(

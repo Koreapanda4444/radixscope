@@ -2,13 +2,17 @@ import sys
 from functools import partial
 from pathlib import Path
 
-from PySide6.QtCore import QStandardPaths, Qt
+from PySide6.QtCore import QSignalBlocker, QStandardPaths, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QDockWidget,
+    QFileDialog,
+    QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QPushButton,
     QTabWidget,
@@ -17,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from radixscope import __version__
+from radixscope.exports import report_json, table_csv, write_export
 from radixscope.gui.batch import BatchWorkspace
 from radixscope.gui.byte_inspector import ByteInspectorWorkspace
 from radixscope.gui.comparison import ComparisonWorkspace
@@ -26,6 +31,7 @@ from radixscope.gui.navigation import transfer_state
 from radixscope.gui.preferences import PreferencesDialog
 from radixscope.gui.programmer import IEEEWorkspace, ProgrammerWorkspace
 from radixscope.gui.widgets import Workspace
+from radixscope.reports import render_report
 from radixscope.settings import SettingsStore
 
 
@@ -38,6 +44,7 @@ class MainWindow(QMainWindow):
     def __init__(self, store: SettingsStore | None = None) -> None:
         super().__init__()
         self.store = store if store is not None else SettingsStore(default_state_path())
+        self._restoring = False
         self.system_palette = QPalette(self.palette())
         self.setWindowTitle(f"RadixScope {__version__}")
         self.resize(1000, 720)
@@ -65,15 +72,29 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
         self.recent = QListWidget()
         self.recent.itemDoubleClicked.connect(self.restore_recent)
-        restore = QPushButton("Restore selected input")
+        self.history_search = QLineEdit()
+        self.history_search.setPlaceholderText("Search input, result or work type")
+        self.history_search.textChanged.connect(self.refresh_history)
+        self.history_kind = QComboBox()
+        self.history_kind.addItem("All work types")
+        self.history_kind.currentIndexChanged.connect(self.refresh_history)
+        restore = QPushButton("Restore selected work")
         restore.clicked.connect(self.restore_recent)
         clear = QPushButton("Clear history")
         clear.clicked.connect(self.clear_history)
         recent_container = QWidget()
         recent_layout = QVBoxLayout(recent_container)
+        recent_layout.addWidget(self.history_search)
+        recent_layout.addWidget(self.history_kind)
         recent_layout.addWidget(self.recent)
         recent_layout.addWidget(restore)
         recent_layout.addWidget(clear)
+        self.history_export_format = QComboBox()
+        self.history_export_format.addItems(["JSON", "CSV", "Text"])
+        history_export = QPushButton("Export displayed history")
+        history_export.clicked.connect(self.export_history)
+        recent_layout.addWidget(self.history_export_format)
+        recent_layout.addWidget(history_export)
         self.recent_dock = QDockWidget("Recent", self)
         self.recent_dock.setWidget(recent_container)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.recent_dock)
@@ -97,13 +118,22 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(self.store.warning)
 
     def show_completed(self, title: str, report: dict[str, object]) -> None:
+        if self._restoring:
+            return
         workspace = next(workspace for workspace in self.workspaces if workspace.title == title)
+        report = workspace.current_report() or report
         summary = report.get("exact")
         if summary is None:
             summary = report.get("value")
         if summary is None:
-            summary = report.get("classification", "")
-        self.store.record(title, workspace.snapshot(), str(summary))
+            summary = report.get("source_exact")
+        if summary is None and "processed" in report:
+            summary = f"{report['processed']}/{report['total']} rows · {report['errors']} errors"
+        if summary is None and "changed_bits" in report:
+            summary = f"{report['changed_bits']} bits · {report['changed_bytes']} bytes changed"
+        if summary is None:
+            summary = report.get("classification", "comparison")
+        self.store.record(title, workspace.snapshot(), str(summary), report)
         self.refresh_history()
         self.statusBar().showMessage(f"{title} complete", 5000)
         self.save_preferences()
@@ -121,14 +151,30 @@ class MainWindow(QMainWindow):
 
     def refresh_history(self) -> None:
         self.recent.clear()
-        for entry in self.store.history:
+        category = self.history_kind.currentText()
+        blocker = QSignalBlocker(self.history_kind)
+        kinds = sorted({str(entry.get("kind", entry["workspace"])) for entry in self.store.history})
+        self.history_kind.clear()
+        self.history_kind.addItems(["All work types", *kinds])
+        if category in kinds:
+            self.history_kind.setCurrentText(category)
+        del blocker
+        kind = self.history_kind.currentText()
+        for index, entry in self.store.search_history(
+            self.history_search.text(), None if kind == "All work types" else kind,
+        ):
             state = entry["state"]
             text = str(state.get("input", "")) if isinstance(state, dict) else ""
-            self.recent.addItem(f"{entry['workspace']} · {text[:50]} → {entry['summary']}")
+            item = QListWidgetItem(f"{entry['workspace']} · {text[:50]} → {entry['summary']}")
+            item.setData(Qt.ItemDataRole.UserRole, index)
+            self.recent.addItem(item)
 
     def restore_recent(self) -> None:
-        index = self.recent.currentRow()
-        if not 0 <= index < len(self.store.history):
+        item = self.recent.currentItem()
+        if item is None:
+            return
+        index = item.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(index, int) or not 0 <= index < len(self.store.history):
             return
         entry = self.store.history[index]
         state = entry["state"]
@@ -138,8 +184,40 @@ class MainWindow(QMainWindow):
             if workspace.title == entry["workspace"]:
                 workspace.restore_state(state)
                 self.tabs.setCurrentIndex(index)
-                self.statusBar().showMessage("Input restored · Run to calculate", 5000)
+                report = entry.get("report")
+                if isinstance(report, dict):
+                    self._restoring = True
+                    try:
+                        workspace.set_result(report)
+                        self.statusBar().showMessage("Saved result restored", 5000)
+                    except (ValueError, TypeError, KeyError, AssertionError):
+                        workspace.invalidate_result()
+                        self.statusBar().showMessage("Input restored · Run to calculate", 5000)
+                    finally:
+                        self._restoring = False
+                else:
+                    self.statusBar().showMessage("Input restored · Run to calculate", 5000)
                 return
+
+    def export_history(self) -> None:
+        selected = self.history_export_format.currentText().lower()
+        extension = "txt" if selected == "text" else selected
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export displayed history", "", f"{selected.upper()} (*.{extension})"
+        )
+        if not path:
+            return
+        kind = self.history_kind.currentText()
+        entries = [entry for _, entry in self.store.search_history(
+            self.history_search.text(), None if kind == "All work types" else kind,
+        )]
+        try:
+            content = report_json({"history": entries}) if selected == "json" else (
+                table_csv(entries) if selected == "csv" else render_report({"history": entries})
+            )
+            write_export(Path(path), content)
+        except (OSError, ValueError) as error:
+            self.statusBar().showMessage(f"Could not export history: {error}")
 
     def clear_history(self) -> None:
         self.store.history.clear()

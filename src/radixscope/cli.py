@@ -27,7 +27,7 @@ from radixscope.core.comparison import compare_float_formats
 from radixscope.core.input_syntax import parse_numeric_input
 from radixscope.core.inspection import inspect_number
 from radixscope.core.limits import MAX_INPUT_CHARS
-from radixscope.exports import batch_report_csv
+from radixscope.exports import batch_report_csv, json_safe
 from radixscope.reports import (
     batch_report,
     binary_comparison_report,
@@ -309,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_command(args)
         output = batch_report_csv(report) if args.command == "batch" and args.csv else (
-            json.dumps(report) if args.json else render_report(report)
+            json.dumps(json_safe(report)) if args.json else render_report(report)
         )
         _write_output(output, sys.stdout)
     except KeyboardInterrupt:

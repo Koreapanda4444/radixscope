@@ -1,22 +1,17 @@
-import json
-from pathlib import Path
 
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
-    QFileDialog,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
-    QPushButton,
     QSpinBox,
     QTableWidgetItem,
 )
 
 from radixscope.core import RoundingMode
-from radixscope.exports import batch_report_csv
 from radixscope.gui.conversion import base_input
 from radixscope.gui.widgets import Workspace
 
@@ -45,12 +40,6 @@ class BatchWorkspace(Workspace):
         self.row_limit.setValue(1000)
         self._summary = QLabel()
         self._summary.setWordWrap(True)
-        self._export_json = QPushButton("Export JSON")
-        self._export_csv = QPushButton("Export CSV")
-        self._export_json.clicked.connect(lambda: self.export("json"))
-        self._export_csv.clicked.connect(lambda: self.export("csv"))
-        self._export_json.setEnabled(False)
-        self._export_csv.setEnabled(False)
         self.form.addRow("Line input", self.input)
         self.form.addRow("Input mode", self.mode)
         self.form.addRow("Source base", self.source_base)
@@ -60,7 +49,6 @@ class BatchWorkspace(Workspace):
         self.form.addRow("Rounding", self.rounding)
         self.form.addRow("Maximum rows", self.row_limit)
         self.form.addRow("Batch status", self._summary)
-        self.form.addRow(self._export_json, self._export_csv)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.exact_output.toggled.connect(self.update_controls)
         self.run_button.setText("Convert lines")
@@ -78,8 +66,6 @@ class BatchWorkspace(Workspace):
     def clear_batch(self) -> None:
         self._rows = []
         self._summary.clear()
-        self._export_json.setEnabled(False)
-        self._export_csv.setEnabled(False)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         super().set_result(report, text)
@@ -102,8 +88,6 @@ class BatchWorkspace(Workspace):
         if report["limited"]:
             message += " · Limit reached; some inputs were not processed"
         self._summary.setText(message)
-        self._export_json.setEnabled(True)
-        self._export_csv.setEnabled(True)
 
     @staticmethod
     def cell_text(row: dict[str, object], key: str) -> str:
@@ -133,19 +117,4 @@ class BatchWorkspace(Workspace):
             )
 
     def export(self, format_: str) -> None:
-        if self._report is None:
-            return
-        path, _ = QFileDialog.getSaveFileName(
-            self, f"Export {format_.upper()}", "", f"{format_.upper()} (*.{format_})"
-        )
-        if not path:
-            return
-        try:
-            content = (
-                batch_report_csv(self._report)
-                if format_ == "csv"
-                else (json.dumps(self._report, ensure_ascii=False, indent=2))
-            )
-            Path(path).write_text(content, encoding="utf-8", newline="")
-        except (OSError, ValueError) as error:
-            self.error.setText(str(error))
+        self.export_report(format_)

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from fractions import Fraction
 
 
 def _decimal_integer(number: int) -> str:
     """Render exact integers without changing Python's process-wide security settings."""
-    if abs(number).bit_length() < 12_000:
+    limit = sys.get_int_max_str_digits()
+    if not limit or abs(number).bit_length() <= limit * 3:
         return str(number)
     magnitude = abs(number)
     chunks: list[int] = []
