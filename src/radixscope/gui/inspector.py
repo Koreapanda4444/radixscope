@@ -12,7 +12,7 @@ from radixscope.core import (
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.floating import FloatNavigator
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import inspection_report
 
 
@@ -28,25 +28,27 @@ class InspectorWorkspace(Workspace):
         self.bit_width = QSpinBox()
         self.bit_width.setRange(1, 4096)
         self.bit_width.setValue(32)
-        self.signed = QCheckBox("Signed two's complement")
-        self.pattern = QCheckBox("Reinterpret raw bits instead of converting a value")
+        self.signed = QCheckBox("Signed")
+        self.signed.setToolTip("Signed two's-complement interpretation of the selected bit width")
+        self.pattern = QCheckBox("Raw bits")
+        self.pattern.setToolTip(
+            "Reinterpret the input as a bit pattern instead of converting its value"
+        )
         self.byteorder = QComboBox()
         self.byteorder.addItems(["big", "little"])
         self.raw_hex = QLineEdit()
         self.raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
         self.form.addRow("Input", self.input)
-        self.form.addRow("Input base", self.base)
-        self.form.addRow("Data type", self.data_type)
-        self.form.addRow("Bit width", self.bit_width)
-        self.form.addRow("Integer interpretation", self.signed)
-        self.form.addRow("Input meaning", self.pattern)
-        self.form.addRow("Byte order", self.byteorder)
-        self.form.addRow("Editable Hex pattern", self.raw_hex)
+        self.form.addRow("Representation", control_row("Base", self.base, self.data_type,
+                                                       "Width", self.bit_width))
+        self.form.addRow("Interpretation", control_row(self.pattern, self.signed, "Bytes",
+                                                       self.byteorder))
+        self.form.addRow("Hex pattern", self.raw_hex)
         self.bit_editor = BitEditor()
         self.bit_editor.setToolTip("Raw result bits; numeric conversion uses the input above")
-        self.form.addRow("Bit pattern", self.bit_editor)
+        self.form.addRow(self.bit_editor)
         self.float_navigator = FloatNavigator()
-        self.form.addRow("Neighbors / boundaries", self.float_navigator)
+        self.form.addRow(self.float_navigator)
         self.float_navigator.pattern_requested.connect(self.edit_pattern)
         self.result_invalidated.connect(self.float_navigator.clear)
         self.result_ready.connect(self.show_bits)
@@ -54,7 +56,7 @@ class InspectorWorkspace(Workspace):
         self.raw_hex.editingFinished.connect(self.edit_hex)
         self.result_invalidated.connect(self.bit_editor.clear)
         self.data_type.currentIndexChanged.connect(self.update_controls)
-        self.run_button.setText("Inspect number")
+        self.run_button.setText("Inspect")
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.start_calculation)
         self.input.returnPressed.connect(self.start_calculation)

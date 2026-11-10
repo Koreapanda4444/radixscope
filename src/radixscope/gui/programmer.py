@@ -20,7 +20,7 @@ from radixscope.core import (
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.floating import FloatNavigator
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import ieee_report, integer_report
 
 
@@ -34,8 +34,8 @@ class ProgrammerWorkspace(Workspace):
         self.bit_width = QSpinBox()
         self.bit_width.setRange(1, 4096)
         self.bit_width.setValue(8)
-        self.signed = QCheckBox("Signed two's complement")
-        self.pattern = QCheckBox("Read input as a raw bit pattern")
+        self.signed = QCheckBox("Signed")
+        self.pattern = QCheckBox("Read raw bits")
         self.operation = QComboBox()
         self.operation.addItems(
             ["inspect", "add", "subtract", "multiply", "and", "or", "xor", "not",
@@ -46,20 +46,18 @@ class ProgrammerWorkspace(Workspace):
         self.byteorder = QComboBox()
         self.byteorder.addItems(["big", "little"])
         self.form.addRow("Input", self.input)
-        self.form.addRow("Input base", self.base)
-        self.form.addRow("Bit width", self.bit_width)
-        self.form.addRow("Interpretation", self.signed)
-        self.form.addRow("Input type", self.pattern)
+        self.form.addRow("Representation", control_row("Base", self.base, "Width", self.bit_width,
+                                                       self.signed))
+        self.form.addRow("Interpretation", control_row(self.pattern, "Bytes", self.byteorder))
         self.form.addRow("Operation", self.operation)
         self.form.addRow(self.operand_label, self.operand)
-        self.form.addRow("Byte order", self.byteorder)
         self.bit_editor = BitEditor()
-        self.form.addRow("Result bits", self.bit_editor)
+        self.form.addRow(self.bit_editor)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
         self.result_ready.connect(self.show_bits)
         self.result_invalidated.connect(self.bit_editor.clear)
         self.operation.currentIndexChanged.connect(self.update_controls)
-        self.run_button.setText("Inspect / calculate")
+        self.run_button.setText("Calculate")
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
@@ -70,6 +68,7 @@ class ProgrammerWorkspace(Workspace):
     def update_controls(self) -> None:
         operation = self.operation.currentText()
         self.operand.setEnabled(operation not in ("inspect", "not"))
+        self.form.setRowVisible(self.operand, operation not in ("inspect", "not"))
         shift = operation in ("shl", "shr", "lshr")
         self.operand_label.setText("Shift count (decimal)" if shift else "Operand")
 
@@ -115,26 +114,28 @@ class IEEEWorkspace(Workspace):
         self.payload = QLineEdit("0")
         self.quiet = QCheckBox("Quiet NaN")
         self.quiet.setChecked(True)
+        self._show_special = QCheckBox("Special value options")
+        self._show_special.toggled.connect(self.update_controls)
         self._compare = False
         self._comparison_rows: list[dict[str, object]] = []
         self._comparison_columns: list[str] = []
         self.compare_button = QPushButton("Compare all four formats")
         self.compare_button.clicked.connect(self.compare_formats)
         self.form.addRow("Input", self.input)
-        self.form.addRow("Mode", self.mode)
-        self.form.addRow("Bit width", self.bit_width)
+        self.form.addRow("Representation", control_row(self.mode, self.bit_width, "Bytes",
+                                                       self.byteorder))
         self.form.addRow("Raw pattern base", self.base)
-        self.form.addRow("Byte order", self.byteorder)
+        self.form.addRow(self._show_special)
         self.form.addRow("Signed zero", self.negative_zero)
         self.form.addRow("NaN payload (decimal)", self.payload)
         self.form.addRow("NaN kind", self.quiet)
         self.form.addRow("Format comparison", self.compare_button)
         self.bit_editor = BitEditor()
         self.bit_legend = QLabel("Sign · Exponent · Fraction")
-        self.form.addRow("Bit fields", self.bit_legend)
-        self.form.addRow("Result bits", self.bit_editor)
+        self.form.addRow(self.bit_legend)
+        self.form.addRow(self.bit_editor)
         self.float_navigator = FloatNavigator()
-        self.form.addRow("Neighbors / boundaries", self.float_navigator)
+        self.form.addRow(self.float_navigator)
         self.float_navigator.pattern_requested.connect(self.edit_bits)
         self.result_invalidated.connect(self.float_navigator.clear)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
@@ -142,7 +143,7 @@ class IEEEWorkspace(Workspace):
         self.result_invalidated.connect(self.bit_editor.clear)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.input.textChanged.connect(self.update_controls)
-        self.run_button.setText("Encode / decode")
+        self.run_button.setText("Analyze")
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
@@ -157,6 +158,15 @@ class IEEEWorkspace(Workspace):
         self.negative_zero.setEnabled(encoding and not nan)
         self.payload.setEnabled(encoding and nan)
         self.quiet.setEnabled(encoding and nan)
+        special = self._show_special.isChecked()
+        self.form.setRowVisible(self.base, not encoding)
+        self.form.setRowVisible(self.negative_zero, encoding and (special or (
+            self.input.text().strip() in ("0", "-0", "+0", "0.0", "-0.0")
+        ) or self.negative_zero.isChecked()))
+        self.form.setRowVisible(self.payload, encoding and (nan or special))
+        self.form.setRowVisible(self.quiet, encoding and (nan or special))
+        self.form.setRowVisible(self.compare_button, encoding)
+        self._show_special.setVisible(encoding)
         self.input.setPlaceholderText("Exact expression, nan or inf" if encoding else "Raw digits")
 
     def calculate(self) -> None:
@@ -196,6 +206,7 @@ class IEEEWorkspace(Workspace):
                 self.result_table.setItem(row_index, column, QTableWidgetItem(str(row.get(key))))
         self.result_table.resizeColumnsToContents()
         self.result_table.selectRow(0)
+        self.filter_results()
 
     def copy_selected(self) -> None:
         if not self._comparison_rows:

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -19,10 +20,13 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +34,20 @@ from PySide6.QtWidgets import (
 from radixscope.calculations import CalculationJob
 from radixscope.exports import report_csv, report_json, write_export
 from radixscope.reports import ReportField, StructuredReport, render_report
+
+
+def control_row(*controls: QWidget | str) -> QWidget:
+    row = QWidget()
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(8)
+    for control in controls:
+        widget = QLabel(control) if isinstance(control, str) else control
+        if isinstance(widget, QComboBox):
+            widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            widget.setMinimumContentsLength(7)
+        layout.addWidget(widget)
+    return row
 
 
 class Workspace(QWidget):
@@ -47,6 +65,8 @@ class Workspace(QWidget):
         self.timer.setInterval(25)
         self.timer.timeout.connect(self.poll_calculation)
         self.form = QFormLayout()
+        self.form.setSpacing(8)
+        self.form.setContentsMargins(2, 2, 8, 2)
         self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.form.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         self.form_container = QWidget()
@@ -73,6 +93,10 @@ class Workspace(QWidget):
         self.result_table.horizontalHeader().setStretchLastSection(True)
         self.result_table.verticalHeader().setVisible(False)
         self.result_table.setAccessibleName(f"{title} output items")
+        self.result_table.setAlternatingRowColors(True)
+        self.result_table.setWordWrap(False)
+        self.result_table.verticalHeader().setDefaultSectionSize(27)
+        self.result_table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.result_table.cellDoubleClicked.connect(self.copy_selected)
         copy_action = QAction(self.result_table)
         copy_action.setShortcut(QKeySequence.StandardKey.Copy)
@@ -80,18 +104,29 @@ class Workspace(QWidget):
         copy_action.triggered.connect(self.copy_selected)
         self.result_table.addAction(copy_action)
         self.result_views = QTabWidget()
-        self.result_views.addTab(self.result_table, "Results")
+        self._result_filter = QLineEdit()
+        self._result_filter.setPlaceholderText("Filter result fields")
+        self._result_filter.textChanged.connect(self.filter_results)
+        results_page = QWidget()
+        results_layout = QVBoxLayout(results_page)
+        results_layout.setContentsMargins(0, 6, 0, 0)
+        results_layout.addWidget(self._result_filter)
+        results_layout.addWidget(self.result_table)
+        self.result_views.addTab(results_page, "Results")
         self.result_views.addTab(self.output, "Text report")
         self.error = QLabel()
         self.error.setWordWrap(True)
         self.error.setObjectName("error")
         self.run_button = QPushButton("Run")
+        self.run_button.setObjectName("primary")
         self.run_button.setEnabled(False)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_calculation)
         self.status = QLabel("Ready")
-        self.copy_button = QPushButton("Copy result")
+        self.status.setWordWrap(True)
+        self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.copy_button = QPushButton("Copy all")
         self.copy_button.setEnabled(False)
         self.copy_button.clicked.connect(self.copy_result)
         self.copy_selected_button = QPushButton("Copy selected")
@@ -100,8 +135,7 @@ class Workspace(QWidget):
         actions = QHBoxLayout()
         actions.addWidget(self.run_button)
         actions.addWidget(self.cancel_button)
-        actions.addWidget(self.status)
-        actions.addStretch()
+        actions.addWidget(self.status, 1)
         actions.addWidget(self.copy_selected_button)
         actions.addWidget(self.copy_button)
         self._destination = QComboBox()
@@ -114,30 +148,48 @@ class Workspace(QWidget):
         self._transfer_button = QPushButton("Send to workspace")
         self._transfer_button.setEnabled(False)
         self._transfer_button.clicked.connect(self.request_transfer)
-        transfer = QHBoxLayout()
-        transfer.addWidget(self._destination)
-        transfer.addWidget(self._transfer_mode)
-        transfer.addWidget(self._transfer_button)
-        transfer.addStretch()
+        self._utilities = QWidget()
+        transfer = QGridLayout(self._utilities)
+        transfer.setContentsMargins(0, 0, 0, 0)
+        transfer.addWidget(self._destination, 0, 0)
+        transfer.addWidget(self._transfer_mode, 0, 1)
+        transfer.addWidget(self._transfer_button, 0, 2)
         self._export_format = QComboBox()
         self._export_format.addItems(["Text", "JSON", "CSV"])
         self._export_button = QPushButton("Export result")
         self._export_button.setEnabled(False)
         self._export_button.clicked.connect(lambda: self.export_report())
-        transfer.addWidget(self._export_format)
-        transfer.addWidget(self._export_button)
+        transfer.addWidget(self._export_format, 1, 1)
+        transfer.addWidget(self._export_button, 1, 2)
+        self._utilities.setVisible(False)
+        self._utility_toggle = QToolButton()
+        self._utility_toggle.setText("Reuse / export")
+        self._utility_toggle.setCheckable(True)
+        self._utility_toggle.toggled.connect(self._utilities.setVisible)
+        self.result_views.setCornerWidget(self._utility_toggle)
         layout = QVBoxLayout(self)
         heading = QLabel(title)
         heading.setObjectName("heading")
         subtitle = QLabel(description)
+        subtitle.setObjectName("subtitle")
         subtitle.setWordWrap(True)
         layout.addWidget(heading)
         layout.addWidget(subtitle)
-        layout.addWidget(self.form_scroll, 2)
-        layout.addLayout(actions)
-        layout.addLayout(transfer)
-        layout.addWidget(self.error)
-        layout.addWidget(self.result_views, 2)
+        input_panel = QWidget()
+        input_layout = QVBoxLayout(input_panel)
+        input_layout.setContentsMargins(0, 0, 0, 0)
+        input_layout.addWidget(self.form_scroll, 1)
+        input_layout.addLayout(actions)
+        input_layout.addWidget(self._utilities)
+        input_layout.addWidget(self.error)
+        self._splitter = QSplitter(Qt.Orientation.Vertical)
+        self._splitter.setChildrenCollapsible(False)
+        self._splitter.addWidget(input_panel)
+        self._splitter.addWidget(self.result_views)
+        self._splitter.setStretchFactor(0, 3)
+        self._splitter.setStretchFactor(1, 2)
+        self._splitter.setSizes([340, 240])
+        layout.addWidget(self._splitter, 1)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         self.error.clear()
@@ -146,7 +198,15 @@ class Workspace(QWidget):
         self._export_button.setEnabled(True)
         self.status.setText("Complete")
         self.output.setPlainText(render_report(report) if text is None else text)
-        self.report_fields = StructuredReport(report).fields
+        priorities = {key: index for index, key in enumerate((
+            "exact", "source_exact", "value", "outputs", "hexadecimal", "bytes",
+            "unsigned", "twos_complement", "absolute_error", "relative_error", "error_ulps",
+            "ulp", "classification", "format", "bits", "width", "signed",
+        ))}
+        self.report_fields = tuple(sorted(
+            StructuredReport(report).fields,
+            key=lambda field: priorities.get(field.path.split(".")[0], 99),
+        ))
         self.result_table.setColumnCount(2)
         self.result_table.setHorizontalHeaderLabels(["Representation", "Value"])
         self.result_table.setRowCount(len(self.report_fields))
@@ -155,12 +215,26 @@ class Workspace(QWidget):
             display = field.text if not isinstance(field.value, list) else (
                 f"{len(field.value)} items · Text report / Copy selected"
             )
+            if field.value is None:
+                display = "—"
             item = QTableWidgetItem(display[:4000])
+            item.setFont(self.output.font())
             item.setToolTip(display[:300])
             self.result_table.setItem(row, 1, item)
         self.copy_button.setEnabled(True)
         self.copy_selected_button.setEnabled(True)
+        self.filter_results()
         self.result_ready.emit(self.title, report)
+
+    def filter_results(self) -> None:
+        query = self._result_filter.text().casefold().strip()
+        for row in range(self.result_table.rowCount()):
+            values = [self.result_table.item(row, column) for column in (
+                range(self.result_table.columnCount())
+            )]
+            self.result_table.setRowHidden(row, bool(query) and not any(
+                query in item.text().casefold() for item in values if item is not None
+            ))
 
     def set_error(self, message: str) -> None:
         self.clear_output()
@@ -270,6 +344,31 @@ class Workspace(QWidget):
 
     def current_report(self) -> dict[str, object] | None:
         return self._report
+
+    def view_state(self) -> dict[str, object]:
+        toggles = {}
+        for name in ("_utility_toggle", "_show_fields", "_show_bits", "_show_special"):
+            widget = getattr(self, name, None)
+            if isinstance(widget, (QCheckBox, QToolButton)):
+                toggles[name] = widget.isChecked()
+        return {"splitter": self._splitter.sizes(), "toggles": toggles}
+
+    def restore_view_state(self, state: object) -> None:
+        if not isinstance(state, dict):
+            return
+        sizes = state.get("splitter")
+        if (isinstance(sizes, list) and len(sizes) == 2
+                and all(type(size) is int and 0 <= size <= 10000 for size in sizes)
+                and sum(sizes) > 0):
+            self._splitter.setSizes(sizes)
+        toggles = state.get("toggles")
+        if isinstance(toggles, dict):
+            for name, checked in toggles.items():
+                if name not in ("_utility_toggle", "_show_fields", "_show_bits", "_show_special"):
+                    continue
+                widget = getattr(self, name, None)
+                if isinstance(widget, (QCheckBox, QToolButton)) and isinstance(checked, bool):
+                    widget.setChecked(checked)
 
     def export_report(self, format_: str | None = None) -> None:
         report = self.current_report()

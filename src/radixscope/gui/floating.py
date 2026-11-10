@@ -1,5 +1,5 @@
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QToolButton, QVBoxLayout, QWidget
 
 from radixscope.core.ieee754 import IEEE754Value
 from radixscope.core.neighbors import adjacent_float, float_boundaries
@@ -24,14 +24,22 @@ class FloatNavigator(QWidget):
         row = QHBoxLayout()
         row.addWidget(self.previous)
         row.addWidget(self.next)
+        toggle = QToolButton()
+        toggle.setText("Boundaries")
+        toggle.setCheckable(True)
+        row.addWidget(toggle)
         row.addStretch()
-        boundaries = QHBoxLayout()
+        boundary_panel = QWidget()
+        boundaries = QHBoxLayout(boundary_panel)
+        boundaries.setContentsMargins(0, 0, 0, 0)
         boundaries.addWidget(self.boundary)
         boundaries.addWidget(self.jump)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(row)
-        layout.addLayout(boundaries)
+        layout.addWidget(boundary_panel)
+        boundary_panel.setVisible(False)
+        toggle.toggled.connect(boundary_panel.setVisible)
         self.clear()
 
     def set_value(self, value: IEEE754Value) -> None:

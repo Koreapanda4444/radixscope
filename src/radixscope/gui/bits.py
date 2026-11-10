@@ -118,7 +118,7 @@ class BitEditor(QWidget):
         self.refresh_buttons()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        columns = 8 if event.size().width() < 560 else 16
+        columns = 8 if event.size().width() < 450 else 16
         if columns != self.columns:
             self.columns = columns
             self.rebuild()

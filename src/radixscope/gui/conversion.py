@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QPushButt
 
 from radixscope.core import RoundingMode
 from radixscope.core.input_syntax import detect_input_syntax
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 
 
 def base_input(value: int = 10) -> QSpinBox:
@@ -26,7 +26,7 @@ class ConversionWorkspace(Workspace):
         self.source_base = base_input()
         self.targets = QLineEdit("2, 8, 10, 16")
         self.exact_output = QCheckBox(
-            "Exact recurring output · display limit: 1000 fractional digits"
+            "Exact expansion · 1000 digit display limit"
         )
         self.exact_output.setChecked(True)
         self.precision = QSpinBox()
@@ -36,14 +36,13 @@ class ConversionWorkspace(Workspace):
         self.rounding.addItems([mode.value for mode in RoundingMode])
         self.rounding.setCurrentText(RoundingMode.HALF_EVEN.value)
         self.form.addRow("Input", self.input)
-        self.form.addRow("Auto suggestion", self._syntax_hint)
-        self.form.addRow("Input detection", self._detect_button)
-        self.form.addRow("Mode", self.mode)
-        self.form.addRow("Source base", self.source_base)
+        self.form.addRow("Input format", control_row(self.mode, "Base", self.source_base,
+                                                     self._detect_button))
+        self.form.addRow(self._syntax_hint)
         self.form.addRow("Target bases", self.targets)
         self.form.addRow("Output", self.exact_output)
-        self.form.addRow("Fractional digits", self.precision)
-        self.form.addRow("Rounding", self.rounding)
+        self._rounding_row = control_row("Digits", self.precision, self.rounding)
+        self.form.addRow("Rounded output", self._rounding_row)
         self.exact_output.toggled.connect(self.update_controls)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.run_button.setText("Convert")
@@ -58,6 +57,7 @@ class ConversionWorkspace(Workspace):
         self.source_base.setEnabled(self.mode.currentText() == "Number")
         self.precision.setEnabled(not self.exact_output.isChecked())
         self.rounding.setEnabled(not self.exact_output.isChecked())
+        self.form.setRowVisible(self._rounding_row, not self.exact_output.isChecked())
 
     def calculate(self) -> None:
         self.start_calculation()

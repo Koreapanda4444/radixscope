@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 from radixscope.core.bitfields import inspect_bitfields
 from radixscope.core.byte_inspection import parse_byte_input
 from radixscope.gui.bitfields import BitfieldPanel
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 
 
 class ByteInspectorWorkspace(Workspace):
@@ -66,18 +66,22 @@ class ByteInspectorWorkspace(Workspace):
         self.byte_table.setMaximumHeight(240)
         self.byte_table.itemSelectionChanged.connect(self.select_range)
         self.form.addRow("Input", self.input)
-        self.form.addRow("Input format", self.input_format)
-        self.form.addRow("Format conversion", self.convert_input_button)
-        self.form.addRow("Byte order", self.byteorder)
-        self.form.addRow("Selection offset", self.offset)
-        self.form.addRow("Selection length", self.length)
+        self.form.addRow("Input format", control_row(self.input_format, "Bytes", self.byteorder))
+        self.form.addRow(self.convert_input_button)
+        self.form.addRow("Selection", control_row("Offset", self.offset, "Length", self.length))
         self.form.addRow("Selection mode", self.all_bytes)
         self.form.addRow("Interpret as", self.interpret_as)
         self.form.addRow("Byte view page", self._byte_page)
         self.form.addRow("Offset · Hex · ASCII", self.byte_table)
         self.form.addRow("Selected bytes", self.copy_bytes_button)
+        self._show_fields = QCheckBox("Show bitfield editor")
+        self.form.addRow(self._show_fields)
         self.bitfields = BitfieldPanel()
         self.form.addRow("Bitfield layout", self.bitfields)
+        self.form.setRowVisible(self.bitfields, False)
+        self._show_fields.toggled.connect(
+            lambda shown: self.form.setRowVisible(self.bitfields, shown)
+        )
         self.bitfields.pattern_requested.connect(self.apply_pattern)
         self.result_invalidated.connect(self.bitfields.clear)
         self.run_button.setText("Inspect bytes")

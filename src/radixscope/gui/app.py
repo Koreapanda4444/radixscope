@@ -75,8 +75,7 @@ class MainWindow(QMainWindow):
         self.navigation.setHeaderHidden(True)
         self.navigation.setRootIsDecorated(False)
         self.navigation.setIndentation(12)
-        self.navigation.setMinimumWidth(150)
-        self.navigation.setMaximumWidth(220)
+        self.navigation.setFixedWidth(180)
         self.navigation.setUniformRowHeights(True)
         self.navigation.setItemsExpandable(False)
         self._navigation_items: dict[int, QTreeWidgetItem] = {}
@@ -145,14 +144,6 @@ class MainWindow(QMainWindow):
         menu.addAction(self.recent_dock.toggleViewAction())
         self.recent_dock.toggleViewAction().setShortcut(QKeySequence("Ctrl+H"))
         self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
-        self.base_stylesheet = (
-            "QWidget { font-size: 13px; }"
-            "QLabel#heading { font-size: 22px; font-weight: 600; margin-top: 8px; }"
-            "QLabel#error { color: #d34a4a; }"
-            "QPushButton { padding: 7px 14px; }"
-            "QLineEdit, QSpinBox, QComboBox { padding: 5px; }"
-            "QTabWidget::pane { border: 0; }"
-        )
         self.restore_preferences()
         self.sync_navigation(self.tabs.currentIndex())
         self.refresh_history()
@@ -306,6 +297,10 @@ class MainWindow(QMainWindow):
             if isinstance(value, int) and not isinstance(value, bool) and 480 <= value <= 3000:
                 setter(value)
         self.apply_theme()
+        views = self.store.preferences.get("workspace_views")
+        if isinstance(views, dict):
+            for workspace in self.workspaces:
+                workspace.restore_view_state(views.get(workspace.title))
         self.recent_dock.setVisible(self.store.preferences.get("history_visible", False) is True)
 
     def resize_width(self, value: int) -> None:
@@ -321,6 +316,8 @@ class MainWindow(QMainWindow):
             "history_visible": self.recent_dock.isVisible(),
             "window_width": self.width(), "window_height": self.height(),
             "workspaces": {workspace.title: workspace.snapshot() for workspace in self.workspaces},
+            "workspace_views": {workspace.title: workspace.view_state()
+                                for workspace in self.workspaces},
         })
         try:
             self.store.save()
@@ -343,33 +340,68 @@ class MainWindow(QMainWindow):
     def apply_theme(self) -> None:
         theme = self.store.preferences.get("theme", "System")
         palette = QPalette(self.system_palette)
-        stylesheet = self.base_stylesheet
-        if theme in ("Dark", "Light"):
-            dark = theme == "Dark"
-            background = "#20242b" if dark else "#f5f6f8"
-            foreground = "#e8edf3" if dark else "#17202b"
-            base = "#151920" if dark else "#ffffff"
-            for role in (QPalette.ColorRole.Window, QPalette.ColorRole.Button):
-                palette.setColor(role, QColor(background))
-            text_roles = (
-                QPalette.ColorRole.WindowText,
-                QPalette.ColorRole.Text,
-                QPalette.ColorRole.ButtonText,
-            )
-            for role in text_roles:
-                palette.setColor(role, QColor(foreground))
-            palette.setColor(QPalette.ColorRole.Base, QColor(base))
-            palette.setColor(QPalette.ColorRole.Highlight, QColor("#3676c8"))
-            palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
-            border = "#495261" if dark else "#b7c0cc"
-            stylesheet += f"QWidget {{ color: {foreground}; background-color: {background}; }}"
-            stylesheet += (
-                "QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QListWidget {"
-                f"background-color: {base}; color: {foreground}; border: 1px solid {border}; }}"
-                "QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled { color: #8793a3; }"
-                f"QTabBar::tab:selected {{ background-color: {base}; }}"
-            )
+        dark = theme == "Dark" or (theme == "System" and palette.window().color().lightness() < 128)
+        background = "#171d27" if dark else "#f3f6fa"
+        foreground = "#e7edf6" if dark else "#182536"
+        base = "#101620" if dark else "#ffffff"
+        border = "#334258" if dark else "#c7d2e1"
+        header = "#243044" if dark else "#e7eef8"
+        muted = "#9eacc0" if dark else "#5d6c80"
+        blue = "#3275cb"
+        assets = Path(__file__).resolve().parents[1] / "assets"
+        up_icon = (assets / "ui-up.svg").as_posix()
+        down_icon = (assets / "ui-down.svg").as_posix()
+        check_icon = (assets / "ui-check.svg").as_posix()
+        for role in (QPalette.ColorRole.Window, QPalette.ColorRole.Button):
+            palette.setColor(role, QColor(background))
+        for role in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text,
+                     QPalette.ColorRole.ButtonText):
+            palette.setColor(role, QColor(foreground))
+            palette.setColor(QPalette.ColorGroup.Disabled, role, QColor(muted))
+        palette.setColor(QPalette.ColorRole.Base, QColor(base))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(background))
+        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(muted))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(blue))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
         self.setPalette(palette)
+        stylesheet = (
+            f"QWidget {{ font-size: 13px; color: {foreground}; background-color: {background}; }}"
+            "QLabel#heading { font-size: 22px; font-weight: 600; margin: 4px 0; }"
+            f"QLabel#subtitle {{ color: {muted}; margin-bottom: 4px; }}"
+            "QLabel#error { color: #c94e5a; }"
+            f"QPushButton, QToolButton {{ border: 1px solid {border}; border-radius: 4px;"
+            "padding: 5px 9px; min-height: 20px; }"
+            f"QPushButton:hover, QToolButton:hover {{ border-color: {blue}; }}"
+            f"QPushButton#primary {{ color: white; background-color: {blue};"
+            f"border-color: {blue}; }}"
+            f"QPushButton:disabled, QToolButton:disabled {{ color: {muted}; }}"
+            "QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QTableWidget,"
+            "QTreeWidget, QListWidget {"
+            f"background-color: {base}; color: {foreground}; border: 1px solid {border};"
+            "border-radius: 4px; padding: 3px; }"
+            f"QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border-color: {blue}; }}"
+            f"QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {{ color: {muted}; }}"
+            f"QCheckBox::indicator {{ width: 14px; height: 14px; border: 1px solid {muted}; }}"
+            f"QCheckBox::indicator:checked {{ background-color: {blue}; border-color: {blue};"
+            f'image: url("{check_icon}"); }}'
+            "QSpinBox::up-button, QSpinBox::down-button { width: 15px;"
+            f"background-color: {header}; border-left: 1px solid {border}; }}"
+            f'QSpinBox::up-arrow {{ width: 12px; height: 8px; image: url("{up_icon}"); }}'
+            "QSpinBox::down-arrow, QComboBox::down-arrow { width: 12px; height: 8px;"
+            f'image: url("{down_icon}"); }}'
+            "QHeaderView::section { border: 0; padding: 6px; font-weight: 600;"
+            f"background-color: {header}; color: {foreground};"
+            f"border-bottom: 1px solid {border}; }}"
+            f"QTableWidget {{ gridline-color: {border}; alternate-background-color: {background};"
+            f"selection-background-color: {blue}; selection-color: white; }}"
+            "QTreeWidget { border: 0; border-radius: 0; }"
+            "QTreeWidget::item { padding: 7px 4px; }"
+            f"QTreeWidget::item:selected {{ background-color: {blue}; color: white; }}"
+            "QTabWidget::pane { border: 0; }"
+            "QTabBar::tab { padding: 6px 10px; border: 0; }"
+            f"QTabBar::tab:selected {{ border-bottom: 2px solid {blue}; }}"
+            f"QSplitter::handle {{ background: {border}; height: 3px; }}"
+        )
         self.setStyleSheet(stylesheet)
 
     def closeEvent(self, event: QCloseEvent) -> None:

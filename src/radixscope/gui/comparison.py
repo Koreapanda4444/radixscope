@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QLabel,
@@ -16,7 +17,7 @@ from PySide6.QtWidgets import (
 from radixscope.core import ExactValue
 from radixscope.core.bitfields import BitfieldLayout
 from radixscope.gui.bits import BitEditor
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 
 
 class ComparisonWorkspace(Workspace):
@@ -61,14 +62,18 @@ class ComparisonWorkspace(Workspace):
         self.field_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.form.addRow("Left input", self.input)
         self.form.addRow("Right input", self.other_input)
-        self.form.addRow("Input format", self.input_format)
-        self.form.addRow("Byte order", self.byteorder)
+        self.form.addRow("Format / order", control_row(self.input_format, self.byteorder))
         self.form.addRow("Length policy", self.length_policy)
         self.form.addRow("Bitfield layout", self._layout_label)
         self.form.addRow(load, clear)
         self.form.addRow("Difference", self._summary)
+        self._show_bits = QCheckBox("Show bit differences")
+        self.form.addRow(self._show_bits)
         self.form.addRow("Left bits", self.left_bits)
         self.form.addRow("Right bits", self.right_bits)
+        for bit_view in (self.left_bits, self.right_bits):
+            self.form.setRowVisible(bit_view, False)
+        self._show_bits.toggled.connect(self.show_bits)
         self.form.addRow("Byte comparison page", self._page)
         self.form.addRow("Byte differences", self.byte_table)
         self.form.addRow("Field differences", self.field_table)
@@ -89,6 +94,10 @@ class ComparisonWorkspace(Workspace):
         self.byte_table.setRowCount(0)
         self.field_table.setRowCount(0)
         self._summary.clear()
+
+    def show_bits(self, shown: bool) -> None:
+        for editor in (self.left_bits, self.right_bits):
+            self.form.setRowVisible(editor, shown)
 
     def show_difference(self, title: str, report: dict[str, object]) -> None:
         left, right = str(report["left_bits"]), str(report["right_bits"])

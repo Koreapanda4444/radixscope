@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
-    QHBoxLayout,
+    QGridLayout,
     QLabel,
     QPushButton,
     QTableWidget,
@@ -48,9 +48,9 @@ class BitfieldPanel(QWidget):
         analyze.clicked.connect(self.analyze)
         save.clicked.connect(self.save_layout)
         load.clicked.connect(self.load_layout)
-        actions = QHBoxLayout()
-        for button in (add, remove, analyze, save, load):
-            actions.addWidget(button)
+        actions = QGridLayout()
+        for index, button in enumerate((add, remove, analyze, save, load)):
+            actions.addWidget(button, index // 3, index % 3)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         description = QLabel(

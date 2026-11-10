@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from radixscope.core import RoundingMode
 from radixscope.gui.conversion import base_input
-from radixscope.gui.widgets import Workspace
+from radixscope.gui.widgets import Workspace, control_row
 
 
 class BatchWorkspace(Workspace):
@@ -41,12 +41,11 @@ class BatchWorkspace(Workspace):
         self._summary = QLabel()
         self._summary.setWordWrap(True)
         self.form.addRow("Line input", self.input)
-        self.form.addRow("Input mode", self.mode)
-        self.form.addRow("Source base", self.source_base)
+        self.form.addRow("Input format", control_row(self.mode, "Base", self.source_base))
         self.form.addRow("Target bases", self.targets)
-        self.form.addRow("Fractional digits", self.precision)
         self.form.addRow("Output", self.exact_output)
-        self.form.addRow("Rounding", self.rounding)
+        self._rounding_row = control_row("Digits", self.precision, self.rounding)
+        self.form.addRow("Rounded output", self._rounding_row)
         self.form.addRow("Maximum rows", self.row_limit)
         self.form.addRow("Batch status", self._summary)
         self.mode.currentIndexChanged.connect(self.update_controls)
@@ -62,6 +61,7 @@ class BatchWorkspace(Workspace):
         self.source_base.setEnabled(self.mode.currentText() == "Number")
         self.precision.setEnabled(not self.exact_output.isChecked())
         self.rounding.setEnabled(not self.exact_output.isChecked())
+        self.form.setRowVisible(self._rounding_row, not self.exact_output.isChecked())
 
     def clear_batch(self) -> None:
         self._rows = []
@@ -84,6 +84,7 @@ class BatchWorkspace(Workspace):
                 self.result_table.setItem(row_index, column, item)
         self.result_table.resizeColumnsToContents()
         self.result_table.selectRow(0)
+        self.filter_results()
         message = f"{report['processed']} / {report['total']} rows · {report['errors']} errors"
         if report["limited"]:
             message += " · Limit reached; some inputs were not processed"
