@@ -1,9 +1,9 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QVBoxLayout, QWidget
 
-from radixscope.gui.i18n import LocalizedComboBox
 from radixscope.core.ieee754 import IEEE754Value
 from radixscope.core.neighbors import adjacent_float, float_boundaries
+from radixscope.gui.i18n import LocalizedComboBox
 
 
 class FloatNavigator(QWidget):

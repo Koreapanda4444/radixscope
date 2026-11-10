@@ -13,10 +13,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from radixscope.gui.i18n import localize, tr
 from radixscope.core.bitfields import BitField, BitfieldLayout, inspect_bitfields
 from radixscope.core.value import ExactValue
 from radixscope.gui.bits import BitEditor
+from radixscope.gui.i18n import localize, tr
 
 
 class BitfieldPanel(QWidget):

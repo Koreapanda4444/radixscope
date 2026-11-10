@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 
+from radixscope.gui.i18n import localize
+
 class BitEditor(QWidget):
     pattern_changed = Signal(object)
     page_size = 32
@@ -144,5 +146,4 @@ class BitEditor(QWidget):
             return
         self.pattern ^= 1 << index
         self.refresh_buttons()
-        self.pattern_changed.emit(self.pattern)from radixscope.gui.i18n import localize
-
+        self.pattern_changed.emit(self.pattern)
