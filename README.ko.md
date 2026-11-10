@@ -2,98 +2,101 @@
 
 한국어 | [English](README.md)
 
-RadixScope 2.1.0은 정확한 수를 2~36진법 사이에서 변환하고, 고정 비트 정수와
-IEEE 754 부동소수점의 비트 표현을 확인하는 도구입니다. 명령줄 인터페이스와
-PySide6 데스크톱 앱을 제공합니다.
-
-기존 Base-Converter를 2.0에서 RadixScope로 재작성하며 정확한 수 계산, 비트 분석,
-새 데스크톱 앱을 추가했습니다. 이전 앱의 설정과 기록은 가져오지 않습니다.
+RadixScope는 정확한 수 계산, 고정 비트 정수, 부동소수점 정밀도, 바이트와 비트필드를
+분석하는 데스크톱·명령줄 도구입니다. CLI와 PySide6 GUI가 같은 Python Core를 사용합니다.
 
 ## 설치와 실행
 
-Windows x64에서는 성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)의
-`RadixScope-windows-x64` 산출물을 내려받으면 됩니다. 산출물 ZIP을 풀고, 안에 있는
-`RadixScope-2.1.0-windows-x64.zip`도 푼 다음 `RadixScope/RadixScope.exe`를 실행하세요.
-`_internal`을 포함한 폴더 전체를 함께 유지해야 합니다. Python과 Qt가 포함되어 있습니다.
+Windows x64에서는 성공한
+[Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)의
+`RadixScope-windows-x64` 산출물을 내려받으세요. 산출물 압축을 풀면 설치 파일과
+압축형 패키지가 있습니다. 설치형은 바로가기와 제거 프로그램을 제공합니다.
+압축형은 내부 ZIP까지 푼 뒤 `RadixScope/RadixScope.exe`를 실행하며,
+`_internal`을 포함한 폴더 전체를 함께 유지해야 합니다. 두 형태 모두 Python과 Qt를 포함합니다.
 
-소스나 휠을 설치할 때는 Python 3.11 이상이 필요합니다. 저장소를 내려받은 폴더에서 실행하세요.
+Python 3.11 이상이 설치된 환경에서는 저장소 폴더에서 실행하세요.
 
 ```sh
 python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-명령줄과 Python API만 사용할 때는 `python -m pip install .`로 설치합니다.
+Core와 CLI만 설치하려면 `python -m pip install .`을 사용합니다. 별도 실행 의존성이 없습니다.
 설치 후 `radixscope`, `radixscope-gui` 명령을 사용할 수 있습니다.
-Windows에서는 위 명령의 `python` 대신 `py`를 사용해도 됩니다.
-
-```sh
-radixscope convert FF --from 16 --to 2 8 10 16
-radixscope expression "0x10 + 2#11 / 10#2" --to 2 10 16
-radixscope trace "1/3" --to 2 --json
-radixscope integer 127 --width 8 --signed --op add --operand 1 --json
-radixscope ieee encode "1/10" --width 32
-radixscope ieee decode 3F800000 --width 32
-```
-
-휠과 소스 배포 패키지는 성공한 [Quality 워크플로 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)의
-산출물에서 받을 수 있습니다. 패키지 설치 방법과 Linux 데스크톱 의존성은
-[설치 안내](docs/ko/install.md)를 참고하세요.
+가상환경, Linux 라이브러리, 업데이트, 휠 설치와 직접 빌드 방법은
+[설치 안내](docs/ko/install.md)에 정리되어 있습니다.
 
 ## 주요 기능
 
-- 정수, 유한소수, 분수, `0.(3)` 같은 순환소수의 정확한 표현
-- 여러 진법으로 동시 출력, 소수 자릿수 지정, 다섯 가지 반올림 방식
-- `base#digits`, `0b`, `0o`, `0x`를 사용하는 혼합 진법 수식과 정확한 사칙연산
-- 정수부 나눗셈과 소수부 곱셈 과정, 순환 구간 탐지
-- 임의 비트 폭의 부호 있는 정수와 부호 없는 정수, 2의 보수, 비트 연산
-- 범위와 오버플로 분석, 정확한 결과와 비트 폭에 맞춰 감싼 결과의 별도 표시
-- 빅 엔디언·리틀 엔디언 바이트, 엄격한 ASCII 변환과 출력 가능 문자 미리보기
-- 비정규수, 부호 있는 0, NaN을 포함하는 binary32·binary64 인코딩과 디코딩
-- 네 가지 데스크톱 작업 화면, 결과 복사, 테마, 옵션 저장, 개수 제한이 있는 최근 기록
-- 별도 프로세스에서 계산하고 취소하거나 입력 변경 시 이전 작업 중단
-- 정수·IEEE 754 비트 편집과 숫자·바이트 표현의 동기화
-- Python을 별도로 설치하지 않고 실행하는 Windows x64 데스크톱 ZIP
+- 2~36진법의 정확한 변환, 분수·순환소수·십진 과학적 표기법
+- 사칙연산·몫·나머지·비트 연산·시프트를 지원하는 정확한 수식 계산
+- 숫자·부호·비트·엔디언 바이트 표현을 함께 다루는 Number Inspector
+- 정확한 결과·오버플로·래핑 결과를 구분하는 고정 비트 정수 연산
+- binary16·bfloat16·binary32·binary64 인코딩, 원시 패턴 디코딩과 형식 비교
+- 유리수 기반 오차, ULP 간격, 인접 값, 비정규수 경계와 NaN 페이로드 분석
+- Hex·Binary·Base64·UTF-8 바이트 입력, 범위 선택, ASCII 미리보기와 비트필드 레이아웃
+- XOR, 변경 비트·바이트와 필드별 차이를 보여주는 패턴 비교
+- 일괄 변환, 기록 검색, 결과 재사용과 텍스트·JSON·CSV 내보내기
+- 한국어·영어 GUI, 라이트·다크 테마, 비트 편집과 취소 가능한 계산 프로세스
 
-IEEE 인코딩은 정확한 유리수를 목적 형식으로 직접 반올림하며, 가장 가까운 값 중
-동률이면 짝수를 선택합니다. 원시 비트 디코딩은 NaN 페이로드와 시그널링 비트를 보존합니다.
-Python `float`는 이미 이진수로 반올림된 값이므로 십진 입력의 정확도가 중요하면
-정확한 숫자 입력을 사용하세요.
+원시 재해석은 비트를 보존하며, 수치 변환은 목적 형식이 허용하는 범위에서 수학적 값을
+옮깁니다. IEEE 인코딩은 정확한 유리수를 목적 형식으로 직접 반올림하며 동률이면 짝수를
+선택합니다. Python `float`는 이미 이진수로 반올림된 값이므로 정확한 십진 입력에는
+문자열이나 `ExactValue`를 사용하세요.
+
+## CLI 예시
+
+```sh
+radixscope convert FF --from 16 --to 2 8 10 16
+radixscope convert "1.25e-3" --auto --to 10 16
+radixscope expression "(0xFF & 0x0F) << 2" --to 2 10 16
+radixscope trace "1/7" --to 2 --max-steps 12 --json
+radixscope inspect FF --base 16 --width 8 --signed --pattern
+radixscope integer 127 --width 8 --signed --op add --operand 1
+radixscope ieee encode "1/10" --format bfloat16 --json
+radixscope ieee compare "1/10"
+radixscope bytes "3F 80 00 00" --byteorder big
+radixscope compare "FF 00" "FE 80" --json
+radixscope batch --file numbers.txt --mode auto --to 2 10 16 --csv
+```
+
+모든 명령에 `--help`, `--json`이 있습니다. 일괄 변환 CSV에는 입력별 오류가 포함됩니다.
+자세한 옵션은 [CLI 안내](docs/ko/cli.md)를 참고하세요.
 
 ## Python API
 
 ```python
-from radixscope.core import ExactValue, convert_bases, encode_ieee754, evaluate_expression
+from radixscope.core import (
+    ExactValue, convert_bases, encode_ieee754, evaluate_expression, inspect_number,
+)
 
 value = evaluate_expression("0x10 + 2#11 / 10#2")
+assert value == ExactValue(35, 2)
 print(convert_bases(value, [2, 10, 16]))
-print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
+print(encode_ieee754(ExactValue(1, 10), "binary16").hexadecimal)
+assert inspect_number("FF", base=16, width=8, signed=True, raw=True).exact == ExactValue(-1)
 ```
 
-## 한국어 문서
+## 문서와 개발
 
-- [설치와 업데이트](docs/ko/install.md)
+- [설치와 패키징](docs/ko/install.md)
 - [명령줄 사용법](docs/ko/cli.md)
-- [데스크톱 앱 사용법](docs/ko/desktop.md)
-- [숫자 처리 명세](docs/ko/specification.md)
-
-정확한 진법 변환 결과의 순환 주기는 매우 길 수 있습니다. 명령줄의 정확한 출력에는
-길이 제한이 없으므로 출력 자릿수를 제한하려면 `--precision`을 지정하세요.
-데스크톱의 정확한 변환은 소수부를 최대 1000자리까지 표시하고, 잘린 결과임을 명시합니다.
-과정 화면에서는 단계 수 제한을 조절할 수 있습니다. 수식 계산과 정수 연산에는 임의 크기
-정수를 사용하므로 매우 큰 거듭제곱이나 입력은 시간과 메모리를 많이 사용할 수 있습니다.
-
-## 개발
+- [데스크톱 작업 화면과 기록](docs/ko/desktop.md)
+- [수치 모델·API·작업 한도](docs/ko/specification.md)
 
 ```sh
 python -m pip install -e ".[dev]"
 python -m ruff check src scripts packaging
 python -m mypy src scripts packaging
+python scripts/verify_numeric.py
+python -m radixscope.gui.verification
 python -m build
 ```
 
-Quality 워크플로는 Ubuntu와 Windows의 Python 3.11, 3.12, 3.13에서 코드 스타일과
-타입을 검사하고 CLI 버전 명령을 실행한 뒤 휠·소스 패키지를 빌드해 산출물로 저장합니다.
-PyPI 자동 게시는 설정되어 있지 않습니다. Windows 데스크톱 작업은 독립 실행 ZIP을
-빌드합니다. Windows에서 직접 빌드하려면 `python -m pip install -e ".[desktop-build]"`로
-설치한 뒤 `python scripts/build_desktop.py`를 실행하세요.
+Quality는 Ubuntu와 Windows의 Python 3.11~3.13에서 검사하고 휠·소스 패키지를 빌드합니다.
+Windows 데스크톱은 압축 해제 후 실행, 설치 후 실행과 제거까지 검증합니다.
+산출물은 Actions 실행에 첨부됩니다.
+
+정확한 계산에도 작업 한도는 있습니다. 전개·거듭제곱·과정·바이트 버퍼·일괄 입력에
+각각 한도를 적용합니다. GUI는 부분 전개를 명시하며, 제한 때문에 원래 유리수를
+자동으로 바꾸지는 않습니다. 구체적인 기준은 수치 처리 명세를 참고하세요.

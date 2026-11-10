@@ -1,20 +1,30 @@
-# 설치
+# 설치와 패키징
 
-[한국어 README](../../README.ko.md) | [English](../install.md)
+한국어 | [English](../install.md)
 
-소스·휠 설치에는 Python 3.11 이상이 필요합니다. Windows에서는 `python` 대신 `py`를
-사용할 수 있습니다. 아래 데스크톱 ZIP은 Python을 별도로 설치하지 않아도 됩니다.
-
-## Windows 데스크톱 ZIP
+## Windows x64
 
 성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)에서
-`RadixScope-windows-x64` 산출물을 내려받으세요. 산출물 ZIP과 그 안의
-`RadixScope-2.1.0-windows-x64.zip`을 풀고 `RadixScope/RadixScope.exe`를 실행합니다.
-Python과 Qt가 포함되어 있어서 Python이나 pip를 별도로 설치할 필요가 없습니다.
-`_internal` 폴더는 실행 파일 옆에 유지해야 하며, 업데이트는 새 폴더에 압축을 풀어서 합니다.
-설정은 Python으로 설치한 앱과 같은 사용자별 앱 데이터 폴더에 저장합니다.
+`RadixScope-windows-x64`를 내려받고 Actions 산출물의 압축부터 풀어 주세요.
 
-## 저장소에서 설치
+| 패키지 | 사용 방법 |
+| --- | --- |
+| `RadixScope-*-windows-x64-setup.exe` | 현재 사용자용으로 설치하고 시작 메뉴 바로가기와 제거 프로그램 제공 |
+| `RadixScope-*-windows-x64.zip` | 압축을 풀고 `RadixScope/RadixScope.exe` 실행 |
+
+두 형태 모두 Python 런타임, Qt, 아이콘, 한국어·영어 리소스, 문서와 제삼자 라이선스
+고지를 포함합니다. 압축형은 EXE만 옮기지 말고 폴더 전체를 유지하세요.
+기본 사용자 설치에는 관리자 권한이 필요하지 않습니다. 바탕화면 바로가기는 설치 중
+선택할 수 있습니다. Windows의 설치된 앱 목록이나 `unins000.exe`로 제거합니다.
+
+설정은 Qt의 사용자별 앱 데이터 디렉터리 아래
+`Koreapanda4444/RadixScope/state.json`에 별도로 보관합니다. 제거 시 이 사용자 데이터는
+지우지 않습니다. 압축형 업데이트는 앱을 닫고 새 폴더에 푸세요.
+설치형 업데이트는 앱을 닫은 뒤 같은 설치 경로에 설치 파일을 실행합니다.
+
+## Python 설치
+
+소스와 휠 배포본에는 Python 3.11 이상이 필요합니다.
 
 ```sh
 git clone https://github.com/Koreapanda4444/radixscope.git
@@ -22,9 +32,8 @@ cd radixscope
 python -m venv .venv
 ```
 
-Windows 명령 프롬프트에서는 `.venv\Scripts\activate`, PowerShell에서는
-`.venv\Scripts\Activate.ps1`, Linux에서는 `source .venv/bin/activate`로 가상 환경을
-활성화합니다. 이후 다음 명령을 실행하세요.
+Windows 명령 프롬프트에서는 `.venv\Scripts\activate`,
+Linux에서는 `source .venv/bin/activate`로 가상환경을 활성화한 뒤 실행하세요.
 
 ```sh
 python -m pip install --upgrade pip
@@ -32,57 +41,52 @@ python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-외부 의존성 없는 코어와 명령줄만 설치하려면 `python -m pip install .`을 사용합니다.
-`gui` 추가 옵션은 PySide6와 Qt를 설치합니다. PySide6가 없으면 데스크톱 실행 명령이
-필요한 추가 옵션을 안내합니다.
-
-## 배포 패키지에서 설치
-
-GitHub Actions에서 성공한 [Quality 실행](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)을
-열고 패키지 산출물을 내려받은 다음 ZIP을 풉니다. 휠 파일이 있는 폴더에서 실행하세요.
-
-```sh
-python -m pip install "radixscope-2.1.0-py3-none-any.whl[gui]"
-radixscope-gui
-```
-
-명령줄만 필요하면 `[gui]`를 생략합니다. 배포 파일은 Python 패키지이므로 Python이
-필요합니다. 독립 실행형 데스크톱 ZIP은 위에서 설명한 별도 산출물입니다.
-
-## Linux 데스크톱 라이브러리
-
-Qt는 화면 없는 환경에서 불러올 때도 시스템 그래픽 라이브러리가 필요합니다.
-Ubuntu/Debian에서는 데스크톱 그래픽 라이브러리를 설치할 수 있습니다.
-
-```sh
-sudo apt-get update
-sudo apt-get install -y libegl1 libopengl0
-```
-
-Qt의 XCB 플랫폼으로 데스크톱을 실행하는 환경에서는 `libxcb-cursor0`와 일반적인
-X11 런타임 라이브러리도 필요할 수 있습니다. 화면 없는 실행에는
-`QT_QPA_PLATFORM=offscreen`을 사용합니다. 이 설정에서는 데스크톱 창이 열리지 않습니다.
-
-## 기존 저장소 업데이트
+Core·CLI만 필요하면 `python -m pip install .`로 설치합니다.
+내려받은 휠은 실제 파일명을 pip에 전달하고, GUI 의존성도 필요하면 따옴표 안의 파일명
+뒤에 `[gui]`를 붙이세요. 휠·소스 압축 파일은 Actions의
+`packages-<os>-py<python>` 산출물에 있습니다. 독립 실행 Windows 패키지와 달리 Python이 필요합니다.
 
 ```sh
 git pull --ff-only origin main
 python -m pip install --upgrade ".[gui]"
-python -m radixscope.gui
+radixscope-gui
 ```
 
-설정과 최근 입력은 Qt의 사용자별 앱 데이터 폴더에 있는
-`Koreapanda4444/RadixScope/state.json`에 저장합니다.
+GUI 의존성에서는 [싱글턴 참조 카운트 오류](https://qt-project.atlassian.net/browse/PYSIDE-3474)가
+있는 PySide6 6.12.0을 제외합니다. 프로젝트의 의존성 조건에 따라 설치하세요.
 
-사용 방법은 [데스크톱 안내](desktop.md)와 [명령줄 안내](cli.md)를 참고하세요.
+## Linux 그래픽 라이브러리
 
-## 데스크톱 ZIP 직접 빌드
+Qt는 화면 없이 실행할 때도 시스템 그래픽 라이브러리가 필요합니다.
+Ubuntu·Debian에서는 다음과 같이 설치합니다.
 
-Windows x64에서 Python 3.12로 실행합니다.
+```sh
+sudo apt-get update
+sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
+```
+
+XCB를 사용하는 데스크톱 환경에는 `libxcb-cursor0`과 배포판의 일반 X11 라이브러리가
+추가로 필요할 수 있습니다. `QT_QPA_PLATFORM=offscreen`은 창을 표시하지 않고 통합 검증을 실행합니다.
+
+## 직접 빌드와 검증
+
+Windows x64의 Python 3.12 환경을 사용합니다. 설치형에는 Inno Setup 6.3 이상이 필요하며,
+`ISCC`를 PATH에 추가하거나 기본 Inno Setup 6 설치 경로를 사용하세요.
 
 ```sh
 python -m pip install -e ".[desktop-build]"
-python scripts/build_desktop.py
+python scripts/build_desktop.py --installer
+python scripts/verify_windows.py
 ```
 
-ZIP은 `dist/`에 생성합니다. 압축을 풀고 `RadixScope/RadixScope.exe`를 실행하세요.
+`--installer`를 빼면 압축형 ZIP만 빌드합니다. 결과는 `dist/`에 생성합니다.
+PyInstaller로 런타임을 묶고, 빌드 스크립트는 의존성의 라이선스 파일을
+`licenses/`에 보존합니다.
+
+검증은 실제 ZIP을 임시 경로에 풀어 모든 화면을 실행하고, 다른 임시 경로에 설치한 앱에서
+같은 검사를 수행한 뒤 제거합니다. 한국어·영어 상태, 취소, 설정, 런타임과 아이콘을 확인합니다.
+JSON 결과와 설치 로그는 `build/desktop/verification/`에 저장하며,
+CI에서는 `Windows-distribution-verification` 산출물로 제공합니다.
+CI는 Windows EXE 제품 메타데이터도 확인합니다.
+
+소스 검사 명령은 [README](../../README.ko.md)를 참고하세요.

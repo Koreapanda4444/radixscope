@@ -1,4 +1,4 @@
-# RadixScope v2 specification
+# Numeric models and API
 
 English | [한국어](ko/specification.md)
 
@@ -9,7 +9,7 @@ English | [한국어](ko/specification.md)
 - Core arithmetic is exact and does not use binary floating-point values.
 - Leading and trailing whitespace is ignored. Internal whitespace is invalid.
 - Every digit must be valid for the selected base.
-- Zero is always normalized to a positive sign.
+- Rational zero has no negative sign; IEEE raw patterns preserve signed zero.
 
 ## Digit alphabet
 
@@ -31,7 +31,8 @@ integer   = sign? digit+
 finite    = sign? digit+ "." digit+
 ratio     = integer "/" integer
 recurring = sign? digit+ "." digit* "(" digit+ ")"
-number    = ratio | recurring | finite | integer
+scientific = (integer | finite | recurring) ("e" | "E") sign? decimal_digit+
+number    = ratio | scientific | recurring | finite | integer
 ```
 
 Examples:
@@ -47,6 +48,9 @@ Examples:
 | `0.(01)` | 2 | `1/3` |
 
 Both sides of a ratio use the selected base. A zero denominator is invalid.
+Scientific notation applies only in base 10, including recurring mantissas:
+`1.25e-3` is `1/800` and `0.(3)e2` is `100/3`. In base 16, `1E3` is `483`.
+`parse_scientific` accepts a decimal integer exponent, not a ratio mantissa.
 
 ## Exact value model
 
@@ -72,7 +76,8 @@ Unprefixed literals use base 10. Prefixes `0b`, `0o` and `0x` select bases 2, 8 
 prefixes and digits are case-insensitive. `base#digits` selects any base from 2 through 36,
 with the base label always written in decimal. Finite and recurring fractions use the same
 syntax as `parse_number`: `0xA.F`, `2#0.(01)` and `0.1(6)` are exact values.
-An integer part is required; `.5` and `0x.F` are not accepted. Scientific notation is unsupported.
+An integer part is required; `.5` and `0x.F` are not accepted.
+Decimal literals support scientific notation; explicit nondecimal bases retain `E` as a digit.
 
 `parse_literal` accepts an optional leading sign and outer whitespace for a single literal.
 In expressions, signs are unary operators. The slash is always division between two literals,
@@ -104,14 +109,24 @@ The `**` operator is emitted as one power token rather than two multiplication t
 All literals and intermediate results remain exact rational values.
 
 ```text
-expression = product (("+" | "-") product)*
-product    = unary (("*" | "/") unary)*
-unary      = ("+" | "-") unary | power
+expression = bit_or
+bit_or     = bit_xor ("|" bit_xor)*
+bit_xor    = bit_and ("^" bit_and)*
+bit_and    = shift ("&" shift)*
+shift      = sum (("<<" | ">>") sum)*
+sum        = product (("+" | "-") product)*
+product    = unary (("*" | "/" | "//" | "%") unary)*
+unary      = ("+" | "-" | "~") unary | power
 power      = primary ("**" unary)?
 primary    = literal | "(" expression ")"
 ```
 
-Addition, subtraction, multiplication and division associate left to right.
+Operators other than power associate left to right. Precedence follows Python.
+`//` floors an exact quotient; `%` satisfies `a == (a // b) * b + a % b`, including
+fractional operands and negative values. Bitwise operations and shifts require
+integer-valued rationals; shifts require a nonnegative integer count.
+Expression integers are unbounded by a selected machine width, subject to the work budget.
+For masking/wrapping behavior, use `FixedWidthInteger`.
 Power associates right to left: `10#2**10#3**10#2` is `512`.
 Power binds tighter than a leading sign: `-10#2**10#2` is `-4`.
 Exponents must evaluate to integers; negative exponents produce exact reciprocals.
@@ -123,7 +138,8 @@ Desktop conversion displays at most 1000 fractional digits in exact mode and lab
 expansions with an ellipsis and the affected bases. The trace workspace has an adjustable
 step limit. `trace_value(..., max_steps=...)` preserves the original rational value and sets
 `complete=False` when that limit is reached before termination or recurrence is established.
-The core's default remains unlimited; partial traces never claim to terminate.
+Without an explicit step limit, Core still enforces its expansion and 10000-step
+work budgets. Partial traces never claim to terminate.
 
 ## Fixed-width integer model
 
@@ -175,8 +191,8 @@ values it fills with zero. `logical_right_shift` always fills with zero, preserv
 result's declared format. Shift counts must be nonnegative integers, excluding booleans.
 Counts at least the width discard all shifted bits: left and logical right shifts give
 zero, while arithmetic right shift gives `-1` for a negative signed value.
-These operations apply to `FixedWidthInteger` values; the rational expression grammar
-continues to support only its documented arithmetic operators.
+These masking rules apply to `FixedWidthInteger`. Integer-valued expression operands
+also support bitwise operators, but do not inherit a fixed-width mask.
 
 ## Endian byte and ASCII representations
 
@@ -199,10 +215,18 @@ they reject non-ASCII text or bytes rather than substituting characters.
 
 ## IEEE 754 decoding
 
-`decode_ieee754(pattern, width=64)` interprets an unsigned raw binary32 or binary64
-pattern without changing any bits. `IEEEFormat` describes the 23/52 fraction bits,
-8/11 exponent bits and 127/1023 exponent bias. Other formats are rejected.
-`decode_ieee754_bytes` requires exactly four or eight bytes with explicit byte order.
+`decode_ieee754(pattern, width=64)` preserves an unsigned raw pattern. The width
+argument accepts existing integer widths or a named format. Use `"bfloat16"` or
+`IEEEFormat.BFLOAT16` to distinguish bfloat16 from binary16. `.bit_width` is the
+physical size; the enum's internal numeric ID for bfloat16 is not a bit count.
+`decode_ieee754_bytes` requires the exact format byte count and explicit byte order.
+
+| Format | Total bits | Exponent bits | Fraction bits | Bias |
+| --- | ---: | ---: | ---: | ---: |
+| binary16 | 16 | 5 | 10 | 15 |
+| bfloat16 | 16 | 8 | 7 | 127 |
+| binary32 | 32 | 8 | 23 | 127 |
+| binary64 | 64 | 11 | 52 | 1023 |
 
 The immutable `IEEE754Value` exposes sign, exponent and fraction fields, padded binary
 and hexadecimal text, and classification as zero, subnormal, normal, infinity or NaN.
@@ -239,6 +263,99 @@ host NaNs become canonical quiet NaNs with their sign preserved.
 a signaling NaN only when the payload is nonzero. Payloads must fit the chosen format;
 they are rejected instead of truncated. Non-NaN special values cannot carry a payload.
 Raw decoding and byte serialization remain the lossless path for existing NaN patterns.
+
+## Unified inspection and precision
+
+`inspect_number(text, base=10, width=32, signed=False, data_type="integer",
+raw=False, byteorder="big")` returns an immutable `NumberInspection`.
+Its `exact`, `pattern`, `width`, `outputs` and `data` link mathematical,
+bit and byte views. Numeric float input retains `source_exact`; raw input
+decodes without rounding. Signed integer input and raw-pattern input remain distinct.
+
+`analyze_float_precision(source, encoded)` compares the original exact rational
+with the actual encoded rational. Absolute error, relative error and ULP-scaled error
+use rational arithmetic. Relative error at source zero and nonfinite errors are
+undefined and represented by `None`, rather than invented finite values.
+`adjacent_float(value, "up"/"down")` returns a neighbor when one exists;
+`float_boundaries(format)` provides named boundary patterns.
+
+`compare_float_formats` encodes the same source directly in all four formats.
+Intermediate binary32/binary64 conversions are checked separately for double rounding.
+`convert_ieee754` preserves sign and special-value information; a NaN payload that
+does not fit the destination is rejected instead of silently truncated.
+
+```python
+from radixscope.core import ExactValue, analyze_float_precision, encode_ieee754
+
+source = ExactValue(1, 10)
+encoded = encode_ieee754(source, "binary32")
+analysis = analyze_float_precision(source, encoded)
+assert analysis.absolute_error == ExactValue(1, 671088640)
+assert analysis.error_ulps == ExactValue(1, 5)
+```
+
+## Raw buffers, fields and differences
+
+`parse_byte_input` accepts Hex, Binary, Base64 or UTF-8 and returns bytes.
+`select_bytes` validates offset/length and returns a `ByteInterpretation`
+with signed/unsigned integers, ASCII/UTF-8 previews and compatible float interpretations.
+UTF-8 replacement previews do not modify the buffer; `utf8_valid` distinguishes invalid input.
+
+`BitField(name, offset, width, signed=False)` counts from LSB 0 after endian decoding.
+`inspect_bitfields` rejects overlaps, duplicate names and out-of-range fields.
+`BitfieldLayout.to_json/from_json` uses schema 1 and explicit `lsb0` numbering.
+`compare_binary` rejects unequal byte lengths by default; explicit zero extension
+pads at the most-significant end for the selected byte order. It computes XOR,
+complete counts and field differences, while marking bounded position lists as partial.
+
+```python
+from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input
+
+data = parse_byte_input("FF 80")
+layout = BitfieldLayout(16, (BitField("low", 0, 8, True), BitField("high", 8, 8)))
+values = inspect_bitfields(int.from_bytes(data, "big"), 16, layout.fields)
+assert values[0].integer.value == -128
+assert BitfieldLayout.from_json(layout.to_json()) == layout
+```
+
+## Batch and structured reports
+
+`convert_batch` processes nonempty lines with number/expression/auto modes, retaining
+line numbers and independent errors. A callback can cancel Core processing; the GUI
+can also terminate its worker process. Output limits produce an explicit limited result.
+The CLI exposes file/stdin input and CSV/JSON; GUI exports additionally support text.
+
+`StructuredReport` and `ReportField` provide typed access to exact values, patterns,
+bytes and flattened display fields. Source report keys remain compatible and independent
+of GUI language. JSON-safe export keeps ordinary integer fields numeric, emitting exact
+decimal strings only when values exceed Python's active integer-string threshold.
+
+## Resource and state policy
+
+Work limits are separate from numeric range and overflow checks. Exceeding a work
+budget reports an error or an explicitly partial result; no numeric value is silently
+clamped. Use rounded output or a bounded trace for long recurring expansions.
+
+| Operation | Work limit |
+| --- | --- |
+| Numeric, expression and batch input | 100000 characters |
+| Guarded computed widths, powers and shifts | 2000000-bit budget |
+| Complete fractional expansion | 100000 digits and a 64 MiB remainder-bit budget |
+| Trace | 10000 steps per phase; optional smaller fractional `max_steps` |
+| GUI exact-conversion preview | 1000 fractional digits, explicitly partial when limited |
+| Byte buffer | 65536 bytes |
+| Bitfield layout | 256 fields; JSON at most 1 MiB |
+| Interactive byte bitfield editing | 512 selected bytes |
+| Batch | 1000 nonempty rows; 2 MiB formatted content |
+| Desktop worker response | 8 MiB |
+| Settings | Schema 1; 32 MiB file; at most 100 history entries |
+| Cached history result | 256 KiB per entry |
+
+The remainder-bit budget estimates stored numeric remainders; it is not a total process
+memory cap. Python integer/rational objects remain exact within accepted work.
+Settings and exports use atomic replacement. Failed saves preserve the previous file.
+Workspace snapshots use canonical control values; theme, language and splitter changes
+do not invalidate an otherwise current calculation.
 
 ## Errors
 

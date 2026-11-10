@@ -1,4 +1,4 @@
-# RadixScope v2 숫자 처리 명세
+# 수치 모델과 API
 
 [한국어 README](../../README.ko.md) | [English](../specification.md)
 
@@ -32,7 +32,8 @@ integer   = sign? digit+
 finite    = sign? digit+ "." digit+
 ratio     = integer "/" integer
 recurring = sign? digit+ "." digit* "(" digit+ ")"
-number    = ratio | recurring | finite | integer
+scientific = (integer | finite | recurring) ("e" | "E") sign? decimal_digit+
+number    = ratio | scientific | recurring | finite | integer
 ```
 
 | 입력 | 진법 | 정확한 값 |
@@ -46,6 +47,9 @@ number    = ratio | recurring | finite | integer
 | `0.(01)` | 2 | `1/3` |
 
 분수의 분자와 분모는 모두 선택한 진법을 사용합니다. 분모 0은 허용하지 않습니다.
+과학적 표기는 10진법에만 적용하며 순환 가수도 받습니다.
+`1.25e-3`은 `1/800`, `0.(3)e2`는 `100/3`입니다. 16진법의 `1E3`은 `483`입니다.
+`parse_scientific`의 지수는 십진 정수이며 분수 형태의 가수는 받지 않습니다.
 
 ## 정확한 수 모델
 
@@ -71,7 +75,8 @@ number    = ratio | recurring | finite | integer
 접두사와 숫자는 대소문자를 구분하지 않습니다. `base#digits`는 2~36진법을 선택하고,
 `base` 부분은 항상 10진수로 씁니다. 유한소수와 순환소수는 `parse_number`와 같은
 문법을 사용하므로 `0xA.F`, `2#0.(01)`, `0.1(6)`은 정확한 값입니다.
-정수부가 필수이므로 `.5`, `0x.F`는 허용하지 않습니다. 지수 표기법은 지원하지 않습니다.
+정수부가 필수이므로 `.5`, `0x.F`는 허용하지 않습니다.
+십진 리터럴은 과학적 표기를 지원하며 명시한 다른 진법의 `E`는 숫자로 유지합니다.
 
 `parse_literal`은 단일 리터럴의 앞 부호와 바깥 공백을 허용합니다.
 수식에서 부호는 단항 연산자입니다. 슬래시는 각자 진법을 갖는 두 리터럴 사이의
@@ -103,14 +108,24 @@ assert evaluate_expression("(0x10 + 2) ** -2") == ExactValue(1, 324)
 합칩니다. 모든 리터럴과 중간 결과는 정확한 유리수로 유지합니다.
 
 ```text
-expression = product (("+" | "-") product)*
-product    = unary (("*" | "/") unary)*
-unary      = ("+" | "-") unary | power
+expression = bit_or
+bit_or     = bit_xor ("|" bit_xor)*
+bit_xor    = bit_and ("^" bit_and)*
+bit_and    = shift ("&" shift)*
+shift      = sum (("<<" | ">>") sum)*
+sum        = product (("+" | "-") product)*
+product    = unary (("*" | "/" | "//" | "%") unary)*
+unary      = ("+" | "-" | "~") unary | power
 power      = primary ("**" unary)?
 primary    = literal | "(" expression ")"
 ```
 
-덧셈·뺄셈·곱셈·나눗셈은 왼쪽부터 결합합니다. 거듭제곱은 오른쪽부터 결합하므로
+거듭제곱 외 연산은 왼쪽부터 결합하고 우선순위는 Python을 따릅니다.
+`//`는 정확한 몫을 내림하며 `%`는 분수·음수에서도 `a == (a // b) * b + a % b`를 만족합니다.
+비트 연산·시프트는 정수 값의 유리수만 받고 시프트 횟수는 0 이상의 정수여야 합니다.
+수식 정수에는 자료형 폭이 없으며 계산 작업 한도가 적용됩니다.
+폭에 따른 마스킹·래핑은 `FixedWidthInteger`를 사용합니다.
+거듭제곱은 오른쪽부터 결합하므로
 `10#2**10#3**10#2`는 `512`입니다. 거듭제곱이 앞 부호보다 우선하므로
 `-10#2**10#2`는 `-4`입니다. 지수는 계산 결과가 정수여야 하며 음의 지수는
 정확한 역수를 만듭니다. 0의 음의 거듭제곱과 0으로 나누기는 허용하지 않습니다.
@@ -120,7 +135,7 @@ primary    = literal | "(" expression ")"
 데스크톱의 정확한 변환은 소수부를 최대 1000자리까지 표시하고 부분 전개에는
 말줄임표와 해당 진법을 표시합니다. 과정 화면에서는 단계 제한을 조절할 수 있습니다.
 `trace_value(..., max_steps=...)`는 원래 유리수를 보존하고, 전개 종료나 순환 확인 전에
-제한에 도달하면 `complete=False`로 표시합니다. 코어의 기본 동작에는 제한이 없습니다.
+제한에 도달하면 `complete=False`로 표시합니다. 명시적 단계 제한이 없어도 Core의 전개 한도와 10000단계 작업 한도를 적용합니다.
 부분 과정은 유한소수라고 판정하지 않습니다.
 
 ## 고정 비트 정수 모델
@@ -173,8 +188,8 @@ primary    = literal | "(" expression ")"
 형식을 유지합니다. 시프트 횟수는 불리언을 제외한 음이 아닌 정수여야 합니다.
 횟수가 폭 이상이면 이동한 비트는 모두 사라집니다. 왼쪽 시프트와 논리 오른쪽 시프트는
 0이 되며, 음의 부호 있는 값의 산술 오른쪽 시프트는 `-1`이 됩니다.
-이 연산은 `FixedWidthInteger`에 적용합니다. 유리수 수식 문법은 문서에 적힌
-산술 연산자만 지원합니다.
+이 마스킹 규칙은 `FixedWidthInteger`에 적용합니다. 정수 값의 수식에도 비트 연산을
+지원하지만 고정 폭 마스크는 적용하지 않습니다.
 
 ## 엔디언 바이트와 ASCII 표현
 
@@ -198,10 +213,18 @@ ASCII 미리보기를 반환합니다. 미리보기는 `20`~`7E`의 출력 가�
 
 ## IEEE 754 디코딩
 
-`decode_ieee754(pattern, width=64)`는 부호 없는 원시 binary32 또는 binary64 패턴을
-비트 변경 없이 해석합니다. `IEEEFormat`은 23/52비트 가수부, 8/11비트 지수부,
-127/1023 지수 바이어스를 정의합니다. 다른 형식은 거부합니다.
-`decode_ieee754_bytes`는 바이트 순서를 명시하며 정확히 4바이트 또는 8바이트를 받습니다.
+`decode_ieee754(pattern, width=64)`는 부호 없는 원시 패턴을 비트 변경 없이 해석합니다.
+기존 정수 폭과 형식 이름을 받으며 bfloat16은 `"bfloat16"` 또는
+`IEEEFormat.BFLOAT16`으로 binary16과 구분합니다. 실제 크기는 `.bit_width`입니다.
+bfloat16 열거형의 내부 숫자 ID는 비트 수가 아닙니다.
+`decode_ieee754_bytes`는 바이트 순서를 명시하며 형식에 맞는 정확한 바이트 수를 받습니다.
+
+| 형식 | 전체 비트 | 지수부 | 가수부 | 바이어스 |
+| --- | ---: | ---: | ---: | ---: |
+| binary16 | 16 | 5 | 10 | 15 |
+| bfloat16 | 16 | 8 | 7 | 127 |
+| binary32 | 32 | 8 | 23 | 127 |
+| binary64 | 64 | 11 | 52 | 1023 |
 
 불변 `IEEE754Value`는 부호·지수·가수부 필드, 폭을 맞춘 이진·16진 문자열,
 0·비정규수·정규수·무한대·NaN 분류를 제공합니다. 유한한 `exact` 값은 가장 작은
@@ -242,6 +265,98 @@ NaN의 `payload`에는 선행 quiet 비트가 포함되지 않습니다. `quiet=
 0이 아닐 때만 signaling NaN을 만듭니다. 페이로드는 선택한 형식에 맞아야 하며
 넘치는 값을 잘라내지 않고 거부합니다. NaN이 아닌 특수값에는 페이로드를 넣을 수 없습니다.
 기존 NaN 패턴을 손실 없이 다루려면 원시 디코딩과 바이트 직렬화를 사용하세요.
+
+## 통합 분석과 정밀도
+
+`inspect_number(text, base=10, width=32, signed=False, data_type="integer",
+raw=False, byteorder="big")`는 불변 `NumberInspection`을 반환합니다.
+`exact`, `pattern`, `width`, `outputs`, `data`가 수학적 값·비트·바이트를 연결합니다.
+부동소수점 수치 입력에는 `source_exact`를 유지하고 원시 입력은 반올림 없이 디코딩합니다.
+부호 있는 정수의 수치 입력과 패턴 입력은 구분합니다.
+
+`analyze_float_precision(source, encoded)`는 원래 정확한 유리수와 실제 인코딩된
+유리수를 비교합니다. 절대·상대·ULP 단위 오차는 유리수로 계산합니다.
+원본 0의 상대 오차나 비유한 값의 오차처럼 정의하지 못하는 항목은 `None`입니다.
+`adjacent_float(value, "up"/"down")`은 존재하는 인접 값을,
+`float_boundaries(format)`은 이름별 경계 패턴을 제공합니다.
+
+`compare_float_formats`는 같은 원본을 네 형식으로 직접 인코딩합니다.
+binary32·binary64를 거치는 변환은 이중 반올림 차이를 따로 확인합니다.
+`convert_ieee754`는 부호와 특수값 정보를 보존하며,
+목적 형식에 들어가지 않는 NaN 페이로드는 잘라내지 않고 거부합니다.
+
+```python
+from radixscope.core import ExactValue, analyze_float_precision, encode_ieee754
+
+source = ExactValue(1, 10)
+encoded = encode_ieee754(source, "binary32")
+analysis = analyze_float_precision(source, encoded)
+assert analysis.absolute_error == ExactValue(1, 671088640)
+assert analysis.error_ulps == ExactValue(1, 5)
+```
+
+## 원시 버퍼·필드·차이
+
+`parse_byte_input`은 Hex·Binary·Base64·UTF-8을 바이트로 변환합니다.
+`select_bytes`는 오프셋·길이를 검사하고 `ByteInterpretation`을 반환합니다.
+부호 있는 값과 없는 값, ASCII·UTF-8 미리보기와 길이가 맞는 부동소수점을 해석합니다.
+UTF-8 대체 미리보기는 원본 버퍼를 바꾸지 않으며 유효성은 `utf8_valid`로 구분합니다.
+
+`BitField(name, offset, width, signed=False)`는 엔디언 적용 후 LSB를 0번으로 셉니다.
+`inspect_bitfields`는 겹침·이름 중복·범위 초과를 거부합니다.
+`BitfieldLayout.to_json/from_json`은 스키마 1과 명시적인 `lsb0` 번호 체계를 사용합니다.
+`compare_binary`는 기본적으로 길이가 다른 바이트열을 거부합니다.
+명시적 0 확장은 선택한 엔디언의 최상위 쪽을 채웁니다.
+XOR·전체 변경 개수·필드 차이를 계산하고 한도가 있는 위치 목록은 부분 목록임을 표시합니다.
+
+```python
+from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input
+
+data = parse_byte_input("FF 80")
+layout = BitfieldLayout(16, (BitField("low", 0, 8, True), BitField("high", 8, 8)))
+values = inspect_bitfields(int.from_bytes(data, "big"), 16, layout.fields)
+assert values[0].integer.value == -128
+assert BitfieldLayout.from_json(layout.to_json()) == layout
+```
+
+## 일괄 처리와 구조화된 보고서
+
+`convert_batch`는 숫자·수식·자동 모드로 빈 줄을 제외한 입력을 처리하고,
+원래 줄 번호와 개별 오류를 유지합니다. Core 콜백으로 취소하거나 GUI 계산 프로세스를
+종료할 수 있습니다. 출력 한도는 제한된 결과임을 명시합니다.
+CLI는 파일·표준 입력과 CSV·JSON을, GUI는 텍스트 내보내기도 지원합니다.
+
+`StructuredReport`, `ReportField`는 정확한 값·패턴·바이트·펼친 표시 필드에
+타입이 있는 접근 방법을 제공합니다. 원본 보고서 키는 기존 형식과 호환되고 GUI 언어와
+무관합니다. JSON 내보내기는 일반 정수 필드를 숫자로 유지하고 Python의 현재 정수
+문자열 변환 한도를 넘는 값만 정확한 십진 문자열로 출력합니다.
+
+## 리소스와 상태 정책
+
+작업 한도는 수치 범위·오버플로 검사와 별개입니다.
+한도 초과는 오류나 명시적인 부분 결과로 알리며 수치를 자동으로 잘라내지 않습니다.
+긴 순환 전개에는 반올림 출력이나 단계 제한이 있는 과정을 사용하세요.
+
+| 작업 | 한도 |
+| --- | --- |
+| 숫자·수식·일괄 입력 | 100000자 |
+| 보호된 계산 폭·거듭제곱·시프트 | 2000000비트 작업 예산 |
+| 완전한 소수부 전개 | 100000자리와 나머지 비트 예산 64 MiB |
+| 변환 과정 | 단계별 10000단계, 더 작은 소수부 `max_steps` 지정 가능 |
+| GUI 정확한 변환 미리보기 | 소수부 1000자리, 제한 시 부분 전개 명시 |
+| 바이트 버퍼 | 65536바이트 |
+| 비트필드 레이아웃 | 256필드, JSON 최대 1 MiB |
+| 대화형 바이트 비트필드 편집 | 선택한 512바이트 |
+| 일괄 변환 | 빈 줄 제외 1000행, 서식화 결과 2 MiB |
+| 데스크톱 계산 응답 | 8 MiB |
+| 설정 | 스키마 1, 파일 32 MiB, 기록 최대 100개 |
+| 기록 결과 캐시 | 항목당 256 KiB |
+
+나머지 비트 예산은 저장하는 수치 나머지를 추정하며 프로세스 전체 메모리 한도는 아닙니다.
+허용된 작업 안에서는 Python 정수·유리수의 정확성을 유지합니다.
+설정·내보내기는 원자적으로 교체하고 저장 실패 시 이전 파일을 보존합니다.
+화면 스냅샷은 정규화한 옵션 값을 사용하므로 테마·언어·구분선 변경 때문에
+유효한 계산을 무효화하지 않습니다.
 
 ## 오류
 

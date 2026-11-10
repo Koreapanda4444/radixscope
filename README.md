@@ -2,96 +2,102 @@
 
 English | [한국어](README.ko.md)
 
-RadixScope 2.1.0 converts exact numbers between bases 2 through 36 and inspects the
-bits behind fixed-width integers and IEEE 754 floating-point values. It provides a
-command line interface and a PySide6 desktop application.
-
-Version 2.0 rewrote Base-Converter as RadixScope, adding exact arithmetic, bit inspection
-and a new desktop app. It does not import the old application's settings or history.
+RadixScope is a desktop and command-line workbench for exact numbers, fixed-width
+integers, floating-point precision, bytes and bitfields. The Python core is shared
+by the CLI and PySide6 interface.
 
 ## Install and run
 
-For Windows x64, download the `RadixScope-windows-x64` artifact from a successful
+On Windows x64, download the `RadixScope-windows-x64` artifact from a successful
 [Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
-Extract the artifact ZIP, then extract the enclosed `RadixScope-2.1.0-windows-x64.zip`
-and run `RadixScope/RadixScope.exe`. Keep the entire folder together, including `_internal`.
-This package includes Python and Qt.
+Extract the artifact and choose the setup executable or the enclosed portable ZIP.
+The installer adds an application shortcut and an uninstaller. For the portable
+package, extract its ZIP and run `RadixScope/RadixScope.exe`; keep the entire folder,
+including `_internal`, together. Both packages include Python and Qt.
 
-Source and wheel installations require Python 3.11 or newer. From a checkout of this repository:
+From a checkout, with Python 3.11 or newer:
 
 ```sh
 python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-For the command line and Python API alone, install with `python -m pip install .`.
-The installed commands are `radixscope` and `radixscope-gui`.
-On Windows, `py` can replace `python` in these commands.
+Use `python -m pip install .` for the dependency-free core and CLI.
+Installed entry points are `radixscope` and `radixscope-gui`.
+See [installation](docs/install.md) for virtual environments, Linux libraries,
+updating, wheel packages and local desktop builds.
+
+## What it does
+
+- Exact conversion between bases 2–36, ratios, recurring fractions and decimal scientific notation.
+- Exact expressions with arithmetic, floor division, remainder, bitwise operators and shifts.
+- Number Inspector with synchronized numeric, signed, bit and endian byte representations.
+- Fixed-width integer operations with separate exact, overflow and wrapped results.
+- binary16, bfloat16, binary32 and binary64 encoding, raw decoding and format comparison.
+- Rational error analysis, ULP spacing, neighboring floats, subnormal boundaries and NaN payloads.
+- Byte selection, Hex/Binary/Base64/UTF-8 input, ASCII previews and saved bitfield layouts.
+- Binary comparison with XOR, changed bits/bytes and field-level differences.
+- Batch conversion, searchable history, result reuse and text/JSON/CSV export.
+- English/Korean desktop UI, light/dark themes, editable bits and cancellable worker processes.
+
+Raw reinterpretation preserves bits. Numeric conversion preserves the mathematical
+value subject to the destination format. IEEE encoding rounds exact rational inputs
+directly to the destination using nearest, ties to even. A Python `float` already
+contains a rounded binary value; use `ExactValue` or text for exact decimal input.
+
+## CLI examples
 
 ```sh
 radixscope convert FF --from 16 --to 2 8 10 16
-radixscope expression "0x10 + 2#11 / 10#2" --to 2 10 16
-radixscope trace "1/3" --to 2 --json
-radixscope integer 127 --width 8 --signed --op add --operand 1 --json
-radixscope ieee encode "1/10" --width 32
-radixscope ieee decode 3F800000 --width 32
+radixscope convert "1.25e-3" --auto --to 10 16
+radixscope expression "(0xFF & 0x0F) << 2" --to 2 10 16
+radixscope trace "1/7" --to 2 --max-steps 12 --json
+radixscope inspect FF --base 16 --width 8 --signed --pattern
+radixscope integer 127 --width 8 --signed --op add --operand 1
+radixscope ieee encode "1/10" --format bfloat16 --json
+radixscope ieee compare "1/10"
+radixscope bytes "3F 80 00 00" --byteorder big
+radixscope compare "FF 00" "FE 80" --json
+radixscope batch --file numbers.txt --mode auto --to 2 10 16 --csv
 ```
 
-Wheel and source packages are attached as artifacts to successful [Quality workflow runs](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
-See the [installation guide](docs/install.md) for package installation and Linux desktop dependencies.
-
-## Features
-
-- Exact integers, finite fractions, ratios and recurring digits such as `0.(3)`
-- Multiple output bases, explicit precision and five rounding modes
-- Mixed-base expressions with `base#digits`, `0b`, `0o`, `0x` and exact arithmetic
-- Integer division and fractional multiplication traces, including cycle detection
-- Arbitrary-width signed and unsigned integers, two's complement and bitwise operations
-- Range and overflow analysis with separate exact and wrapped results
-- Big-endian and little-endian bytes, strict ASCII codecs and printable previews
-- Binary32 and binary64 encoding and decoding, including subnormals, signed zero and NaNs
-- Four desktop workspaces, clipboard output, themes, saved options and bounded recent history
-- Isolated desktop calculations with cancellation and input-change protection
-- Editable integer and IEEE 754 bits with synchronized numeric and byte representations
-- Windows x64 desktop ZIP that runs without a separate Python installation
-
-IEEE encoding rounds exact rational inputs directly using nearest, ties to even.
-Raw decoding preserves NaN payloads and signaling bits. A host Python float already contains
-a rounded binary value; use exact numeric input when decimal precision matters.
+Every command has `--help` and `--json`. Batch CSV includes per-line errors.
+See the [CLI guide](docs/cli.md).
 
 ## Python API
 
 ```python
-from radixscope.core import ExactValue, convert_bases, encode_ieee754, evaluate_expression
+from radixscope.core import (
+    ExactValue, convert_bases, encode_ieee754, evaluate_expression, inspect_number,
+)
 
 value = evaluate_expression("0x10 + 2#11 / 10#2")
+assert value == ExactValue(35, 2)
 print(convert_bases(value, [2, 10, 16]))
-print(encode_ieee754(ExactValue(1, 10), 32).hexadecimal)
+print(encode_ieee754(ExactValue(1, 10), "binary16").hexadecimal)
+assert inspect_number("FF", base=16, width=8, signed=True, raw=True).exact == ExactValue(-1)
 ```
 
-## Documentation
+## Documentation and development
 
+- [Installation and packaging](docs/install.md)
 - [Command line](docs/cli.md)
-- [Desktop application](docs/desktop.md)
-- [Numeric specification](docs/specification.md)
-
-Exact expansions can have long periods. CLI exact output is unlimited; choose `--precision`
-for a bounded expansion. Desktop exact conversion displays at most 1000 fractional digits
-and marks incomplete output explicitly. The trace workspace offers an adjustable limit.
-Expression evaluation and integer operations use arbitrary-size integers; very large powers
-or inputs can take substantial time and memory.
-
-## Development
+- [Desktop workspaces and history](docs/desktop.md)
+- [Numeric models, API and work limits](docs/specification.md)
 
 ```sh
 python -m pip install -e ".[dev]"
 python -m ruff check src scripts packaging
 python -m mypy src scripts packaging
+python scripts/verify_numeric.py
+python -m radixscope.gui.verification
 python -m build
 ```
 
-Quality runs check lint and types, run the CLI version command, and build wheel and source
-packages on Ubuntu and Windows with Python 3.11, 3.12 and 3.13. Packages are retained as
-workflow artifacts. No PyPI publishing is configured. The Windows desktop job builds the
-standalone ZIP. To reproduce that build on Windows, install
-`python -m pip install -e ".[desktop-build]"`, then run `python scripts/build_desktop.py`.
+Quality checks Ubuntu and Windows on Python 3.11–3.13, builds wheel/source packages,
+and validates extracted and installed Windows desktop applications, including uninstall.
+Artifacts remain attached to Actions runs.
+
+Exact arithmetic does not imply unlimited work. Expansions, powers, traces, byte
+buffers and batches have explicit resource limits. The GUI marks partial expansions;
+limits do not silently alter the stored rational value. See the numeric specification.

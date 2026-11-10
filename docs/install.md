@@ -1,17 +1,32 @@
-# Installation
+# Installation and packaging
 
 English | [한국어](ko/install.md)
 
-## Windows desktop ZIP
+## Windows x64
 
-Open a successful [Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml)
-and download the `RadixScope-windows-x64` artifact. Extract that ZIP and the enclosed
-`RadixScope-2.1.0-windows-x64.zip`. Launch `RadixScope/RadixScope.exe` from the extracted folder.
-The application includes its own Python and Qt; no pip installation is needed.
-Keep `_internal` beside the executable, and extract a newer package into a new folder when updating.
-Preferences stay in the same per-user application data directory used by the Python installation.
+Download `RadixScope-windows-x64` from a successful
+[Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
+Extract the Actions artifact first, then choose:
 
-## From a checkout
+| Package | Use |
+| --- | --- |
+| `RadixScope-*-windows-x64-setup.exe` | Install for the current user, with a Start menu shortcut and uninstaller |
+| `RadixScope-*-windows-x64.zip` | Extract and run `RadixScope/RadixScope.exe` without installation |
+
+Both contain the Python runtime, Qt, icon, English/Korean resources, documentation
+and third-party license notices. Keep all portable files together; moving only the
+EXE will break its runtime. Administrator rights are not required for the default
+per-user installation. The installer offers an optional desktop shortcut.
+Remove it through Windows Installed apps or its `unins000.exe`.
+
+Preferences live separately under Qt's per-user application data directory,
+`Koreapanda4444/RadixScope/state.json`. Uninstalling does not erase this user data.
+For portable updates, close the app and extract into a fresh folder. For installed
+updates, close the app and run setup against the same installation directory.
+
+## Python installation
+
+Python 3.11 or newer is required for source and wheel distributions.
 
 ```sh
 git clone https://github.com/Koreapanda4444/radixscope.git
@@ -19,8 +34,8 @@ cd radixscope
 python -m venv .venv
 ```
 
-Activate the environment with `.venv\Scripts\activate` in Windows Command Prompt,
-or `source .venv/bin/activate` on Linux. Then:
+Activate with `.venv\Scripts\activate` in Windows Command Prompt, or
+`source .venv/bin/activate` on Linux. Then:
 
 ```sh
 python -m pip install --upgrade pip
@@ -28,55 +43,55 @@ python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-Use `python -m pip install .` for the dependency-free core and command line only.
-Installing the `gui` extra adds PySide6 and Qt. The desktop entry point explains the
-missing extra when PySide6 is absent.
-
-## From a release package
-
-Open a successful Quality run in GitHub Actions, download its package artifact and extract
-the ZIP. Then run from the directory containing the wheel:
-
-```sh
-python -m pip install "radixscope-2.1.0-py3-none-any.whl[gui]"
-radixscope-gui
-```
-
-Omit `[gui]` when only the command line is needed. These are Python distributions;
-they require Python. The standalone desktop ZIP is a separate artifact described above.
-
-## Linux desktop libraries
-
-Qt needs the system graphics libraries even in a headless environment.
-On Ubuntu/Debian, install the desktop graphics libraries:
-
-```sh
-sudo apt-get update
-sudo apt-get install -y libegl1 libopengl0
-```
-
-For a desktop session using Qt's XCB platform, the distribution may also need
-`libxcb-cursor0` and its normal X11 runtime libraries. Use `QT_QPA_PLATFORM=offscreen`
-without a display; that setting does not open a desktop window.
-
-## Updating an existing checkout
+Install with `python -m pip install .` for Core/CLI only. A downloaded wheel is
+installed by passing its actual filename to pip; append `[gui]` inside the quoted
+filename when desktop dependencies are needed. Wheels and source archives are in
+the `packages-<os>-py<python>` Actions artifacts. They require Python, unlike the
+standalone Windows packages.
 
 ```sh
 git pull --ff-only origin main
 python -m pip install --upgrade ".[gui]"
-python -m radixscope.gui
+radixscope-gui
 ```
 
-Preferences and recent inputs live in Qt's
-per-user application data directory under `Koreapanda4444/RadixScope/state.json`.
+GUI dependencies exclude PySide6 6.12.0 because of
+[the upstream singleton reference-counting regression](https://qt-project.atlassian.net/browse/PYSIDE-3474).
+Use the project's dependency constraints when installing the GUI.
 
-## Building the desktop ZIP
+## Linux graphics libraries
 
-On Windows x64, use Python 3.12 and run:
+Even offscreen Qt requires system graphics libraries. On Ubuntu/Debian:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
+```
+
+A desktop session using XCB may also require `libxcb-cursor0` and the distribution's
+normal X11 libraries. `QT_QPA_PLATFORM=offscreen` runs integration verification
+without opening a visible desktop window.
+
+## Build and verify
+
+On Windows x64, use Python 3.12. Install Inno Setup 6.3 or newer for the installer;
+make `ISCC` available on PATH or use its standard Inno Setup 6 installation location.
 
 ```sh
 python -m pip install -e ".[desktop-build]"
-python scripts/build_desktop.py
+python scripts/build_desktop.py --installer
+python scripts/verify_windows.py
 ```
 
-The ZIP appears in `dist/`. Extract it and launch `RadixScope/RadixScope.exe`.
+Omit `--installer` to build only the portable ZIP. Outputs are in `dist/`.
+PyInstaller bundles the runtime; the build preserves dependency license files in
+`licenses/`.
+
+Verification extracts the actual ZIP into a temporary directory, runs all desktop
+workspaces, installs setup into another temporary directory, repeats the checks,
+and uninstalls. It checks bilingual UI state, cancellation, settings, runtime
+availability and the icon. JSON receipts and installer logs go to
+`build/desktop/verification/`; CI publishes them as
+`Windows-distribution-verification`. CI also checks Windows EXE product metadata.
+
+For source validation, see the commands in the [README](../README.md).
