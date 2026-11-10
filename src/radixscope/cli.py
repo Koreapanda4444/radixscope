@@ -22,6 +22,7 @@ from radixscope.core import (
 from radixscope.core.comparison import compare_float_formats
 from radixscope.core.inspection import inspect_number
 from radixscope.reports import (
+    byte_report,
     comparison_report,
     ieee_report,
     inspection_report,
@@ -47,6 +48,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="radixscope", description="Exact numbers and raw bits")
     parser.add_argument("--version", action="version", version=f"RadixScope {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    byte_parser = commands.add_parser("bytes", help="interpret raw bytes and selected ranges")
+    byte_parser.add_argument("value")
+    byte_parser.add_argument("--input-format", choices=["hex", "binary", "base64", "utf8"],
+                             default="hex")
+    byte_parser.add_argument("--byteorder", choices=["big", "little"], default="big")
+    byte_parser.add_argument("--offset", type=int, default=0)
+    byte_parser.add_argument("--length", type=int)
+    _output_options(byte_parser)
     inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
     inspect.add_argument("value")
     inspect.add_argument("--base", type=int, default=10)
@@ -196,6 +205,8 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "bytes":
+        return byte_report(args.value, args.input_format, args.byteorder, args.offset, args.length)
     if args.command == "inspect":
         return inspection_report(inspect_number(
             args.value, base=args.base, width=args.width, signed=args.signed,

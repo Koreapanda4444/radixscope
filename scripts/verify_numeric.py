@@ -114,6 +114,7 @@ def main() -> None:
         ["integer", "127", "--width", "8", "--signed", "--op", "add", "--operand", "1"],
         ["ieee", "encode", "1/10", "--width", "32"],
         ["ieee", "compare", "1/10"],
+        ["bytes", "3F 80 00 00"],
     ):
         result = subprocess.run(
             [sys.executable, "-m", "radixscope", *arguments, "--json"],
