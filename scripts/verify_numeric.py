@@ -56,6 +56,12 @@ def main() -> None:
     check(format_rounded(ExactValue(-1, 8), 10, 2, RoundingMode.CEILING) == "-0.12")
     check(evaluate_expression("0xFF + 2#11 / 10#2") == ExactValue(513, 2))
     check(evaluate_expression("-2**2 + 2**-3").fraction == -4 + Fraction(1, 8))
+    for expression, expected_integer in {
+        "1 | 2 ^ 3 & 4": 3, "1 << 2 + 1": 8, "32 >> 2 >> 1": 4,
+        "~1 & 0xFF": 254, "-7 // 3": -3, "-7 % 3": 2,
+        "(7/3) // (2/3)": 3, "2**3**2": 512,
+    }.items():
+        check(evaluate_expression(expression) == ExactValue(expected_integer))
     check(evaluate_expression("2**10000").numerator == 2**10000)
     check(len(str(evaluate_expression("10**5000"))) == 5001)
     try:

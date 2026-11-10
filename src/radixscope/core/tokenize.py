@@ -15,6 +15,14 @@ class TokenKind(StrEnum):
     MULTIPLY = "*"
     DIVIDE = "/"
     POWER = "**"
+    FLOOR_DIVIDE = "//"
+    MODULO = "%"
+    BIT_AND = "&"
+    BIT_OR = "|"
+    BIT_XOR = "^"
+    INVERT = "~"
+    LEFT_SHIFT = "<<"
+    RIGHT_SHIFT = ">>"
     LEFT_PAREN = "("
     RIGHT_PAREN = ")"
     END = "end"
@@ -80,10 +88,11 @@ def tokenize_expression(expression: str) -> tuple[ExpressionToken, ...]:
         elif character in _DIGITS:
             token, position = _read_literal(expression, position)
             tokens.append(token)
-        elif expression.startswith("**", position):
-            tokens.append(ExpressionToken(TokenKind.POWER, "**", position, position + 2))
+        elif expression[position:position + 2] in ("**", "//", "<<", ">>"):
+            operator = expression[position:position + 2]
+            tokens.append(ExpressionToken(TokenKind(operator), operator, position, position + 2))
             position += 2
-        elif character in "+-*/()":
+        elif character in "+-*/()%&|^~":
             tokens.append(ExpressionToken(TokenKind(character), character, position, position + 1))
             position += 1
         else:
