@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from radixscope import __version__
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
 from radixscope.gui.inspector import InspectorWorkspace
+from radixscope.gui.navigation import transfer_state
 from radixscope.gui.preferences import PreferencesDialog
 from radixscope.gui.programmer import IEEEWorkspace, ProgrammerWorkspace
 from radixscope.gui.widgets import Workspace
@@ -54,6 +55,7 @@ class MainWindow(QMainWindow):
             action.triggered.connect(partial(self.tabs.setCurrentIndex, index))
             self.addAction(action)
             workspace.result_ready.connect(self.show_completed)
+            workspace.transfer_requested.connect(self.receive_transfer)
         self.setCentralWidget(self.tabs)
         self.recent = QListWidget()
         self.recent.itemDoubleClicked.connect(self.restore_recent)
@@ -74,7 +76,7 @@ class MainWindow(QMainWindow):
         menu = self.menuBar().addMenu("Settings")
         menu.addAction(settings_action)
         menu.addAction(self.recent_dock.toggleViewAction())
-        self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+4 switch workspaces")
+        self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+5 switch workspaces")
         self.base_stylesheet = (
             "QWidget { font-size: 13px; }"
             "QLabel#heading { font-size: 22px; font-weight: 600; margin-top: 8px; }"
@@ -99,6 +101,17 @@ class MainWindow(QMainWindow):
         self.refresh_history()
         self.statusBar().showMessage(f"{title} complete", 5000)
         self.save_preferences()
+
+    def receive_transfer(self, title: str, raw: bool, report: dict[str, object]) -> None:
+        destination = next(workspace for workspace in self.workspaces if workspace.title == title)
+        try:
+            state = transfer_state(report, title, destination.snapshot(), raw)
+        except ValueError as error:
+            self.statusBar().showMessage(str(error), 8000)
+            return
+        destination.restore_state(state)
+        self.tabs.setCurrentWidget(destination)
+        destination.start_calculation()
 
     def refresh_history(self) -> None:
         self.recent.clear()

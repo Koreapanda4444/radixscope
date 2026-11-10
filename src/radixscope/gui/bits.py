@@ -1,6 +1,7 @@
 from functools import partial
 
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
@@ -22,6 +23,7 @@ class BitEditor(QWidget):
         self.bit_count = 0
         self.fields: dict[str, tuple[int, int]] = {}
         self.buttons: dict[int, QToolButton] = {}
+        self.columns = 16
         self.page = QSpinBox()
         self.page.setMinimum(1)
         self.page.valueChanged.connect(self.rebuild)
@@ -87,7 +89,7 @@ class BitEditor(QWidget):
         low = max(0, high - self.page_size + 1)
         self.range_label.setText(f"Bits {high} … {low} · MSB → LSB")
         for offset, index in enumerate(range(high, low - 1, -1)):
-            row, column = divmod(offset, 16)
+            row, column = divmod(offset, self.columns)
             label = QLabel(str(index))
             button = QToolButton()
             button.setCheckable(True)
@@ -101,6 +103,13 @@ class BitEditor(QWidget):
             self.grid.addWidget(button, row * 2 + 1, column)
             self.buttons[index] = button
         self.refresh_buttons()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        columns = 8 if event.size().width() < 560 else 16
+        if columns != self.columns:
+            self.columns = columns
+            self.rebuild()
+        super().resizeEvent(event)
 
     def refresh_buttons(self) -> None:
         if self.pattern is None:

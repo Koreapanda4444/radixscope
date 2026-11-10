@@ -32,16 +32,19 @@ from radixscope.reports import ReportField, StructuredReport, render_report
 class Workspace(QWidget):
     result_ready = Signal(str, object)
     result_invalidated = Signal()
+    transfer_requested = Signal(str, bool, object)
 
     def __init__(self, title: str, description: str) -> None:
         super().__init__()
         self.title = title
+        self._report: dict[str, object] | None = None
         self.job: CalculationJob | None = None
         self.job_state: dict[str, object] = {}
         self.timer = QTimer(self)
         self.timer.setInterval(25)
         self.timer.timeout.connect(self.poll_calculation)
         self.form = QFormLayout()
+        self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.form.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         self.form_container = QWidget()
         self.form_container.setLayout(self.form)
@@ -98,6 +101,20 @@ class Workspace(QWidget):
         actions.addStretch()
         actions.addWidget(self.copy_selected_button)
         actions.addWidget(self.copy_button)
+        self._destination = QComboBox()
+        self._destination.addItems([name for name in (
+            "Number Inspector", "Programmer", "IEEE 754", "Conversion"
+        ) if name != title])
+        self._transfer_mode = QComboBox()
+        self._transfer_mode.addItems(["Numeric value", "Raw bits"])
+        self._transfer_button = QPushButton("Send to workspace")
+        self._transfer_button.setEnabled(False)
+        self._transfer_button.clicked.connect(self.request_transfer)
+        transfer = QHBoxLayout()
+        transfer.addWidget(self._destination)
+        transfer.addWidget(self._transfer_mode)
+        transfer.addWidget(self._transfer_button)
+        transfer.addStretch()
         layout = QVBoxLayout(self)
         heading = QLabel(title)
         heading.setObjectName("heading")
@@ -107,11 +124,14 @@ class Workspace(QWidget):
         layout.addWidget(subtitle)
         layout.addWidget(self.form_scroll, 2)
         layout.addLayout(actions)
+        layout.addLayout(transfer)
         layout.addWidget(self.error)
         layout.addWidget(self.result_views, 2)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         self.error.clear()
+        self._report = report
+        self._transfer_button.setEnabled(True)
         self.status.setText("Complete")
         self.output.setPlainText(render_report(report) if text is None else text)
         self.report_fields = StructuredReport(report).fields
@@ -139,6 +159,8 @@ class Workspace(QWidget):
             input_widget.setFocus()
 
     def clear_output(self) -> None:
+        self._report = None
+        self._transfer_button.setEnabled(False)
         self.output.clear()
         self.report_fields = ()
         self.result_table.setRowCount(0)
@@ -146,7 +168,9 @@ class Workspace(QWidget):
         self.copy_selected_button.setEnabled(False)
 
     def bind_inputs(self) -> None:
-        for widget in vars(self).values():
+        for name, widget in vars(self).items():
+            if name.startswith("_"):
+                continue
             if isinstance(widget, QLineEdit):
                 widget.textChanged.connect(self.invalidate_result)
             elif isinstance(widget, QCheckBox):
@@ -219,9 +243,18 @@ class Workspace(QWidget):
             self.report_fields[row].text for row in rows if row < len(self.report_fields)
         ))
 
+    def request_transfer(self) -> None:
+        if self._report is not None:
+            self.transfer_requested.emit(
+                self._destination.currentText(), self._transfer_mode.currentIndex() == 1,
+                self._report,
+            )
+
     def snapshot(self) -> dict[str, object]:
         state: dict[str, object] = {}
         for name, widget in vars(self).items():
+            if name.startswith("_"):
+                continue
             if isinstance(widget, QLineEdit):
                 state[name] = widget.text()
             elif isinstance(widget, QCheckBox):
