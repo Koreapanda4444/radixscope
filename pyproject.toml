@@ -31,11 +31,12 @@ radixscope = "radixscope.cli:main"
 radixscope-gui = "radixscope.gui:main"
 
 [project.optional-dependencies]
-desktop-build = ["PySide6>=6.8,<7", "pyinstaller>=6.22.3,<7"]
-gui = ["PySide6>=6.8,<7"]
+# PySide6 6.12.0 over-releases Python singletons (PYSIDE-3474).
+desktop-build = ["PySide6>=6.8,<7,!=6.12.0", "pyinstaller>=6.22.3,<7"]
+gui = ["PySide6>=6.8,<7,!=6.12.0"]
 dev = [
     "build>=1,<2",
-    "PySide6>=6.8,<7",
+    "PySide6>=6.8,<7,!=6.12.0",
     "mypy>=1.13,<2",
     "ruff>=0.8,<1",
 ]
