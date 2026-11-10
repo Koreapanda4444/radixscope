@@ -29,11 +29,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[dev]"
-      - run: python -m ruff check src scripts packaging
-      - run: python -m mypy src scripts packaging
-      - run: python scripts/verify_numeric.py
-      - run: python -m radixscope.gui.verification
+      - id: install
+        run: python -m pip install -e ".[dev]"
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python -m ruff check src scripts packaging
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python -m mypy src scripts packaging
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python scripts/verify_numeric.py
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: python -m radixscope.gui.verification
       - run: python -m radixscope --version
       - run: python -m build
       - uses: actions/upload-artifact@v4

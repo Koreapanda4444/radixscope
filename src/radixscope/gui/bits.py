@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-
 from radixscope.gui.i18n import localize
+
 
 class BitEditor(QWidget):
     pattern_changed = Signal(object)
