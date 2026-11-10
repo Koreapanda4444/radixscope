@@ -113,6 +113,7 @@ def main() -> None:
         ["trace", "1/7", "--max-steps", "3"],
         ["integer", "127", "--width", "8", "--signed", "--op", "add", "--operand", "1"],
         ["ieee", "encode", "1/10", "--width", "32"],
+        ["ieee", "compare", "1/10"],
     ):
         result = subprocess.run(
             [sys.executable, "-m", "radixscope", *arguments, "--json"],

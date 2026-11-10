@@ -135,6 +135,8 @@ class Workspace(QWidget):
         self.status.setText("Complete")
         self.output.setPlainText(render_report(report) if text is None else text)
         self.report_fields = StructuredReport(report).fields
+        self.result_table.setColumnCount(2)
+        self.result_table.setHorizontalHeaderLabels(["Representation", "Value"])
         self.result_table.setRowCount(len(self.report_fields))
         for row, field in enumerate(self.report_fields):
             self.result_table.setItem(row, 0, QTableWidgetItem(field.path.replace("_", " ")))

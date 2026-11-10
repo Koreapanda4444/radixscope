@@ -23,7 +23,7 @@ def transfer_state(
                            "signed": report.get("signed") is True})
         elif target == "IEEE 754" and len(bits) in (16, 32, 64):
             format_name = "bfloat16" if report.get("format") == "bfloat16" else str(len(bits))
-            result.update({"mode": "decode", "bit_width": format_name})
+            result.update({"mode": "decode", "bit_width": format_name, "compare": False})
         else:
             raise ValueError("Raw IEEE bits require 16, 32 or 64 bits; Conversion accepts values")
         order = report.get("byteorder")
@@ -49,7 +49,8 @@ def transfer_state(
         else:
             result["operation"] = "inspect"
     elif target == "IEEE 754":
-        result.update({"mode": "encode", "negative_zero": False, "payload": "0", "quiet": True})
+        result.update({"mode": "encode", "negative_zero": False, "payload": "0", "quiet": True,
+                       "compare": False})
     else:
         raise ValueError("Unknown destination workspace")
     return result

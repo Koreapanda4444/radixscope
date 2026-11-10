@@ -19,8 +19,10 @@ from radixscope.core import (
     parse_number,
     trace_value,
 )
+from radixscope.core.comparison import compare_float_formats
 from radixscope.core.inspection import inspect_number
 from radixscope.reports import (
+    comparison_report,
     ieee_report,
     inspection_report,
     integer_report,
@@ -88,7 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     integer.add_argument("--byteorder", choices=["big", "little"], default="big")
     _output_options(integer)
     ieee = commands.add_parser("ieee", help="encode values or decode IEEE 754 raw bits")
-    ieee.add_argument("mode", choices=["encode", "decode"])
+    ieee.add_argument("mode", choices=["encode", "decode", "compare"])
     ieee.add_argument(
         "value", help="exact expression/special value for encode, raw integer for decode"
     )
@@ -149,6 +151,19 @@ def _integer_command(args: argparse.Namespace) -> dict[str, object]:
 
 def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
     width = getattr(args, "format", None) or args.width
+    if args.mode == "compare":
+        if args.payload or args.signaling:
+            raise ValueError("NaN payload options require single-format encoding")
+        text = args.value.strip().lower()
+        comparison_input = float(text) if text.lstrip("+-") in ("nan", "inf", "infinity") else (
+            evaluate_expression(args.value)
+        )
+        negative_zero = args.negative_zero or (
+            text.startswith("-") and comparison_input == ExactValue(0)
+        )
+        return comparison_report(compare_float_formats(
+            comparison_input, negative_zero=negative_zero
+        ))
     if args.mode == "decode":
         if args.negative_zero or args.payload or args.signaling:
             raise ValueError("special-value encoding options cannot be used with decode")

@@ -1,5 +1,14 @@
 from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QSpinBox
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTableWidgetItem,
+)
 
 from radixscope.core import (
     ExactValue,
@@ -106,6 +115,11 @@ class IEEEWorkspace(Workspace):
         self.payload = QLineEdit("0")
         self.quiet = QCheckBox("Quiet NaN")
         self.quiet.setChecked(True)
+        self._compare = False
+        self._comparison_rows: list[dict[str, object]] = []
+        self._comparison_columns: list[str] = []
+        self.compare_button = QPushButton("Compare all four formats")
+        self.compare_button.clicked.connect(self.compare_formats)
         self.form.addRow("Input", self.input)
         self.form.addRow("Mode", self.mode)
         self.form.addRow("Bit width", self.bit_width)
@@ -114,6 +128,7 @@ class IEEEWorkspace(Workspace):
         self.form.addRow("Signed zero", self.negative_zero)
         self.form.addRow("NaN payload (decimal)", self.payload)
         self.form.addRow("NaN kind", self.quiet)
+        self.form.addRow("Format comparison", self.compare_button)
         self.bit_editor = BitEditor()
         self.bit_legend = QLabel("Sign · Exponent · Fraction")
         self.form.addRow("Bit fields", self.bit_legend)
@@ -136,6 +151,7 @@ class IEEEWorkspace(Workspace):
 
     def update_controls(self) -> None:
         encoding = self.mode.currentText() == "encode"
+        self.compare_button.setEnabled(encoding)
         nan = self.input.text().strip().lower().lstrip("+-") == "nan"
         self.base.setEnabled(not encoding)
         self.negative_zero.setEnabled(encoding and not nan)
@@ -144,7 +160,62 @@ class IEEEWorkspace(Workspace):
         self.input.setPlaceholderText("Exact expression, nan or inf" if encoding else "Raw digits")
 
     def calculate(self) -> None:
+        self._compare = False
         self.start_calculation()
+
+    def compare_formats(self) -> None:
+        self._compare = True
+        self.start_calculation()
+
+    def snapshot(self) -> dict[str, object]:
+        state = super().snapshot()
+        state["compare"] = self._compare
+        return state
+
+    def restore_state(self, state: dict[str, object]) -> None:
+        super().restore_state(state)
+        self._compare = state.get("compare") is True
+
+    def set_result(self, report: dict[str, object], text: str | None = None) -> None:
+        super().set_result(report, text)
+        rows = report.get("comparison")
+        self._comparison_rows = [row for row in rows if isinstance(row, dict)] if (
+            isinstance(rows, list)
+        ) else []
+        if not self._comparison_rows:
+            return
+        columns = ["format", "hexadecimal", "exact", "absolute_error", "relative_error",
+                   "error_ulps", "effective_significand_bits", "classification",
+                   "double_rounding_via_binary32", "double_rounding_via_binary64"]
+        self._comparison_columns = columns
+        self.result_table.setColumnCount(len(columns))
+        self.result_table.setHorizontalHeaderLabels([key.replace("_", " ") for key in columns])
+        self.result_table.setRowCount(len(self._comparison_rows))
+        for row_index, row in enumerate(self._comparison_rows):
+            for column, key in enumerate(columns):
+                self.result_table.setItem(row_index, column, QTableWidgetItem(str(row.get(key))))
+        self.result_table.resizeColumnsToContents()
+        self.result_table.selectRow(0)
+
+    def copy_selected(self) -> None:
+        if not self._comparison_rows:
+            super().copy_selected()
+            return
+        rows = sorted({index.row() for index in self.result_table.selectedIndexes()})
+        QApplication.clipboard().setText("\n".join(
+            "\t".join(str(self._comparison_rows[row].get(key)) for key in self._comparison_columns)
+            for row in rows
+        ))
+
+    def request_transfer(self) -> None:
+        if not self._comparison_rows:
+            super().request_transfer()
+            return
+        row = max(0, self.result_table.currentRow())
+        self.transfer_requested.emit(
+            self._destination.currentText(), self._transfer_mode.currentIndex() == 1,
+            self._comparison_rows[row],
+        )
 
     def show_bits(self, title: str, report: dict[str, object]) -> None:
         bits = report.get("bits")

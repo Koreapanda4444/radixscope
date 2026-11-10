@@ -10,6 +10,8 @@ from radixscope.core import (
     parse_number,
     represent_bytes,
 )
+from radixscope.core.comparison import FloatFormatComparison
+from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
 from radixscope.core.inspection import NumberInspection
 from radixscope.core.neighbors import adjacent_float, float_boundaries
 from radixscope.core.precision import analyze_float_precision
@@ -188,6 +190,38 @@ def precision_report(source: ExactValue, encoded: IEEE754Value) -> dict[str, obj
         "underflowed_to_zero": encoded.classification.value == "zero" and source.numerator != 0,
     })
     return report
+
+
+def comparison_report(comparison: FloatFormatComparison) -> dict[str, object]:
+    rows: list[dict[str, object]] = []
+    source = comparison.source
+    for value in comparison.values:
+        exact = value.exact
+        row: dict[str, object] = {
+            "format": value.format.label, "width": value.format.bit_width,
+            "hexadecimal": value.hexadecimal, "bits": value.bits,
+            "classification": value.classification.value,
+            "exact": str(exact) if exact is not None else None,
+            "precision_bits": value.format.fraction_width + 1,
+            "effective_significand_bits": value.fraction_bits.bit_length() if (
+                value.classification is FloatClass.SUBNORMAL
+            ) else (value.format.fraction_width + 1 if (
+                value.classification is FloatClass.NORMAL
+            ) else 0),
+        }
+        if source is not None:
+            row.update(precision_report(source, value))
+        for intermediate in (IEEEFormat.BINARY32, IEEEFormat.BINARY64):
+            different = None
+            if source is not None and value.format.fraction_width < intermediate.fraction_width:
+                rounded = encode_ieee754(source, intermediate, negative_zero=(
+                    source.numerator == 0 and bool(value.sign_bit)
+                ))
+                different = convert_ieee754(rounded, value.format).pattern != value.pattern
+            row[f"double_rounding_via_{intermediate.label}"] = different
+        rows.append(row)
+    return {"source_exact": str(source) if source is not None else None,
+            "comparison": rows, "rounding_rule": "nearest, ties to even"}
 
 
 def trace_report(trace: ConversionTrace) -> dict[str, object]:

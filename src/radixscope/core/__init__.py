@@ -1,3 +1,4 @@
+from radixscope.core.comparison import FloatFormatComparison, compare_float_formats
 from radixscope.core.digits import (
     DIGIT_ALPHABET,
     MAX_BASE,
@@ -106,6 +107,7 @@ __all__ = [
     "ExpressionToken",
     "FixedWidthInteger",
     "FloatClass",
+    "FloatFormatComparison",
     "FloatPrecisionAnalysis",
     "FractionMultiplicationStep",
     "IEEE754Value",
@@ -130,6 +132,7 @@ __all__ = [
     "analyze_arithmetic",
     "analyze_float_precision",
     "analyze_range",
+    "compare_float_formats",
     "convert_bases",
     "convert_ieee754",
     "convert_text",

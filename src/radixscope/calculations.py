@@ -95,7 +95,8 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         encoding = text("mode") == "encode"
         nan = input_text.strip().lower().lstrip("+-") == "nan"
         report = run_command(argparse.Namespace(
-            command="ieee", mode=text("mode"), value=input_text,
+            command="ieee", mode="compare" if state.get("compare") is True else text("mode"),
+            value=input_text,
             width=text("bit_width"), base=integer("base"), byteorder=text("byteorder"),
             negative_zero=encoding and not nan and flag("negative_zero"),
             payload=int(text("payload")) if encoding and nan else 0,
