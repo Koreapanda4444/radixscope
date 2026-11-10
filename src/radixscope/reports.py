@@ -1,13 +1,68 @@
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 
 from radixscope.core import (
     ConversionTrace,
+    ExactValue,
     FixedWidthInteger,
     IEEE754Value,
     interpret_bit_pattern,
+    parse_number,
     represent_bytes,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ReportField:
+    path: str
+    value: object
+
+    @property
+    def text(self) -> str:
+        if isinstance(self.value, (dict, list)):
+            return json.dumps(self.value, ensure_ascii=False)
+        return str(self.value)
+
+
+@dataclass(frozen=True, slots=True)
+class StructuredReport:
+    """Presentation adapter: legacy JSON stays unchanged, numeric data stays exact."""
+
+    data: dict[str, object]
+
+    @property
+    def exact_value(self) -> ExactValue | None:
+        exact = self.data.get("exact", self.data.get("value"))
+        if isinstance(exact, int) and not isinstance(exact, bool):
+            return ExactValue(exact)
+        if isinstance(exact, str):
+            return parse_number(exact, 10)
+        return None
+
+    @property
+    def pattern(self) -> int | None:
+        bits = self.data.get("bits")
+        return int(bits, 2) if isinstance(bits, str) and bits else None
+
+    @property
+    def byte_data(self) -> bytes | None:
+        text = self.data.get("bytes")
+        return bytes.fromhex(text) if isinstance(text, str) else None
+
+    @property
+    def fields(self) -> tuple[ReportField, ...]:
+        rows: list[ReportField] = []
+
+        def flatten(path: str, value: object) -> None:
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    flatten(f"{path}.{key}" if path else str(key), item)
+            else:
+                rows.append(ReportField(path, value))
+
+        for key, value in self.data.items():
+            flatten(key, value)
+        return tuple(rows)
 
 
 def integer_report(value: FixedWidthInteger, byteorder: str = "big") -> dict[str, object]:

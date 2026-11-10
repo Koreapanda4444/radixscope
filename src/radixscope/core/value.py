@@ -4,6 +4,20 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 
+def _decimal_integer(number: int) -> str:
+    """Render exact integers without changing Python's process-wide security settings."""
+    if abs(number).bit_length() < 12_000:
+        return str(number)
+    magnitude = abs(number)
+    chunks: list[int] = []
+    while magnitude:
+        magnitude, chunk = divmod(magnitude, 1_000_000_000)
+        chunks.append(chunk)
+    return ("-" if number < 0 else "") + str(chunks[-1]) + "".join(
+        f"{chunk:09d}" for chunk in reversed(chunks[:-1])
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class ExactValue:
     numerator: int
@@ -58,5 +72,5 @@ class ExactValue:
 
     def __str__(self) -> str:
         if self.is_integer:
-            return str(self.numerator)
-        return f"{self.numerator}/{self.denominator}"
+            return _decimal_integer(self.numerator)
+        return f"{_decimal_integer(self.numerator)}/{_decimal_integer(self.denominator)}"

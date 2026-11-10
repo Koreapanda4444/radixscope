@@ -16,7 +16,7 @@ from radixscope.core import (
     trace_value,
     validate_base,
 )
-from radixscope.reports import render_report, trace_report
+from radixscope.reports import StructuredReport, render_report, trace_report
 
 MAX_RESULT_BYTES = 8 * 1024 * 1024
 
@@ -119,6 +119,10 @@ class CalculationResult:
     report: dict[str, object] | None = None
     text: str = ""
     error: str = ""
+
+    @property
+    def structured(self) -> StructuredReport | None:
+        return StructuredReport(self.report) if self.report is not None else None
 
 
 class CalculationJob:
