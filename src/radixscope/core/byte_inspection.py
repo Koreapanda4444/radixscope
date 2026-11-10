@@ -11,7 +11,7 @@ MAX_BYTE_INPUT = 65_536
 def parse_byte_input(text: str, input_format: str = "hex") -> bytes:
     if not isinstance(text, str):
         raise TypeError("byte input must be text")
-    if len(text) > MAX_BYTE_INPUT * 8:
+    if len(text) > MAX_BYTE_INPUT * 12:
         raise ValueError("byte input exceeds the 64 KiB work limit")
     if input_format == "hex":
         chunks: list[bytes] = []

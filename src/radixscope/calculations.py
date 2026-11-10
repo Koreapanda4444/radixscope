@@ -17,7 +17,13 @@ from radixscope.core import (
     trace_value,
     validate_base,
 )
-from radixscope.reports import StructuredReport, inspection_report, render_report, trace_report
+from radixscope.reports import (
+    StructuredReport,
+    byte_report,
+    inspection_report,
+    render_report,
+    trace_report,
+)
 
 MAX_RESULT_BYTES = 8 * 1024 * 1024
 
@@ -42,6 +48,26 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return value
 
     input_text = text("input")
+    if workspace == "Byte Inspector":
+        report = byte_report(
+            input_text, text("input_format"), text("byteorder"), integer("offset"),
+            None if flag("all_bytes") else integer("length"),
+        )
+        interpretation = text("interpret_as")
+        if interpretation in ("unsigned integer", "signed integer"):
+            signed = interpretation == "signed integer"
+            report["exact"] = report["twos_complement" if signed else "unsigned"]
+            report["signed"] = signed
+        else:
+            floating = report["floating"]
+            assert isinstance(floating, list)
+            match = next((item for item in floating if item["format"] == interpretation), None)
+            if match is None:
+                raise ValueError(f"selection length does not match {interpretation}")
+            report.update(match)
+            report["data_type"] = interpretation
+        report.update({"input": input_text, "selected_interpretation": interpretation})
+        return report
     if workspace == "Number Inspector":
         report = inspection_report(inspect_number(
             input_text, base=integer("base"), width=integer("bit_width"),

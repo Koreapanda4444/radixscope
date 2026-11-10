@@ -152,6 +152,7 @@ class Workspace(QWidget):
 
     def set_error(self, message: str) -> None:
         self.clear_output()
+        self.result_invalidated.emit()
         self.error.setText(message)
         self.status.setText("Error")
         position = re.search(r"at position (\d+)", message)
@@ -173,7 +174,9 @@ class Workspace(QWidget):
         for name, widget in vars(self).items():
             if name.startswith("_"):
                 continue
-            if isinstance(widget, QLineEdit):
+            if isinstance(widget, QLineEdit) or (
+                isinstance(widget, QPlainTextEdit) and not widget.isReadOnly()
+            ):
                 widget.textChanged.connect(self.invalidate_result)
             elif isinstance(widget, QCheckBox):
                 widget.toggled.connect(self.invalidate_result)
@@ -259,6 +262,8 @@ class Workspace(QWidget):
                 continue
             if isinstance(widget, QLineEdit):
                 state[name] = widget.text()
+            elif isinstance(widget, QPlainTextEdit) and not widget.isReadOnly():
+                state[name] = widget.toPlainText()
             elif isinstance(widget, QCheckBox):
                 state[name] = widget.isChecked()
             elif isinstance(widget, QSpinBox):
@@ -272,6 +277,9 @@ class Workspace(QWidget):
             widget = vars(self).get(name)
             if isinstance(widget, QLineEdit) and isinstance(value, str):
                 widget.setText(value)
+            elif (isinstance(widget, QPlainTextEdit) and not widget.isReadOnly()
+                  and isinstance(value, str)):
+                widget.setPlainText(value)
             elif isinstance(widget, QCheckBox) and isinstance(value, bool):
                 widget.setChecked(value)
             elif isinstance(widget, QComboBox) and isinstance(value, str):
