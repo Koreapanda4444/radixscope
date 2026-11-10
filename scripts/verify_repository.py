@@ -12,6 +12,7 @@ import sys
 import tarfile
 import tempfile
 import tomllib
+from email.parser import BytesParser
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -28,8 +29,10 @@ def verify_packages(root: Path) -> None:
                 assert f"radixscope/assets/{asset}" in package.namelist()
             translations = json.loads(package.read("radixscope/assets/ko.json"))
             assert translations["Convert"] == "변환"
-            metadata = package.read(f"radixscope-{__version__}.dist-info/METADATA")
-            assert b"\nVersion: 1.0.0\n" in metadata
+            metadata = BytesParser().parsebytes(
+                package.read(f"radixscope-{__version__}.dist-info/METADATA")
+            )
+            assert metadata["Version"] == __version__
     archive = root / "dist" / f"radixscope-{__version__}.tar.gz"
     with tarfile.open(archive) as source:
         assert f"radixscope-{__version__}/packaging/windows.iss" in source.getnames()
