@@ -92,6 +92,7 @@ python -m mypy src scripts packaging
 python scripts/verify_numeric.py
 python -m radixscope.gui.verification
 python -m build
+python scripts/verify_repository.py --packages
 ```
 
 Quality checks Ubuntu and Windows on Python 3.11–3.13, builds wheel/source packages,

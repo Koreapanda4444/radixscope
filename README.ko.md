@@ -91,6 +91,7 @@ python -m mypy src scripts packaging
 python scripts/verify_numeric.py
 python -m radixscope.gui.verification
 python -m build
+python scripts/verify_repository.py --packages
 ```
 
 Quality는 Ubuntu와 Windows의 Python 3.11~3.13에서 검사하고 휠·소스 패키지를 빌드합니다.

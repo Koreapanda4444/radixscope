@@ -40,11 +40,14 @@ jobs:
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python -m mypy src scripts packaging
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: python scripts/verify_numeric.py
+        run: >-
+          python scripts/verify_numeric.py
+          ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' && '--exhaustive' || '' }}
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python -m radixscope.gui.verification
       - run: python -m radixscope --version
       - run: python -m build
+      - run: python scripts/verify_repository.py --packages
       - uses: actions/upload-artifact@v4
         with:
           name: packages-${{ matrix.os }}-py${{ matrix.python-version }}

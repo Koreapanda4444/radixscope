@@ -27,9 +27,11 @@ def check_application(executable: Path, receipt: Path) -> dict[str, object]:
     if process.returncode != 0 or result.get("status") != "ok":
         raise RuntimeError(f"desktop validation failed: {result}")
     assert result["version"] == __version__ == "1.0.0"
-    assert result["workspaces"] == 8 and result["calculations"] == 26
+    assert result["workspaces"] == 8 and result["calculations"] >= 34
     assert result["languages"] == ["en", "ko"]
-    assert result["cancellation"] and result["settings"]
+    assert all(result[key] for key in (
+        "cancellation", "settings", "editing", "transfer", "stale_result", "save_failure"
+    ))
     return dict(result)
 
 

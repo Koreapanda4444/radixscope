@@ -1,6 +1,8 @@
 """Small deterministic numeric checks using independent standard-library oracles."""
 
+import argparse
 import json
+import math
 import random
 import struct
 import subprocess
@@ -33,7 +35,32 @@ from radixscope.core.limits import ComputationLimitError
 from radixscope.core.overflow import ArithmeticOperation
 
 
-def main() -> None:
+def verify_small_formats() -> None:
+    patterns = 0
+    for format_ in (IEEEFormat.BINARY16, IEEEFormat.BFLOAT16):
+        for pattern in range(1 << 16):
+            raw = pattern.to_bytes(2, "big")
+            native = struct.unpack(">e", raw)[0] if format_ is IEEEFormat.BINARY16 else (
+                struct.unpack(">f", raw + bytes(2))[0]
+            )
+            decoded = decode_ieee754(pattern, format_)
+            if math.isnan(native):
+                assert decoded.classification == "nan"
+            elif math.isinf(native):
+                assert decoded.classification == "infinity"
+                assert decoded.sign_bit == int(native < 0)
+            else:
+                assert decoded.exact is not None
+                assert decoded.exact.fraction == Fraction.from_float(native)
+                negative_zero = native == 0 and math.copysign(1, native) < 0
+                assert encode_ieee754(
+                    decoded.exact, format_, negative_zero=negative_zero
+                ).pattern == pattern
+            patterns += 1
+    print(f"Native-oracle verification: {patterns} complete 16-bit patterns passed")
+
+
+def main(*, exhaustive: bool = False) -> None:
     checks = 0
 
     def check(condition: bool) -> None:
@@ -149,7 +176,11 @@ def main() -> None:
         )
         check(isinstance(json.loads(result.stdout), dict) and not result.stderr)
     print(f"Numeric verification: {checks} checks passed")
+    if exhaustive:
+        verify_small_formats()
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--exhaustive", action="store_true", help="check every 16-bit pattern")
+    main(exhaustive=parser.parse_args().exhaustive)
