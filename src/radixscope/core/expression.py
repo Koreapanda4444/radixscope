@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TypeAlias
 
 from radixscope.core.errors import InvalidExpressionError, RadixScopeError
+from radixscope.core.limits import MAX_COMPUTED_BITS, ComputationLimitError
 from radixscope.core.literals import parse_literal
 from radixscope.core.tokenize import ExpressionToken, TokenKind, tokenize_expression
 from radixscope.core.value import ExactValue
@@ -133,6 +134,13 @@ def _evaluate_node(node: ExpressionNode) -> ExactValue:
         raise TypeError("node must be an ExpressionNode")
     left = _evaluate_node(node.left)
     right = _evaluate_node(node.right)
+    if node.operator is not TokenKind.POWER:
+        sizes = [abs(value.numerator).bit_length() + value.denominator.bit_length()
+                 for value in (left, right)]
+        if sum(sizes) > MAX_COMPUTED_BITS:
+            raise ComputationLimitError(
+                f"operation exceeds the computation budget at position {node.position}"
+            )
     if node.operator is TokenKind.PLUS:
         return left + right
     if node.operator is TokenKind.MINUS:
@@ -150,7 +158,17 @@ def _evaluate_node(node: ExpressionNode) -> ExactValue:
             raise InvalidExpressionError(
                 f"zero cannot have a negative exponent at position {node.position}"
             )
-        return left ** right.numerator
+        exponent = right.numerator
+        if left.numerator == 0:
+            return ExactValue(int(exponent == 0))
+        if left.denominator == 1 and abs(left.numerator) == 1:
+            return ExactValue(-1 if left.numerator < 0 and exponent % 2 else 1)
+        size = max(abs(left.numerator).bit_length(), left.denominator.bit_length())
+        if size * abs(exponent) > MAX_COMPUTED_BITS:
+            raise ComputationLimitError(
+                f"power exceeds the computation budget at position {node.position}"
+            )
+        return left ** exponent
     raise InvalidExpressionError(f"unsupported binary operator: {node.operator}")
 
 

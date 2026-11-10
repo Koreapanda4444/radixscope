@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from radixscope.core.errors import InvalidExpressionError
+from radixscope.core.limits import check_input
 
 _DIGITS = "0123456789"
 _NUMERAL_DIGITS = _DIGITS + "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -69,6 +70,7 @@ def _read_literal(expression: str, start: int) -> tuple[ExpressionToken, int]:
 def tokenize_expression(expression: str) -> tuple[ExpressionToken, ...]:
     if not isinstance(expression, str):
         raise InvalidExpressionError("expression must be text")
+    check_input(expression)
     tokens: list[ExpressionToken] = []
     position = 0
     while position < len(expression):

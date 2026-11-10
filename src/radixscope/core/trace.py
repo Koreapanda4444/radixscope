@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from radixscope.core.digits import digit_char, validate_base
 from radixscope.core.formatting import format_exact
+from radixscope.core.limits import MAX_TRACE_STEPS, ComputationLimitError, check_expansion
 from radixscope.core.parse import parse_number
 from radixscope.core.value import ExactValue
 
@@ -48,6 +49,8 @@ def _trace_integer(number: int, base: int) -> tuple[IntegerDivisionStep, ...]:
     steps: list[IntegerDivisionStep] = []
     dividend = number
     while dividend:
+        if len(steps) >= MAX_TRACE_STEPS:
+            raise ComputationLimitError("integer trace exceeds 10000 steps; use conversion instead")
         quotient, remainder = divmod(dividend, base)
         steps.append(
             IntegerDivisionStep(
@@ -75,6 +78,9 @@ def _trace_fraction(
             return tuple(steps), positions[remainder], True
         if max_steps is not None and len(steps) >= max_steps:
             return tuple(steps), None, False
+        check_expansion(len(steps), denominator)
+        if len(steps) >= MAX_TRACE_STEPS:
+            raise ComputationLimitError("trace exceeds 10000 steps; set a smaller max_steps")
         positions[remainder] = len(steps)
         product = remainder * base
         value, next_remainder = divmod(product, denominator)

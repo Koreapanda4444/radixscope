@@ -1,11 +1,13 @@
 from radixscope.core.digits import digit_value, validate_base, validate_digits
 from radixscope.core.errors import InvalidNumberError
+from radixscope.core.limits import check_input
 from radixscope.core.value import ExactValue
 
 
 def _normalized_text(text: str) -> str:
     if not isinstance(text, str):
         raise InvalidNumberError("number must be text")
+    check_input(text)
     normalized = text.strip()
     if not normalized:
         raise InvalidNumberError("number cannot be empty")

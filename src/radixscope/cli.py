@@ -48,6 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
     trace.add_argument("value")
     trace.add_argument("--from", type=int, default=10, dest="source_base")
     trace.add_argument("--to", type=int, default=2, dest="target_base")
+    trace.add_argument(
+        "--max-steps", type=int, help="limit fractional trace steps (positive integer)"
+    )
     _output_options(trace)
     integer = commands.add_parser("integer", help="inspect fixed-width integers and operations")
     integer.add_argument("value")
@@ -157,7 +160,7 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
     else:
         value = parse_number(args.value, args.source_base)
     if args.command == "trace":
-        return trace_report(trace_value(value, args.target_base))
+        return trace_report(trace_value(value, args.target_base, max_steps=args.max_steps))
     outputs = convert_bases(value, args.bases, args.precision, RoundingMode(args.rounding))
     return {"exact": str(value), "outputs": {str(base): text for base, text in outputs.items()}}
 

@@ -2,6 +2,7 @@ from enum import StrEnum
 
 from radixscope.core.digits import digit_char, validate_base
 from radixscope.core.errors import NonIntegerValueError
+from radixscope.core.limits import MAX_EXPANSION_DIGITS, ComputationLimitError, check_expansion
 from radixscope.core.value import ExactValue
 
 
@@ -41,6 +42,7 @@ def _fractional_expansion(
         if remainder in positions:
             start = positions[remainder]
             return digits[:start], digits[start:]
+        check_expansion(len(digits), denominator)
         positions[remainder] = len(digits)
         remainder *= base
         digit, remainder = divmod(remainder, denominator)
@@ -74,6 +76,8 @@ def _validated_precision(precision: object) -> int:
         raise ValueError("precision must be an integer")
     if precision < 0:
         raise ValueError("precision cannot be negative")
+    if precision > MAX_EXPANSION_DIGITS:
+        raise ComputationLimitError(f"precision exceeds {MAX_EXPANSION_DIGITS} digits")
     return precision
 
 
