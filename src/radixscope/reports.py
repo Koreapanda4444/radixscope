@@ -10,6 +10,7 @@ from radixscope.core import (
     parse_number,
     represent_bytes,
 )
+from radixscope.core.inspection import NumberInspection
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +109,28 @@ def ieee_report(value: IEEE754Value, byteorder: str = "big") -> dict[str, object
         "byteorder": byteorder,
         "bytes": value.to_bytes(byteorder).hex(" ").upper(),
     }
+
+
+def inspection_report(inspection: NumberInspection) -> dict[str, object]:
+    value = inspection.value
+    if isinstance(value, FixedWidthInteger):
+        report = integer_report(value, inspection.byteorder)
+    else:
+        report = ieee_report(value, inspection.byteorder)
+    interpretation = interpret_bit_pattern(inspection.pattern, inspection.width)
+    report.update({
+        "source_exact": (
+            str(inspection.source_exact) if inspection.source_exact is not None else None
+        ),
+        "exact": str(inspection.exact) if inspection.exact is not None else None,
+        "unsigned": interpretation.unsigned_value,
+        "twos_complement": interpretation.signed_value,
+        "outputs": {str(base): text for base, text in inspection.outputs.items()},
+        "data_type": "integer" if isinstance(value, FixedWidthInteger) else (
+            f"binary{value.format.value}"
+        ),
+    })
+    return report
 
 
 def trace_report(trace: ConversionTrace) -> dict[str, object]:

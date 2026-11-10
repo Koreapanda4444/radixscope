@@ -55,6 +55,7 @@ from radixscope.core.ieee754 import (
     encode_ieee754,
     encode_ieee754_special,
 )
+from radixscope.core.inspection import NumberInspection, inspect_number
 from radixscope.core.literals import parse_literal
 from radixscope.core.overflow import (
     ArithmeticOperation,
@@ -115,6 +116,7 @@ __all__ = [
     "InvalidWidthError",
     "LiteralExpression",
     "NonIntegerValueError",
+    "NumberInspection",
     "RadixScopeError",
     "RangeAnalysis",
     "RoundingMode",
@@ -143,6 +145,7 @@ __all__ = [
     "format_rounded",
     "format_twos_complement",
     "format_value",
+    "inspect_number",
     "integer_bounds",
     "interpret_bit_pattern",
     "parse_bit_pattern",

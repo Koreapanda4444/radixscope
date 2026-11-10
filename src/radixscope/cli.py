@@ -19,7 +19,14 @@ from radixscope.core import (
     parse_number,
     trace_value,
 )
-from radixscope.reports import ieee_report, integer_report, render_report, trace_report
+from radixscope.core.inspection import inspect_number
+from radixscope.reports import (
+    ieee_report,
+    inspection_report,
+    integer_report,
+    render_report,
+    trace_report,
+)
 
 
 def _output_options(parser: argparse.ArgumentParser) -> None:
@@ -37,6 +44,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="radixscope", description="Exact numbers and raw bits")
     parser.add_argument("--version", action="version", version=f"RadixScope {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
+    inspect.add_argument("value")
+    inspect.add_argument("--base", type=int, default=10)
+    inspect.add_argument("--width", type=int, default=32)
+    inspect.add_argument("--type", choices=["integer", "binary32", "binary64"], default="integer")
+    inspect.add_argument("--signed", action="store_true")
+    inspect.add_argument("--pattern", action="store_true")
+    inspect.add_argument("--byteorder", choices=["big", "little"], default="big")
+    _output_options(inspect)
     convert = commands.add_parser("convert", help="convert a number between bases 2 through 36")
     convert.add_argument("value")
     convert.add_argument("--from", type=int, default=10, dest="source_base")
@@ -151,6 +167,11 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "inspect":
+        return inspection_report(inspect_number(
+            args.value, base=args.base, width=args.width, signed=args.signed,
+            data_type=args.type, raw=args.pattern, byteorder=args.byteorder,
+        ))
     if args.command == "integer":
         return _integer_command(args)
     if args.command == "ieee":
