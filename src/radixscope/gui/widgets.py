@@ -106,7 +106,8 @@ class Workspace(QWidget):
         actions.addWidget(self.copy_button)
         self._destination = QComboBox()
         self._destination.addItems([name for name in (
-            "Number Inspector", "Programmer", "IEEE 754", "Conversion"
+            "Number Inspector", "Programmer", "IEEE 754", "Conversion",
+            "Byte Inspector", "Binary Comparison", "Batch Conversion", "Trace",
         ) if name != title])
         self._transfer_mode = QComboBox()
         self._transfer_mode.addItems(["Numeric value", "Raw bits"])

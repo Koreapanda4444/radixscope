@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from radixscope.core import ExactValue
 from radixscope.core.bitfields import BitfieldLayout
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.widgets import Workspace
@@ -71,6 +72,9 @@ class ComparisonWorkspace(Workspace):
         self.form.addRow("Byte comparison page", self._page)
         self.form.addRow("Byte differences", self.byte_table)
         self.form.addRow("Field differences", self.field_table)
+        self._source_side = QComboBox()
+        self._source_side.addItems(["Left", "Right", "XOR"])
+        self.form.addRow("Send comparison side", self._source_side)
         self.run_button.setText("Compare patterns")
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.start_calculation)
@@ -158,6 +162,20 @@ class ComparisonWorkspace(Workspace):
         state = super().snapshot()
         state["layout"] = self._layout
         return state
+
+    def request_transfer(self) -> None:
+        if self._report is None:
+            return
+        side = self._source_side.currentText().lower()
+        data = bytes.fromhex(str(self._report[f"{side}_bytes"]))
+        order = "little" if self._report["byteorder"] == "little" else "big"
+        pattern = int.from_bytes(data, "little" if order == "little" else "big")
+        self.transfer_requested.emit(
+            self._destination.currentText(), self._transfer_mode.currentIndex() == 1,
+            {"bits": format(pattern, f"0{len(data) * 8}b"), "bytes": data.hex(" "),
+             "width": len(data) * 8, "byteorder": order, "exact": str(ExactValue(pattern)),
+             "signed": False, "data_type": "integer"},
+        )
 
     def restore_state(self, state: dict[str, object]) -> None:
         super().restore_state(state)

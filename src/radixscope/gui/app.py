@@ -10,12 +10,15 @@ from PySide6.QtWidgets import (
     QDialog,
     QDockWidget,
     QFileDialog,
+    QHBoxLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QPushButton,
-    QTabWidget,
+    QStackedWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -49,8 +52,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"RadixScope {__version__}")
         self.resize(1000, 720)
         self.setMinimumSize(640, 480)
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
+        self.tabs = QStackedWidget()
         self.workspaces: list[Workspace] = [
             ConversionWorkspace(),
             TraceWorkspace(),
@@ -62,14 +64,52 @@ class MainWindow(QMainWindow):
             BatchWorkspace(),
         ]
         for index, workspace in enumerate(self.workspaces):
-            self.tabs.addTab(workspace, workspace.title)
+            self.tabs.addWidget(workspace)
             action = QAction(workspace.title, self)
             action.setShortcut(QKeySequence(f"Ctrl+{index + 1}"))
             action.triggered.connect(partial(self.tabs.setCurrentIndex, index))
             self.addAction(action)
             workspace.result_ready.connect(self.show_completed)
             workspace.transfer_requested.connect(self.receive_transfer)
-        self.setCentralWidget(self.tabs)
+        self.navigation = QTreeWidget()
+        self.navigation.setHeaderHidden(True)
+        self.navigation.setRootIsDecorated(False)
+        self.navigation.setIndentation(12)
+        self.navigation.setMinimumWidth(150)
+        self.navigation.setMaximumWidth(220)
+        self.navigation.setUniformRowHeights(True)
+        self.navigation.setItemsExpandable(False)
+        self._navigation_items: dict[int, QTreeWidgetItem] = {}
+        groups = {
+            "Inspect": ("Number Inspector", "Byte Inspector", "IEEE 754", "Programmer"),
+            "Calculate": ("Conversion", "Batch Conversion", "Trace"),
+            "Compare": ("Binary Comparison",),
+        }
+        for name, titles in groups.items():
+            group = QTreeWidgetItem([name])
+            group.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            font = group.font(0)
+            font.setBold(True)
+            group.setFont(0, font)
+            self.navigation.addTopLevelItem(group)
+            for title in titles:
+                index = next(i for i, workspace in enumerate(self.workspaces)
+                             if workspace.title == title)
+                label = "Integer operations" if title == "Programmer" else title
+                item = QTreeWidgetItem([label])
+                item.setData(0, Qt.ItemDataRole.UserRole, index)
+                item.setToolTip(0, f"{title} · Ctrl+{index + 1}")
+                group.addChild(item)
+                self._navigation_items[index] = item
+            group.setExpanded(True)
+        self.navigation.currentItemChanged.connect(self.navigate_to_item)
+        self.tabs.currentChanged.connect(self.sync_navigation)
+        central = QWidget()
+        central_layout = QHBoxLayout(central)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(self.navigation)
+        central_layout.addWidget(self.tabs, 1)
+        self.setCentralWidget(central)
         self.recent = QListWidget()
         self.recent.itemDoubleClicked.connect(self.restore_recent)
         self.history_search = QLineEdit()
@@ -103,6 +143,7 @@ class MainWindow(QMainWindow):
         menu = self.menuBar().addMenu("Settings")
         menu.addAction(settings_action)
         menu.addAction(self.recent_dock.toggleViewAction())
+        self.recent_dock.toggleViewAction().setShortcut(QKeySequence("Ctrl+H"))
         self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
         self.base_stylesheet = (
             "QWidget { font-size: 13px; }"
@@ -113,9 +154,25 @@ class MainWindow(QMainWindow):
             "QTabWidget::pane { border: 0; }"
         )
         self.restore_preferences()
+        self.sync_navigation(self.tabs.currentIndex())
         self.refresh_history()
         if self.store.warning:
             self.statusBar().showMessage(self.store.warning)
+
+    def navigate_to_item(
+        self, current: QTreeWidgetItem | None, previous: QTreeWidgetItem | None,
+    ) -> None:
+        if current is not None:
+            index = current.data(0, Qt.ItemDataRole.UserRole)
+            if isinstance(index, int):
+                self.tabs.setCurrentIndex(index)
+
+    def sync_navigation(self, index: int) -> None:
+        item = self._navigation_items.get(index)
+        if item is not None:
+            blocker = QSignalBlocker(self.navigation)
+            self.navigation.setCurrentItem(item)
+            del blocker
 
     def show_completed(self, title: str, report: dict[str, object]) -> None:
         if self._restoring:
@@ -147,7 +204,12 @@ class MainWindow(QMainWindow):
             return
         destination.restore_state(state)
         self.tabs.setCurrentWidget(destination)
-        destination.start_calculation()
+        if title == "Binary Comparison":
+            self.statusBar().showMessage(
+                "Left pattern transferred · Enter the right pattern and compare"
+            )
+        else:
+            destination.start_calculation()
 
     def refresh_history(self) -> None:
         self.recent.clear()
@@ -232,6 +294,10 @@ class MainWindow(QMainWindow):
                 if isinstance(state, dict):
                     workspace.restore_state(state)
         tab = self.store.preferences.get("active_tab", 0)
+        active = self.store.preferences.get("active_workspace")
+        if isinstance(active, str):
+            tab = next((i for i, workspace in enumerate(self.workspaces)
+                        if workspace.title == active), tab)
         if isinstance(tab, int) and not isinstance(tab, bool) and 0 <= tab < self.tabs.count():
             self.tabs.setCurrentIndex(tab)
         dimensions = (("window_width", self.resize_width), ("window_height", self.resize_height))
@@ -240,6 +306,7 @@ class MainWindow(QMainWindow):
             if isinstance(value, int) and not isinstance(value, bool) and 480 <= value <= 3000:
                 setter(value)
         self.apply_theme()
+        self.recent_dock.setVisible(self.store.preferences.get("history_visible", False) is True)
 
     def resize_width(self, value: int) -> None:
         self.resize(value, self.height())
@@ -250,6 +317,8 @@ class MainWindow(QMainWindow):
     def save_preferences(self) -> None:
         self.store.preferences.update({
             "active_tab": self.tabs.currentIndex(),
+            "active_workspace": self.workspaces[self.tabs.currentIndex()].title,
+            "history_visible": self.recent_dock.isVisible(),
             "window_width": self.width(), "window_height": self.height(),
             "workspaces": {workspace.title: workspace.snapshot() for workspace in self.workspaces},
         })
