@@ -73,7 +73,7 @@ def build_installer(root: Path, bundle: Path, icon: Path) -> None:
         raise ValueError("the installer requires a Windows x64 build environment")
     compiler = shutil.which("ISCC")
     if compiler is None:
-        program_files = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
+        program_files = Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)"))
         candidate = program_files / "Inno Setup 6" / "ISCC.exe"
         if not candidate.is_file():
             raise FileNotFoundError("install Inno Setup 6.3 or newer, or add ISCC to PATH")
