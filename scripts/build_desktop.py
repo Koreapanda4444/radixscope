@@ -1,3 +1,4 @@
+import argparse
 import importlib.metadata
 import json
 import os
@@ -66,7 +67,29 @@ def version_resource() -> str:
     )
 
 
+def build_installer(root: Path, bundle: Path, icon: Path) -> None:
+    if (os.name != "nt" or struct.calcsize("P") != 8
+            or platform.machine().lower() not in ("amd64", "x86_64")):
+        raise ValueError("the installer requires a Windows x64 build environment")
+    compiler = shutil.which("ISCC")
+    if compiler is None:
+        program_files = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
+        candidate = program_files / "Inno Setup 6" / "ISCC.exe"
+        if not candidate.is_file():
+            raise FileNotFoundError("install Inno Setup 6.3 or newer, or add ISCC to PATH")
+        compiler = str(candidate)
+    subprocess.run(
+        [compiler, "/Qp", f"/DVersion={__version__}", f"/DBundle={bundle}",
+         f"/DProductIcon={icon}", f"/O{root / 'dist'}",
+         str(root / "packaging" / "windows.iss")],
+        cwd=root, check=True,
+    )
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build the standalone desktop distribution")
+    parser.add_argument("--installer", action="store_true", help="also build Windows setup")
+    arguments = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     work = root / "build" / "desktop"
     work.mkdir(parents=True, exist_ok=True)
@@ -116,6 +139,8 @@ def main() -> None:
             if path.is_file():
                 package.write(path, path.relative_to(bundle.parent))
     print(f"Desktop package: {archive}")
+    if arguments.installer:
+        build_installer(root, bundle, work / "radixscope.ico")
 
 
 if __name__ == "__main__":

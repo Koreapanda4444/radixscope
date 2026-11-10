@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
+from radixscope import __version__
 from radixscope.gui.app import MainWindow, create_application
 from radixscope.gui.byte_inspector import ByteInspectorWorkspace
 from radixscope.gui.conversion import ConversionWorkspace
@@ -115,7 +116,7 @@ def verify_desktop() -> dict[str, object]:
         finally:
             window.close()
             application.processEvents()
-    return {"status": "ok", "workspaces": 8, "calculations": calculations,
+    return {"status": "ok", "version": __version__, "workspaces": 8, "calculations": calculations,
             "languages": ["en", "ko"], "cancellation": True, "settings": True}
 
 
