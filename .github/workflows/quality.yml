@@ -33,6 +33,7 @@ jobs:
       - run: python -m ruff check src scripts packaging
       - run: python -m mypy src scripts packaging
       - run: python scripts/verify_numeric.py
+      - run: python -m radixscope.gui.verification
       - run: python -m radixscope --version
       - run: python -m build
       - uses: actions/upload-artifact@v4

@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QCheckBox,
-    QComboBox,
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
@@ -17,6 +16,7 @@ from PySide6.QtWidgets import (
 from radixscope.core.bitfields import inspect_bitfields
 from radixscope.core.byte_inspection import parse_byte_input
 from radixscope.gui.bitfields import BitfieldPanel
+from radixscope.gui.i18n import LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 
 
@@ -31,9 +31,9 @@ class ByteInspectorWorkspace(Workspace):
         self.input = QPlainTextEdit("3F 80 00 00")
         self.input.setMaximumHeight(100)
         self.input.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
-        self.input_format = QComboBox()
+        self.input_format = LocalizedComboBox()
         self.input_format.addItems(["hex", "binary", "base64", "utf8"])
-        self.byteorder = QComboBox()
+        self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.offset = QSpinBox()
         self.offset.setRange(0, 65535)
@@ -42,7 +42,7 @@ class ByteInspectorWorkspace(Workspace):
         self.length.setValue(4)
         self.all_bytes = QCheckBox("Interpret from offset through the end of the buffer")
         self.all_bytes.setChecked(True)
-        self.interpret_as = QComboBox()
+        self.interpret_as = LocalizedComboBox()
         self.interpret_as.addItems(["unsigned integer", "signed integer", "binary16", "bfloat16",
                                     "binary32", "binary64"])
         self.convert_input_button = QPushButton("Convert buffer to selected input format")

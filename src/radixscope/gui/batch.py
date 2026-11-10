@@ -3,7 +3,6 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
-    QComboBox,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
@@ -13,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from radixscope.core import RoundingMode
 from radixscope.gui.conversion import base_input
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 
 
@@ -24,7 +24,7 @@ class BatchWorkspace(Workspace):
         self.input = QPlainTextEdit("255\n1/3\n0.1")
         self.input.setMinimumHeight(90)
         self.input.setMaximumHeight(160)
-        self.mode = QComboBox()
+        self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Expression", "Auto"])
         self.source_base = base_input()
         self.targets = QLineEdit("2, 8, 10, 16")
@@ -32,7 +32,7 @@ class BatchWorkspace(Workspace):
         self.precision.setRange(0, 1000)
         self.precision.setValue(16)
         self.exact_output = QCheckBox("Exact output (expansion work limits still apply)")
-        self.rounding = QComboBox()
+        self.rounding = LocalizedComboBox()
         self.rounding.addItems([mode.value for mode in RoundingMode])
         self.rounding.setCurrentText(RoundingMode.HALF_EVEN.value)
         self.row_limit = QSpinBox()
@@ -81,6 +81,8 @@ class BatchWorkspace(Workspace):
                 item = QTableWidgetItem(self.cell_text(row, key))
                 if row.get("error"):
                     item.setForeground(QColor("#c94848"))
+                    if key == "error":
+                        item.setData(UI_TEXT_ROLE, str(row["error"]))
                 self.result_table.setItem(row_index, column, item)
         self.result_table.resizeColumnsToContents()
         self.result_table.selectRow(0)
@@ -89,6 +91,7 @@ class BatchWorkspace(Workspace):
         if report["limited"]:
             message += " · Limit reached; some inputs were not processed"
         self._summary.setText(message)
+        self.translate_ui()
 
     @staticmethod
     def cell_text(row: dict[str, object], key: str) -> str:

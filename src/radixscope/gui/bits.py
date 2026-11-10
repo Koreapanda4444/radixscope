@@ -73,6 +73,7 @@ class BitEditor(QWidget):
         self.pattern = None
         self.setEnabled(False)
         self.range_label.setText("Run a calculation to edit its result bits")
+        localize(self)
 
     def field_name(self, index: int) -> str:
         for name, (low, high) in self.fields.items():
@@ -134,6 +135,7 @@ class BitEditor(QWidget):
             bit = bool(self.pattern & (1 << index))
             button.setChecked(bit)
             button.setText("1" if bit else "0")
+        localize(self)
 
     def toggle_bit(self, index: int) -> None:
         if self.read_only:
@@ -142,4 +144,5 @@ class BitEditor(QWidget):
             return
         self.pattern ^= 1 << index
         self.refresh_buttons()
-        self.pattern_changed.emit(self.pattern)
+        self.pattern_changed.emit(self.pattern)from radixscope.gui.i18n import localize
+

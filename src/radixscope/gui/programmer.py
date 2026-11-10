@@ -2,7 +2,6 @@ from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
-    QComboBox,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -20,6 +19,7 @@ from radixscope.core import (
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.floating import FloatNavigator
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import ieee_report, integer_report
 
@@ -36,14 +36,14 @@ class ProgrammerWorkspace(Workspace):
         self.bit_width.setValue(8)
         self.signed = QCheckBox("Signed")
         self.pattern = QCheckBox("Read raw bits")
-        self.operation = QComboBox()
+        self.operation = LocalizedComboBox()
         self.operation.addItems(
             ["inspect", "add", "subtract", "multiply", "and", "or", "xor", "not",
              "shl", "shr", "lshr"]
         )
         self.operand = QLineEdit("1")
         self.operand_label = QLabel("Operand")
-        self.byteorder = QComboBox()
+        self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.form.addRow("Input", self.input)
         self.form.addRow("Representation", control_row("Base", self.base, "Width", self.bit_width,
@@ -103,12 +103,12 @@ class IEEEWorkspace(Workspace):
             "IEEE 754", "Encode exact values or decode binary16, bfloat16, binary32 and binary64"
         )
         self.input = QLineEdit("0.1")
-        self.mode = QComboBox()
+        self.mode = LocalizedComboBox()
         self.mode.addItems(["encode", "decode"])
-        self.bit_width = QComboBox()
+        self.bit_width = LocalizedComboBox()
         self.bit_width.addItems(["32", "64", "16", "bfloat16"])
         self.base = base_input(16)
-        self.byteorder = QComboBox()
+        self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.negative_zero = QCheckBox("Encode a zero value as -0")
         self.payload = QLineEdit("0")
@@ -203,10 +203,14 @@ class IEEEWorkspace(Workspace):
         self.result_table.setRowCount(len(self._comparison_rows))
         for row_index, row in enumerate(self._comparison_rows):
             for column, key in enumerate(columns):
-                self.result_table.setItem(row_index, column, QTableWidgetItem(str(row.get(key))))
+                item = QTableWidgetItem(str(row.get(key)))
+                if key == "classification" or isinstance(row.get(key), bool):
+                    item.setData(UI_TEXT_ROLE, str(row.get(key)))
+                self.result_table.setItem(row_index, column, item)
         self.result_table.resizeColumnsToContents()
         self.result_table.selectRow(0)
         self.filter_results()
+        self.translate_ui()
 
     def copy_selected(self) -> None:
         if not self._comparison_rows:

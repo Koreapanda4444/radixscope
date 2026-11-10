@@ -1,6 +1,7 @@
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QVBoxLayout, QWidget
 
+from radixscope.gui.i18n import LocalizedComboBox
 from radixscope.core.ieee754 import IEEE754Value
 from radixscope.core.neighbors import adjacent_float, float_boundaries
 
@@ -15,7 +16,7 @@ class FloatNavigator(QWidget):
         self.next = QPushButton("Next value")
         self.previous.clicked.connect(lambda: self.move_to_neighbor("down"))
         self.next.clicked.connect(lambda: self.move_to_neighbor("up"))
-        self.boundary = QComboBox()
+        self.boundary = LocalizedComboBox()
         for name in ("positive_zero", "minimum_subnormal", "maximum_subnormal", "minimum_normal",
                      "maximum_finite", "positive_infinity"):
             self.boundary.addItem(name.replace("_", " ").capitalize(), name)

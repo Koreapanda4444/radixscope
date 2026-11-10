@@ -4,7 +4,6 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
-    QComboBox,
     QFileDialog,
     QLabel,
     QPlainTextEdit,
@@ -17,6 +16,7 @@ from PySide6.QtWidgets import (
 from radixscope.core import ExactValue
 from radixscope.core.bitfields import BitfieldLayout
 from radixscope.gui.bits import BitEditor
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
 from radixscope.gui.widgets import Workspace, control_row
 
 
@@ -31,11 +31,11 @@ class ComparisonWorkspace(Workspace):
         self.other_input = QPlainTextEdit("FE 80")
         for editor in (self.input, self.other_input):
             editor.setMaximumHeight(80)
-        self.input_format = QComboBox()
+        self.input_format = LocalizedComboBox()
         self.input_format.addItems(["hex", "binary", "base64", "utf8"])
-        self.byteorder = QComboBox()
+        self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
-        self.length_policy = QComboBox()
+        self.length_policy = LocalizedComboBox()
         self.length_policy.addItems(["equal", "zero-extend"])
         self._layout_label = QLabel("No bitfield layout")
         load = QPushButton("Load bitfield layout")
@@ -77,7 +77,7 @@ class ComparisonWorkspace(Workspace):
         self.form.addRow("Byte comparison page", self._page)
         self.form.addRow("Byte differences", self.byte_table)
         self.form.addRow("Field differences", self.field_table)
-        self._source_side = QComboBox()
+        self._source_side = LocalizedComboBox()
         self._source_side.addItems(["Left", "Right", "XOR"])
         self.form.addRow("Send comparison side", self._source_side)
         self.run_button.setText("Compare patterns")
@@ -123,7 +123,10 @@ class ComparisonWorkspace(Workspace):
         self.field_table.setRowCount(len(fields))
         for row, field in enumerate(fields):
             for column, key in enumerate(("name", "left", "right", "xor_bits", "changed")):
-                self.field_table.setItem(row, column, QTableWidgetItem(str(field[key])))
+                item = QTableWidgetItem(str(field[key]))
+                if key == "changed":
+                    item.setData(UI_TEXT_ROLE, str(field[key]))
+                self.field_table.setItem(row, column, item)
         self.field_table.resizeColumnsToContents()
 
     def show_byte_page(self) -> None:
@@ -147,7 +150,7 @@ class ComparisonWorkspace(Workspace):
         self.byte_table.resizeColumnsToContents()
 
     def load_layout(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Load bitfield layout", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, tr("Load bitfield layout"), "", "JSON (*.json)")
         if not path:
             return
         try:
@@ -161,11 +164,13 @@ class ComparisonWorkspace(Workspace):
         self.invalidate_result()
         self._layout = text
         self._layout_label.setText(f"{len(layout.fields)} fields · {layout.width} bits")
+        self.translate_ui()
 
     def clear_layout(self) -> None:
         self.invalidate_result()
         self._layout = ""
         self._layout_label.setText("No bitfield layout")
+        self.translate_ui()
 
     def snapshot(self) -> dict[str, object]:
         state = super().snapshot()
@@ -190,6 +195,7 @@ class ComparisonWorkspace(Workspace):
         super().restore_state(state)
         self._layout = ""
         self._layout_label.setText("No bitfield layout")
+        self.translate_ui()
         text = state.get("layout", "")
         if isinstance(text, str) and text:
             try:
@@ -198,3 +204,4 @@ class ComparisonWorkspace(Workspace):
                 return
             self._layout = text
             self._layout_label.setText(f"{len(layout.fields)} fields · {layout.width} bits")
+            self.translate_ui()

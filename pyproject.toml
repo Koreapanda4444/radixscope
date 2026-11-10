@@ -47,7 +47,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-radixscope = ["py.typed", "assets/*.svg"]
+radixscope = ["py.typed", "assets/*.svg", "assets/*.json"]
 
 [tool.ruff]
 target-version = "py311"

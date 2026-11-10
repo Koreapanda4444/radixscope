@@ -6,7 +6,6 @@ from PySide6.QtCore import QSignalBlocker, QStandardPaths, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QApplication,
-    QComboBox,
     QDialog,
     QDockWidget,
     QFileDialog,
@@ -29,6 +28,13 @@ from radixscope.gui.batch import BatchWorkspace
 from radixscope.gui.byte_inspector import ByteInspectorWorkspace
 from radixscope.gui.comparison import ComparisonWorkspace
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
+from radixscope.gui.i18n import (
+    LocalizedComboBox,
+    default_language,
+    localize,
+    set_language,
+    tr,
+)
 from radixscope.gui.inspector import InspectorWorkspace
 from radixscope.gui.navigation import transfer_state
 from radixscope.gui.preferences import PreferencesDialog
@@ -47,6 +53,7 @@ class MainWindow(QMainWindow):
     def __init__(self, store: SettingsStore | None = None) -> None:
         super().__init__()
         self.store = store if store is not None else SettingsStore(default_state_path())
+        set_language(self.store.preferences.get("language", default_language()))
         self._restoring = False
         self.system_palette = QPalette(self.palette())
         self.setWindowTitle(f"RadixScope {__version__}")
@@ -114,7 +121,7 @@ class MainWindow(QMainWindow):
         self.history_search = QLineEdit()
         self.history_search.setPlaceholderText("Search input, result or work type")
         self.history_search.textChanged.connect(self.refresh_history)
-        self.history_kind = QComboBox()
+        self.history_kind = LocalizedComboBox()
         self.history_kind.addItem("All work types")
         self.history_kind.currentIndexChanged.connect(self.refresh_history)
         restore = QPushButton("Restore selected work")
@@ -128,7 +135,7 @@ class MainWindow(QMainWindow):
         recent_layout.addWidget(self.recent)
         recent_layout.addWidget(restore)
         recent_layout.addWidget(clear)
-        self.history_export_format = QComboBox()
+        self.history_export_format = LocalizedComboBox()
         self.history_export_format.addItems(["JSON", "CSV", "Text"])
         history_export = QPushButton("Export displayed history")
         history_export.clicked.connect(self.export_history)
@@ -143,12 +150,28 @@ class MainWindow(QMainWindow):
         menu.addAction(settings_action)
         menu.addAction(self.recent_dock.toggleViewAction())
         self.recent_dock.toggleViewAction().setShortcut(QKeySequence("Ctrl+H"))
-        self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
+        self.show_status("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
         self.restore_preferences()
         self.sync_navigation(self.tabs.currentIndex())
         self.refresh_history()
         if self.store.warning:
-            self.statusBar().showMessage(self.store.warning)
+            self.show_status(self.store.warning)
+        self.apply_language()
+
+    def show_status(self, message: str, timeout: int = 0) -> None:
+        self._status_source, self._status_timeout = message, timeout
+        self.statusBar().showMessage(tr(message), timeout)
+
+    def apply_language(self) -> None:
+        language = self.store.preferences.get("language", default_language())
+        self.store.preferences["language"] = "ko" if language == "ko" else "en"
+        set_language(self.store.preferences["language"])
+        self.refresh_history()
+        localize(self)
+        for workspace in self.workspaces:
+            workspace.translate_ui()
+        if hasattr(self, "_status_source"):
+            self.statusBar().showMessage(tr(self._status_source), self._status_timeout)
 
     def navigate_to_item(
         self, current: QTreeWidgetItem | None, previous: QTreeWidgetItem | None,
@@ -183,7 +206,7 @@ class MainWindow(QMainWindow):
             summary = report.get("classification", "comparison")
         self.store.record(title, workspace.snapshot(), str(summary), report)
         self.refresh_history()
-        self.statusBar().showMessage(f"{title} complete", 5000)
+        self.show_status(f"{title} complete", 5000)
         self.save_preferences()
 
     def receive_transfer(self, title: str, raw: bool, report: dict[str, object]) -> None:
@@ -191,12 +214,12 @@ class MainWindow(QMainWindow):
         try:
             state = transfer_state(report, title, destination.snapshot(), raw)
         except ValueError as error:
-            self.statusBar().showMessage(str(error), 8000)
+            self.show_status(str(error), 8000)
             return
         destination.restore_state(state)
         self.tabs.setCurrentWidget(destination)
         if title == "Binary Comparison":
-            self.statusBar().showMessage(
+            self.show_status(
                 "Left pattern transferred · Enter the right pattern and compare"
             )
         else:
@@ -212,15 +235,30 @@ class MainWindow(QMainWindow):
         if category in kinds:
             self.history_kind.setCurrentText(category)
         del blocker
-        kind = self.history_kind.currentText()
-        for index, entry in self.store.search_history(
-            self.history_search.text(), None if kind == "All work types" else kind,
-        ):
+        for index, entry in self.displayed_history():
             state = entry["state"]
             text = str(state.get("input", "")) if isinstance(state, dict) else ""
-            item = QListWidgetItem(f"{entry['workspace']} · {text[:50]} → {entry['summary']}")
+            item = QListWidgetItem(
+                f"{tr(str(entry['workspace']))} · {text[:50]} → {tr(str(entry['summary']))}"
+            )
             item.setData(Qt.ItemDataRole.UserRole, index)
             self.recent.addItem(item)
+        localize(self.history_kind)
+
+    def displayed_history(self) -> list[tuple[int, dict[str, object]]]:
+        kind = self.history_kind.currentText()
+        query = self.history_search.text().casefold().strip()
+        entries = self.store.search_history("", None if kind == "All work types" else kind)
+        result = []
+        for index, entry in entries:
+            state = entry["state"]
+            assert isinstance(state, dict)
+            values = (entry["workspace"], entry.get("kind", ""), entry["summary"],
+                      state.get("input", ""), state.get("other_input", ""))
+            text = " ".join(str(value) + " " + tr(str(value)) for value in values).casefold()
+            if not query or query in text:
+                result.append((index, entry))
+        return result
 
     def restore_recent(self) -> None:
         item = self.recent.currentItem()
@@ -242,35 +280,32 @@ class MainWindow(QMainWindow):
                     self._restoring = True
                     try:
                         workspace.set_result(report)
-                        self.statusBar().showMessage("Saved result restored", 5000)
+                        self.show_status("Saved result restored", 5000)
                     except (ValueError, TypeError, KeyError, AssertionError):
                         workspace.invalidate_result()
-                        self.statusBar().showMessage("Input restored · Run to calculate", 5000)
+                        self.show_status("Input restored · Run to calculate", 5000)
                     finally:
                         self._restoring = False
                 else:
-                    self.statusBar().showMessage("Input restored · Run to calculate", 5000)
+                    self.show_status("Input restored · Run to calculate", 5000)
                 return
 
     def export_history(self) -> None:
         selected = self.history_export_format.currentText().lower()
         extension = "txt" if selected == "text" else selected
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export displayed history", "", f"{selected.upper()} (*.{extension})"
+            self, tr("Export displayed history"), "", f"{selected.upper()} (*.{extension})"
         )
         if not path:
             return
-        kind = self.history_kind.currentText()
-        entries = [entry for _, entry in self.store.search_history(
-            self.history_search.text(), None if kind == "All work types" else kind,
-        )]
+        entries = [entry for _, entry in self.displayed_history()]
         try:
             content = report_json({"history": entries}) if selected == "json" else (
                 table_csv(entries) if selected == "csv" else render_report({"history": entries})
             )
             write_export(Path(path), content)
         except (OSError, ValueError) as error:
-            self.statusBar().showMessage(f"Could not export history: {error}")
+            self.show_status(f"Could not export history: {error}")
 
     def clear_history(self) -> None:
         self.store.history.clear()
@@ -322,18 +357,21 @@ class MainWindow(QMainWindow):
         try:
             self.store.save()
         except (OSError, ValueError) as error:
-            self.statusBar().showMessage(f"Could not save preferences: {error}")
+            self.show_status(f"Could not save preferences: {error}")
 
     def edit_preferences(self) -> None:
         dialog = PreferencesDialog(self.store, self)
+        localize(dialog)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.store.preferences.update({
                 "theme": dialog.theme.currentText(),
+                "language": dialog.language.currentData(),
                 "remember_history": dialog.remember.isChecked(),
                 "history_limit": dialog.limit.value(),
             })
             del self.store.history[self.store.history_limit:]
             self.apply_theme()
+            self.apply_language()
             self.refresh_history()
             self.save_preferences()
 

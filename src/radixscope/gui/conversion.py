@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QPushButton, QSpinBox
+from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit, QPushButton, QSpinBox
 
 from radixscope.core import RoundingMode
 from radixscope.core.input_syntax import detect_input_syntax
+from radixscope.gui.i18n import LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 
 
@@ -16,7 +17,7 @@ class ConversionWorkspace(Workspace):
     def __init__(self) -> None:
         super().__init__("Conversion", "Convert exact numbers or evaluate mixed-base expressions")
         self.input = QLineEdit("255")
-        self.mode = QComboBox()
+        self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Expression", "Auto"])
         self._syntax_hint = QLabel()
         self._syntax_hint.setWordWrap(True)
@@ -32,7 +33,7 @@ class ConversionWorkspace(Workspace):
         self.precision = QSpinBox()
         self.precision.setRange(0, 1000)
         self.precision.setValue(16)
-        self.rounding = QComboBox()
+        self.rounding = LocalizedComboBox()
         self.rounding.addItems([mode.value for mode in RoundingMode])
         self.rounding.setCurrentText(RoundingMode.HALF_EVEN.value)
         self.form.addRow("Input", self.input)

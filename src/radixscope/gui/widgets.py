@@ -33,6 +33,14 @@ from PySide6.QtWidgets import (
 
 from radixscope.calculations import CalculationJob
 from radixscope.exports import report_csv, report_json, write_export
+from radixscope.gui.i18n import (
+    UI_CONTEXT_ROLE,
+    UI_TEXT_ROLE,
+    LocalizedComboBox,
+    gui_report,
+    localize,
+    tr,
+)
 from radixscope.reports import ReportField, StructuredReport, render_report
 
 
@@ -59,6 +67,7 @@ class Workspace(QWidget):
         super().__init__()
         self.title = title
         self._report: dict[str, object] | None = None
+        self._english_report = ""
         self.job: CalculationJob | None = None
         self.job_state: dict[str, object] = {}
         self.timer = QTimer(self)
@@ -117,6 +126,7 @@ class Workspace(QWidget):
         self.error = QLabel()
         self.error.setWordWrap(True)
         self.error.setObjectName("error")
+        self.error.setTextFormat(Qt.TextFormat.PlainText)
         self.run_button = QPushButton("Run")
         self.run_button.setObjectName("primary")
         self.run_button.setEnabled(False)
@@ -138,12 +148,12 @@ class Workspace(QWidget):
         actions.addWidget(self.status, 1)
         actions.addWidget(self.copy_selected_button)
         actions.addWidget(self.copy_button)
-        self._destination = QComboBox()
+        self._destination = LocalizedComboBox()
         self._destination.addItems([name for name in (
             "Number Inspector", "Programmer", "IEEE 754", "Conversion",
             "Byte Inspector", "Binary Comparison", "Batch Conversion", "Trace",
         ) if name != title])
-        self._transfer_mode = QComboBox()
+        self._transfer_mode = LocalizedComboBox()
         self._transfer_mode.addItems(["Numeric value", "Raw bits"])
         self._transfer_button = QPushButton("Send to workspace")
         self._transfer_button.setEnabled(False)
@@ -154,7 +164,7 @@ class Workspace(QWidget):
         transfer.addWidget(self._destination, 0, 0)
         transfer.addWidget(self._transfer_mode, 0, 1)
         transfer.addWidget(self._transfer_button, 0, 2)
-        self._export_format = QComboBox()
+        self._export_format = LocalizedComboBox()
         self._export_format.addItems(["Text", "JSON", "CSV"])
         self._export_button = QPushButton("Export result")
         self._export_button.setEnabled(False)
@@ -197,7 +207,8 @@ class Workspace(QWidget):
         self._transfer_button.setEnabled(True)
         self._export_button.setEnabled(True)
         self.status.setText("Complete")
-        self.output.setPlainText(render_report(report) if text is None else text)
+        self._english_report = render_report(report) if text is None else text
+        self.output.setPlainText(self._english_report)
         priorities = {key: index for index, key in enumerate((
             "exact", "source_exact", "value", "outputs", "hexadecimal", "bytes",
             "unsigned", "twos_complement", "absolute_error", "relative_error", "error_ulps",
@@ -211,13 +222,21 @@ class Workspace(QWidget):
         self.result_table.setHorizontalHeaderLabels(["Representation", "Value"])
         self.result_table.setRowCount(len(self.report_fields))
         for row, field in enumerate(self.report_fields):
-            self.result_table.setItem(row, 0, QTableWidgetItem(field.path.replace("_", " ")))
+            label = QTableWidgetItem(field.path.replace("_", " "))
+            label.setData(UI_TEXT_ROLE, field.path)
+            label.setData(UI_CONTEXT_ROLE, "field")
+            self.result_table.setItem(row, 0, label)
             display = field.text if not isinstance(field.value, list) else (
                 f"{len(field.value)} items · Text report / Copy selected"
             )
             if field.value is None:
                 display = "—"
             item = QTableWidgetItem(display[:4000])
+            if (isinstance(field.value, (bool, list)) or field.value is None
+                    or field.path.split(".")[-1] in (
+                        "classification", "rounding_direction", "rounding_rule", "error",
+                    )):
+                item.setData(UI_TEXT_ROLE, display[:4000])
             item.setFont(self.output.font())
             item.setToolTip(display[:300])
             self.result_table.setItem(row, 1, item)
@@ -225,6 +244,16 @@ class Workspace(QWidget):
         self.copy_selected_button.setEnabled(True)
         self.filter_results()
         self.result_ready.emit(self.title, report)
+        self.translate_ui()
+
+    def translate_ui(self) -> None:
+        localize(self)
+        report = self.current_report()
+        if report is not None:
+            self.output.setPlainText(gui_report(
+                report, self._english_report if report is self._report else None
+            ))
+        self.filter_results()
 
     def filter_results(self) -> None:
         query = self._result_filter.text().casefold().strip()
@@ -246,9 +275,11 @@ class Workspace(QWidget):
         if position is not None and isinstance(input_widget, QLineEdit):
             input_widget.setCursorPosition(min(int(position.group(1)), len(input_widget.text())))
             input_widget.setFocus()
+        self.translate_ui()
 
     def clear_output(self) -> None:
         self._report = None
+        self._english_report = ""
         self._transfer_button.setEnabled(False)
         self._export_button.setEnabled(False)
         self.output.clear()
@@ -278,6 +309,7 @@ class Workspace(QWidget):
         self.error.clear()
         self.status.setText("Input changed · Run to update")
         self.result_invalidated.emit()
+        self.translate_ui()
 
     def set_busy(self, busy: bool) -> None:
         self.run_button.setEnabled(not busy)
@@ -295,6 +327,7 @@ class Workspace(QWidget):
             return
         self.set_busy(True)
         self.status.setText("Calculating…")
+        self.translate_ui()
         self.timer.start()
 
     def poll_calculation(self) -> None:
@@ -314,6 +347,7 @@ class Workspace(QWidget):
             self.set_error(result.error)
 
     def cancel_calculation(self) -> None:
+        running = self.job is not None
         self.timer.stop()
         if self.job is not None:
             self.job.cancel()
@@ -321,6 +355,8 @@ class Workspace(QWidget):
             self.clear_output()
             self.status.setText("Cancelled")
         self.set_busy(False)
+        if running:
+            self.translate_ui()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.cancel_calculation()
@@ -377,7 +413,7 @@ class Workspace(QWidget):
         selected = (format_ or self._export_format.currentText()).lower()
         extension = "txt" if selected == "text" else selected
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export result", "", f"{selected.upper()} (*.{extension})"
+            self, tr("Export result"), "", f"{selected.upper()} (*.{extension})"
         )
         if not path:
             return
@@ -388,6 +424,7 @@ class Workspace(QWidget):
             write_export(Path(path), content)
         except (OSError, ValueError) as error:
             self.error.setText(f"Could not export result: {error}")
+            self.translate_ui()
 
     def snapshot(self) -> dict[str, object]:
         state: dict[str, object] = {}

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from radixscope.gui.i18n import localize, tr
 from radixscope.core.bitfields import BitField, BitfieldLayout, inspect_bitfields
 from radixscope.core.value import ExactValue
 from radixscope.gui.bits import BitEditor
@@ -67,6 +68,7 @@ class BitfieldPanel(QWidget):
     def add_field(self, field: BitField | None = None) -> None:
         if self.fields.rowCount() >= 256:
             self.error.setText("A layout supports at most 256 fields")
+            localize(self)
             return
         row = self.fields.rowCount()
         field = field or BitField(f"field_{row + 1}", row * 8, 8)
@@ -108,6 +110,7 @@ class BitfieldPanel(QWidget):
         self._pattern, self._width = pattern, width
         if width > 4096:
             self.error.setText("Select at most 512 bytes for interactive bitfield editing")
+            localize(self)
             self.values.setRowCount(0)
             self.bits.clear()
             return
@@ -131,6 +134,7 @@ class BitfieldPanel(QWidget):
             values = inspect_bitfields(self._pattern, self._width, fields)
         except (ValueError, TypeError) as error:
             self.error.setText(str(error))
+            localize(self)
             self.values.setRowCount(0)
             self.bits.clear()
             return
@@ -156,14 +160,17 @@ class BitfieldPanel(QWidget):
     def save_layout(self) -> None:
         try:
             layout = BitfieldLayout(self._width, self.field_definitions())
-            path, _ = QFileDialog.getSaveFileName(self, "Save bitfield layout", "", "JSON (*.json)")
+            path, _ = QFileDialog.getSaveFileName(
+                self, tr("Save bitfield layout"), "", "JSON (*.json)"
+            )
             if path:
                 Path(path).write_text(layout.to_json(), encoding="utf-8")
         except (ValueError, OSError) as error:
             self.error.setText(str(error))
+            localize(self)
 
     def load_layout(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Load bitfield layout", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, tr("Load bitfield layout"), "", "JSON (*.json)")
         if not path:
             return
         try:
@@ -174,6 +181,7 @@ class BitfieldPanel(QWidget):
                 raise ValueError(f"layout requires a {layout.width}-bit selection")
         except (ValueError, OSError) as error:
             self.error.setText(str(error))
+            localize(self)
             return
         self.fields.setRowCount(0)
         for field in layout.fields:

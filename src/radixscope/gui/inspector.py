@@ -1,5 +1,5 @@
 from PySide6.QtCore import QSignalBlocker, QTimer
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QSpinBox
+from PySide6.QtWidgets import QCheckBox, QLineEdit, QSpinBox
 
 from radixscope.core import (
     ExactValue,
@@ -12,6 +12,7 @@ from radixscope.core import (
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.floating import FloatNavigator
+from radixscope.gui.i18n import LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import inspection_report
 
@@ -23,7 +24,7 @@ class InspectorWorkspace(Workspace):
         )
         self.input = QLineEdit("255")
         self.base = base_input()
-        self.data_type = QComboBox()
+        self.data_type = LocalizedComboBox()
         self.data_type.addItems(["integer", "binary32", "binary64", "binary16", "bfloat16"])
         self.bit_width = QSpinBox()
         self.bit_width.setRange(1, 4096)
@@ -34,7 +35,7 @@ class InspectorWorkspace(Workspace):
         self.pattern.setToolTip(
             "Reinterpret the input as a bit pattern instead of converting its value"
         )
-        self.byteorder = QComboBox()
+        self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.raw_hex = QLineEdit()
         self.raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
