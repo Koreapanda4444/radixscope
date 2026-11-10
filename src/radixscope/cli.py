@@ -24,6 +24,7 @@ from radixscope.reports import (
     ieee_report,
     inspection_report,
     integer_report,
+    precision_report,
     render_report,
     trace_report,
 )
@@ -148,6 +149,7 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
     text = args.value.strip().lower()
     sign = int(text.startswith("-"))
     unsigned = text[1:] if text.startswith(("+", "-")) else text
+    source: ExactValue | None = None
     if unsigned in ("nan", "inf", "infinity"):
         if args.negative_zero:
             raise ValueError("negative_zero requires a zero value")
@@ -161,9 +163,13 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         if args.payload or args.signaling:
             raise ValueError("--payload and --signaling require NaN")
         exact = evaluate_expression(args.value)
+        source = exact
         negative_zero = args.negative_zero or (text.startswith("-") and exact == ExactValue(0))
         value = encode_ieee754(exact, args.width, negative_zero=negative_zero)
-    return ieee_report(value, args.byteorder)
+    report = ieee_report(value, args.byteorder)
+    if source is not None:
+        report.update(precision_report(source, value))
+    return report
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:

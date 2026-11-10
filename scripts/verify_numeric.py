@@ -12,6 +12,7 @@ from radixscope.core import (
     FixedWidthInteger,
     RoundingMode,
     analyze_arithmetic,
+    analyze_float_precision,
     decode_ieee754,
     encode_ieee754,
     encode_ieee754_special,
@@ -86,6 +87,11 @@ def main() -> None:
     check(encode_ieee754(ExactValue((1 << 25) - 1) * ExactValue(1 << 103), 32)
           .classification == "infinity")
     trace = trace_value(ExactValue(1, 97), 10, max_steps=8)
+    precision = analyze_float_precision(ExactValue(1, 10), encode_ieee754(ExactValue(1, 10), 32))
+    check(precision.absolute_error == ExactValue(1, 671088640))
+    check(precision.relative_error == ExactValue(1, 67108864))
+    check(precision.error_ulps == ExactValue(1, 5))
+    check(analyze_float_precision(ExactValue(0), encode_ieee754(0)).relative_error is None)
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],

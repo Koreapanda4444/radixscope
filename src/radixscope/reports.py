@@ -11,6 +11,7 @@ from radixscope.core import (
     represent_bytes,
 )
 from radixscope.core.inspection import NumberInspection
+from radixscope.core.precision import analyze_float_precision
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +130,27 @@ def inspection_report(inspection: NumberInspection) -> dict[str, object]:
         "data_type": "integer" if isinstance(value, FixedWidthInteger) else (
             f"binary{value.format.value}"
         ),
+    })
+    if isinstance(value, IEEE754Value) and inspection.source_exact is not None:
+        report.update(precision_report(inspection.source_exact, value))
+    return report
+
+
+def precision_report(source: ExactValue, encoded: IEEE754Value) -> dict[str, object]:
+    analysis = analyze_float_precision(source, encoded)
+    rational_fields = {
+        "absolute_error": analysis.absolute_error, "relative_error": analysis.relative_error,
+        "ulp": analysis.ulp, "error_ulps": analysis.error_ulps,
+    }
+    report: dict[str, object] = {
+        key: str(value) if value is not None else None for key, value in rational_fields.items()
+    }
+    report.update({
+        "source_exact": str(source), "exactly_represented": analysis.exactly_represented,
+        "rounding_direction": analysis.rounding_direction,
+        "rounding_rule": "nearest, ties to even",
+        "overflowed": encoded.classification.value == "infinity",
+        "underflowed_to_zero": encoded.classification.value == "zero" and source.numerator != 0,
     })
     return report
 

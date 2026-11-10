@@ -70,6 +70,7 @@ from radixscope.core.parse import (
     parse_ratio,
     parse_recurring,
 )
+from radixscope.core.precision import FloatPrecisionAnalysis, analyze_float_precision
 from radixscope.core.representations import (
     ByteOrder,
     ByteRepresentation,
@@ -103,6 +104,7 @@ __all__ = [
     "ExpressionToken",
     "FixedWidthInteger",
     "FloatClass",
+    "FloatPrecisionAnalysis",
     "FractionMultiplicationStep",
     "IEEE754Value",
     "IEEEFormat",
@@ -123,6 +125,7 @@ __all__ = [
     "TokenKind",
     "UnaryExpression",
     "analyze_arithmetic",
+    "analyze_float_precision",
     "analyze_range",
     "convert_bases",
     "convert_text",
