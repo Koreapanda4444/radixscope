@@ -17,6 +17,7 @@ from radixscope.core import (
     analyze_arithmetic,
     analyze_float_precision,
     compare_binary,
+    convert_batch,
     convert_ieee754,
     decode_ieee754,
     encode_ieee754,
@@ -125,6 +126,10 @@ def main() -> None:
     check(inspect_bitfields(255, 8, layout.fields)[0].integer.value == -1)
     difference = compare_binary(b"\xff\0", b"\xfe\x80")
     check(difference.changed_bits == 2 and difference.changed_bit_positions == (7, 8))
+    batch = convert_batch("1\nbad!\n1e-3", mode="auto", precision=None)
+    check(batch.total == 3 and bool(batch.entries[1].error))
+    check(batch.entries[2].exact == ExactValue(1, 1000))
+    check(convert_batch("1\n2", max_rows=1).limited)
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],
@@ -136,6 +141,7 @@ def main() -> None:
         ["ieee", "compare", "1/10"],
         ["bytes", "3F 80 00 00"],
         ["compare", "FF00", "FE80"],
+        ["batch", "0x10", "--mode", "auto"],
     ):
         result = subprocess.run(
             [sys.executable, "-m", "radixscope", *arguments, "--json"],

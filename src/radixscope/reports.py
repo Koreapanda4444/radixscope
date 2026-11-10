@@ -10,6 +10,7 @@ from radixscope.core import (
     parse_number,
     represent_bytes,
 )
+from radixscope.core.batch import BatchConversion
 from radixscope.core.binary_comparison import compare_binary
 from radixscope.core.bitfields import BitfieldLayout
 from radixscope.core.byte_inspection import parse_byte_input, select_bytes
@@ -311,6 +312,18 @@ def binary_comparison_report(
         "byte_positions_complete": len(difference.changed_byte_offsets) <= 4096,
         "bit_numbering": "lsb0 after byte-order decoding",
         "fields": list(difference.field_differences),
+    }
+
+
+def batch_report(batch: BatchConversion) -> dict[str, object]:
+    return {
+        "bases": list(batch.bases), "total": batch.total, "processed": len(batch.entries),
+        "limited": batch.limited, "cancelled": batch.cancelled,
+        "errors": sum(bool(entry.error) for entry in batch.entries),
+        "rows": [{"line": entry.line, "input": entry.input,
+                  "exact": str(entry.exact) if entry.exact is not None else None,
+                  "outputs": {str(base): text for base, text in entry.outputs.items()},
+                  "error": entry.error} for entry in batch.entries],
     }
 
 

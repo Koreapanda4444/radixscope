@@ -11,6 +11,7 @@ from radixscope.cli import run_command
 from radixscope.core import (
     RoundingMode,
     convert_bases,
+    convert_batch,
     evaluate_expression,
     inspect_number,
     parse_number,
@@ -20,6 +21,7 @@ from radixscope.core import (
 )
 from radixscope.reports import (
     StructuredReport,
+    batch_report,
     binary_comparison_report,
     byte_report,
     inspection_report,
@@ -50,6 +52,13 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return value
 
     input_text = text("input")
+    if workspace == "Batch Conversion":
+        return batch_report(convert_batch(
+            input_text, [int(base.strip()) for base in text("targets").split(",")],
+            source_base=integer("source_base"), mode=text("mode").lower(),
+            precision=None if flag("exact_output") else integer("precision"),
+            rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
+        ))
     if workspace == "Binary Comparison":
         report = binary_comparison_report(
             input_text, text("other_input"), text("input_format"), text("byteorder"),

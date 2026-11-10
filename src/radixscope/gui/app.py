@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from radixscope import __version__
+from radixscope.gui.batch import BatchWorkspace
 from radixscope.gui.byte_inspector import ByteInspectorWorkspace
 from radixscope.gui.comparison import ComparisonWorkspace
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
@@ -51,6 +52,7 @@ class MainWindow(QMainWindow):
             InspectorWorkspace(),
             ByteInspectorWorkspace(),
             ComparisonWorkspace(),
+            BatchWorkspace(),
         ]
         for index, workspace in enumerate(self.workspaces):
             self.tabs.addTab(workspace, workspace.title)
@@ -80,7 +82,7 @@ class MainWindow(QMainWindow):
         menu = self.menuBar().addMenu("Settings")
         menu.addAction(settings_action)
         menu.addAction(self.recent_dock.toggleViewAction())
-        self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+7 switch workspaces")
+        self.statusBar().showMessage("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
         self.base_stylesheet = (
             "QWidget { font-size: 13px; }"
             "QLabel#heading { font-size: 22px; font-weight: 600; margin-top: 8px; }"

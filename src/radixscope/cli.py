@@ -21,11 +21,15 @@ from radixscope.core import (
     parse_number,
     trace_value,
 )
+from radixscope.core.batch import convert_batch
 from radixscope.core.bitfields import BitfieldLayout, inspect_bitfields
 from radixscope.core.comparison import compare_float_formats
 from radixscope.core.input_syntax import parse_numeric_input
 from radixscope.core.inspection import inspect_number
+from radixscope.core.limits import MAX_INPUT_CHARS
+from radixscope.exports import batch_report_csv
 from radixscope.reports import (
+    batch_report,
     binary_comparison_report,
     byte_report,
     comparison_report,
@@ -53,6 +57,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="radixscope", description="Exact numbers and raw bits")
     parser.add_argument("--version", action="version", version=f"RadixScope {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    batch = commands.add_parser("batch", help="convert newline-separated values")
+    batch.add_argument("value", nargs="?", default="-", help="multiline input, or - for stdin")
+    batch.add_argument("--file", help="UTF-8 input file instead of the value argument")
+    batch.add_argument("--from", type=int, default=10, dest="source_base")
+    batch.add_argument("--mode", choices=["number", "expression", "auto"], default="number")
+    batch.add_argument("--limit", type=int, default=1000)
+    batch.add_argument("--to", type=int, nargs="+", default=[2, 8, 10, 16], dest="bases")
+    batch.add_argument("--precision", type=int, default=16)
+    batch.add_argument("--exact", action="store_true")
+    batch.add_argument("--rounding", choices=list(RoundingMode), default=RoundingMode.HALF_EVEN)
+    output = batch.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true")
+    output.add_argument("--csv", action="store_true")
     compare = commands.add_parser("compare", help="compare two raw bit or byte patterns")
     compare.add_argument("left")
     compare.add_argument("right")
@@ -223,6 +240,17 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "batch":
+        if args.file:
+            with Path(args.file).open(encoding="utf-8-sig") as handle:
+                text = handle.read(MAX_INPUT_CHARS + 1)
+        else:
+            text = sys.stdin.read(MAX_INPUT_CHARS + 1) if args.value == "-" else args.value
+        return batch_report(convert_batch(
+            text, args.bases, source_base=args.source_base, mode=args.mode,
+            precision=None if args.exact else args.precision, rounding=RoundingMode(args.rounding),
+            max_rows=args.limit,
+        ))
     if args.command == "compare":
         comparison_layout = ""
         if args.layout:
@@ -280,7 +308,13 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         report = run_command(args)
-        _write_output(json.dumps(report) if args.json else render_report(report), sys.stdout)
+        output = batch_report_csv(report) if args.command == "batch" and args.csv else (
+            json.dumps(report) if args.json else render_report(report)
+        )
+        _write_output(output, sys.stdout)
+    except KeyboardInterrupt:
+        _write_output("radixscope: calculation cancelled", sys.stderr)
+        return 130
     except (ValueError, TypeError, ArithmeticError, OSError) as error:
         _write_output(f"radixscope: {error}", sys.stderr)
         return 2
