@@ -25,6 +25,7 @@ from radixscope.core.bitfields import BitfieldLayout, inspect_bitfields
 from radixscope.core.comparison import compare_float_formats
 from radixscope.core.inspection import inspect_number
 from radixscope.reports import (
+    binary_comparison_report,
     byte_report,
     comparison_report,
     ieee_report,
@@ -51,6 +52,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="radixscope", description="Exact numbers and raw bits")
     parser.add_argument("--version", action="version", version=f"RadixScope {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    compare = commands.add_parser("compare", help="compare two raw bit or byte patterns")
+    compare.add_argument("left")
+    compare.add_argument("right")
+    compare.add_argument("--input-format", choices=["hex", "binary", "base64", "utf8"],
+                         default="hex")
+    compare.add_argument("--byteorder", choices=["big", "little"], default="big")
+    compare.add_argument("--length-policy", choices=["equal", "zero-extend"], default="equal")
+    compare.add_argument("--layout", help="saved bitfield layout JSON")
+    _output_options(compare)
     byte_parser = commands.add_parser("bytes", help="interpret raw bytes and selected ranges")
     byte_parser.add_argument("value")
     byte_parser.add_argument("--input-format", choices=["hex", "binary", "base64", "utf8"],
@@ -209,6 +219,17 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "compare":
+        comparison_layout = ""
+        if args.layout:
+            path = Path(args.layout)
+            if path.stat().st_size > 1024 * 1024:
+                raise ValueError("bitfield layout exceeds 1 MiB")
+            comparison_layout = path.read_text(encoding="utf-8")
+        return binary_comparison_report(
+            args.left, args.right, args.input_format, args.byteorder, args.length_policy,
+            comparison_layout
+        )
     if args.command == "bytes":
         report = byte_report(
             args.value, args.input_format, args.byteorder, args.offset, args.length

@@ -16,6 +16,7 @@ from radixscope.core import (
     RoundingMode,
     analyze_arithmetic,
     analyze_float_precision,
+    compare_binary,
     convert_ieee754,
     decode_ieee754,
     encode_ieee754,
@@ -112,6 +113,8 @@ def main() -> None:
     layout = BitfieldLayout(8, (BitField("signed_byte", 0, 8, True),))
     check(BitfieldLayout.from_json(layout.to_json()) == layout)
     check(inspect_bitfields(255, 8, layout.fields)[0].integer.value == -1)
+    difference = compare_binary(b"\xff\0", b"\xfe\x80")
+    check(difference.changed_bits == 2 and difference.changed_bit_positions == (7, 8))
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],
@@ -121,6 +124,7 @@ def main() -> None:
         ["ieee", "encode", "1/10", "--width", "32"],
         ["ieee", "compare", "1/10"],
         ["bytes", "3F 80 00 00"],
+        ["compare", "FF00", "FE80"],
     ):
         result = subprocess.run(
             [sys.executable, "-m", "radixscope", *arguments, "--json"],

@@ -24,6 +24,8 @@ class BitEditor(QWidget):
         self.fields: dict[str, tuple[int, int]] = {}
         self.buttons: dict[int, QToolButton] = {}
         self.columns = 16
+        self.read_only = False
+        self.changed: set[int] = set()
         self.page = QSpinBox()
         self.page.setMinimum(1)
         self.page.valueChanged.connect(self.rebuild)
@@ -50,13 +52,16 @@ class BitEditor(QWidget):
 
     def set_pattern(
         self, pattern: int, width: int, fields: dict[str, tuple[int, int]] | None = None,
+        *, changed: set[int] | None = None,
     ) -> None:
         if not 1 <= width <= 4096 or not 0 <= pattern < (1 << width):
             raise ValueError("bit editor pattern does not fit its width")
-        changed_layout = self.bit_count != width or self.fields != (fields or {})
+        changed_layout = (self.bit_count != width or self.fields != (fields or {})
+                          or self.changed != (changed or set()))
         self.pattern = pattern
         self.bit_count = width
         self.fields = fields or {}
+        self.changed = changed or set()
         self.setEnabled(True)
         self.page.setMaximum((width + self.page_size - 1) // self.page_size)
         if changed_layout or not self.buttons:
@@ -99,9 +104,13 @@ class BitEditor(QWidget):
                 colors = ("#287bc1", "#9165c9", "#a05b20", "#29836a", "#b74466")
                 color = colors[list(self.fields).index(field) % len(colors)]
                 button.setStyleSheet(f"color: {color};")
+            if index in self.changed:
+                button.setStyleSheet("background-color: #a34e2a; color: #ffffff;")
             button.setProperty("field", field)
             button.setAccessibleName(f"Bit {index} · {field}")
-            button.setToolTip(f"Bit {index} · {field} · click or press Space to toggle")
+            button.setToolTip(f"Bit {index} · {field}" if self.read_only else (
+                f"Bit {index} · {field} · click or press Space to toggle"
+            ))
             button.clicked.connect(partial(self.toggle_bit, index))
             self.grid.addWidget(label, row * 2, column)
             self.grid.addWidget(button, row * 2 + 1, column)
@@ -127,6 +136,8 @@ class BitEditor(QWidget):
             button.setText("1" if bit else "0")
 
     def toggle_bit(self, index: int) -> None:
+        if self.read_only:
+            return
         if self.pattern is None or not self.isEnabled() or not 0 <= index < self.bit_count:
             return
         self.pattern ^= 1 << index
