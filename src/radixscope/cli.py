@@ -23,6 +23,7 @@ from radixscope.core import (
 )
 from radixscope.core.bitfields import BitfieldLayout, inspect_bitfields
 from radixscope.core.comparison import compare_float_formats
+from radixscope.core.input_syntax import parse_numeric_input
 from radixscope.core.inspection import inspect_number
 from radixscope.reports import (
     binary_comparison_report,
@@ -85,6 +86,9 @@ def build_parser() -> argparse.ArgumentParser:
     convert = commands.add_parser("convert", help="convert a number between bases 2 through 36")
     convert.add_argument("value")
     convert.add_argument("--from", type=int, default=10, dest="source_base")
+    convert.add_argument(
+        "--auto", action="store_true", help="detect input syntax; overrides --from"
+    )
     _conversion_options(convert)
     expression = commands.add_parser("expression", help="evaluate an exact mixed-base expression")
     expression.add_argument("value")
@@ -263,7 +267,9 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
     if args.command == "expression":
         value = evaluate_expression(args.value)
     else:
-        value = parse_number(args.value, args.source_base)
+        value = parse_numeric_input(args.value) if getattr(args, "auto", False) else (
+            parse_number(args.value, args.source_base)
+        )
     if args.command == "trace":
         return trace_report(trace_value(value, args.target_base, max_steps=args.max_steps))
     outputs = convert_bases(value, args.bases, args.precision, RoundingMode(args.rounding))

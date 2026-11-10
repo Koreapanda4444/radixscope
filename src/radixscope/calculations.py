@@ -14,6 +14,7 @@ from radixscope.core import (
     evaluate_expression,
     inspect_number,
     parse_number,
+    parse_numeric_input,
     trace_value,
     validate_base,
 )
@@ -87,6 +88,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
     if workspace == "Conversion":
         value = (
             evaluate_expression(input_text) if text("mode") == "Expression"
+            else parse_numeric_input(input_text) if text("mode") == "Auto"
             else parse_number(input_text, integer("source_base"))
         )
         bases = [validate_base(int(part.strip())) for part in text("targets").split(",")]

@@ -55,6 +55,10 @@ def main() -> None:
     check(format_rounded(ExactValue(-1, 8), 10, 2, RoundingMode.FLOOR) == "-0.13")
     check(format_rounded(ExactValue(-1, 8), 10, 2, RoundingMode.CEILING) == "-0.12")
     check(evaluate_expression("0xFF + 2#11 / 10#2") == ExactValue(513, 2))
+    check(parse_number("1.25e-3", 10) == ExactValue(1, 800))
+    check(parse_number("1E3", 16) == ExactValue(483))
+    check(evaluate_expression("10#1e-2 + 16#1E3") == ExactValue(48301, 100))
+    check(parse_number("0.(3)e2", 10) == ExactValue(100, 3))
     check(evaluate_expression("-2**2 + 2**-3").fraction == -4 + Fraction(1, 8))
     for expression, expected_integer in {
         "1 | 2 ^ 3 & 4": 3, "1 << 2 + 1": 8, "32 >> 2 >> 1": 4,
@@ -124,6 +128,7 @@ def main() -> None:
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],
+        ["convert", "0xFF + 1", "--auto"],
         ["expression", "0x10 + 2#11"],
         ["trace", "1/7", "--max-steps", "3"],
         ["integer", "127", "--width", "8", "--signed", "--op", "add", "--operand", "1"],

@@ -1,6 +1,8 @@
+import re
+
 from radixscope.core.digits import digit_value, validate_base, validate_digits
 from radixscope.core.errors import InvalidNumberError
-from radixscope.core.limits import check_input
+from radixscope.core.limits import MAX_COMPUTED_BITS, ComputationLimitError, check_input
 from radixscope.core.value import ExactValue
 
 
@@ -104,10 +106,35 @@ def parse_recurring(text: str, base: object) -> ExactValue:
 
 def parse_number(text: str, base: object) -> ExactValue:
     normalized = _normalized_text(text)
+    checked_base = validate_base(base)
     if "/" in normalized:
-        return parse_ratio(normalized, base)
+        return parse_ratio(normalized, checked_base)
+    if checked_base == 10 and ("e" in normalized or "E" in normalized):
+        return parse_scientific(normalized)
     if "(" in normalized or ")" in normalized:
         return parse_recurring(normalized, base)
     if "." in normalized:
         return parse_finite(normalized, base)
     return parse_integer(normalized, base)
+
+
+def parse_scientific(text: str) -> ExactValue:
+    normalized = _normalized_text(text)
+    match = re.fullmatch(r"(.+?)[eE]([+-]?[0-9]+)", normalized)
+    if match is None or "/" in match.group(1):
+        raise InvalidNumberError("scientific notation requires a mantissa and integer exponent")
+    mantissa, exponent_text = match.groups()
+    if "e" in mantissa.lower():
+        raise InvalidNumberError("scientific notation requires exactly one exponent")
+    source = parse_number(mantissa, 10)
+    if source.numerator == 0:
+        return source
+    digits = exponent_text.lstrip("+-").lstrip("0") or "0"
+    if len(digits) > 7:
+        raise ComputationLimitError("scientific exponent exceeds the computation budget")
+    exponent = int(digits) * (-1 if exponent_text.startswith("-") else 1)
+    size = max(abs(source.numerator).bit_length(), source.denominator.bit_length())
+    if abs(exponent) * 4 + size > MAX_COMPUTED_BITS:
+        raise ComputationLimitError("scientific exponent exceeds the computation budget")
+    scale = ExactValue(10 ** abs(exponent))
+    return source * scale if exponent >= 0 else source / scale

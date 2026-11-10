@@ -60,6 +60,7 @@ from radixscope.core.ieee754 import (
     encode_ieee754,
     encode_ieee754_special,
 )
+from radixscope.core.input_syntax import InputSyntax, detect_input_syntax, parse_numeric_input
 from radixscope.core.inspection import NumberInspection, inspect_number
 from radixscope.core.literals import parse_literal
 from radixscope.core.neighbors import adjacent_float, float_boundaries
@@ -75,6 +76,7 @@ from radixscope.core.parse import (
     parse_number,
     parse_ratio,
     parse_recurring,
+    parse_scientific,
 )
 from radixscope.core.precision import FloatPrecisionAnalysis, analyze_float_precision
 from radixscope.core.representations import (
@@ -120,6 +122,7 @@ __all__ = [
     "FractionMultiplicationStep",
     "IEEE754Value",
     "IEEEFormat",
+    "InputSyntax",
     "IntegerDivisionStep",
     "IntegerInterpretation",
     "IntegerRangeError",
@@ -150,6 +153,7 @@ __all__ = [
     "decode_ieee754",
     "decode_ieee754_bytes",
     "decode_twos_complement",
+    "detect_input_syntax",
     "digit_char",
     "digit_value",
     "encode_ascii",
@@ -176,8 +180,10 @@ __all__ = [
     "parse_integer",
     "parse_literal",
     "parse_number",
+    "parse_numeric_input",
     "parse_ratio",
     "parse_recurring",
+    "parse_scientific",
     "parse_twos_complement",
     "represent_bytes",
     "select_bytes",
