@@ -1,9 +1,17 @@
 from PySide6.QtCore import QSignalBlocker, QTimer
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QSpinBox
 
-from radixscope.core import ExactValue, IEEEFormat, format_integer, inspect_number, parse_integer
+from radixscope.core import (
+    ExactValue,
+    IEEEFormat,
+    decode_ieee754,
+    format_integer,
+    inspect_number,
+    parse_integer,
+)
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
+from radixscope.gui.floating import FloatNavigator
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import inspection_report
 
@@ -37,6 +45,10 @@ class InspectorWorkspace(Workspace):
         self.bit_editor = BitEditor()
         self.bit_editor.setToolTip("Raw result bits; numeric conversion uses the input above")
         self.form.addRow("Bit pattern", self.bit_editor)
+        self.float_navigator = FloatNavigator()
+        self.form.addRow("Neighbors / boundaries", self.float_navigator)
+        self.float_navigator.pattern_requested.connect(self.edit_pattern)
+        self.result_invalidated.connect(self.float_navigator.clear)
         self.result_ready.connect(self.show_bits)
         self.bit_editor.pattern_changed.connect(self.edit_pattern)
         self.raw_hex.editingFinished.connect(self.edit_hex)
@@ -64,6 +76,7 @@ class InspectorWorkspace(Workspace):
         integer = self.data_type.currentText() == "integer"
         self.bit_width.setEnabled(integer)
         self.signed.setEnabled(integer)
+        self.float_navigator.setVisible(not integer)
         if not integer:
             self.bit_width.setValue(IEEEFormat[self.data_type.currentText().upper()].bit_width)
 
@@ -76,6 +89,9 @@ class InspectorWorkspace(Workspace):
                 fraction = IEEEFormat[self.data_type.currentText().upper()].fraction_width
                 fields = {"sign": (width - 1, width - 1),
                           "exponent": (fraction, width - 2), "fraction": (0, fraction - 1)}
+                self.float_navigator.set_value(decode_ieee754(
+                    int(bits, 2), self.data_type.currentText()
+                ))
             elif self.signed.isChecked():
                 fields = {"sign": (width - 1, width - 1)}
             self.bit_editor.set_pattern(int(bits, 2), width, fields)

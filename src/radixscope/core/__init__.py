@@ -58,6 +58,7 @@ from radixscope.core.ieee754 import (
 )
 from radixscope.core.inspection import NumberInspection, inspect_number
 from radixscope.core.literals import parse_literal
+from radixscope.core.neighbors import adjacent_float, float_boundaries
 from radixscope.core.overflow import (
     ArithmeticOperation,
     RangeAnalysis,
@@ -125,6 +126,7 @@ __all__ = [
     "RoundingMode",
     "TokenKind",
     "UnaryExpression",
+    "adjacent_float",
     "analyze_arithmetic",
     "analyze_float_precision",
     "analyze_range",
@@ -145,6 +147,7 @@ __all__ = [
     "encode_twos_complement",
     "evaluate_expression",
     "evaluate_parsed_expression",
+    "float_boundaries",
     "format_exact",
     "format_integer",
     "format_rounded",

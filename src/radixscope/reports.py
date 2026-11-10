@@ -11,6 +11,7 @@ from radixscope.core import (
     represent_bytes,
 )
 from radixscope.core.inspection import NumberInspection
+from radixscope.core.neighbors import adjacent_float, float_boundaries
 from radixscope.core.precision import analyze_float_precision
 
 
@@ -89,7 +90,7 @@ def integer_report(value: FixedWidthInteger, byteorder: str = "big") -> dict[str
 def ieee_report(value: IEEE754Value, byteorder: str = "big") -> dict[str, object]:
     exact = value.exact
     significand = value.significand
-    return {
+    report: dict[str, object] = {
         "width": value.format.bit_width,
         "format": value.format.label,
         "classification": value.classification.value,
@@ -110,6 +111,39 @@ def ieee_report(value: IEEE754Value, byteorder: str = "big") -> dict[str, object
         "nan_payload": value.nan_payload,
         "byteorder": byteorder,
         "bytes": value.to_bytes(byteorder).hex(" ").upper(),
+    }
+    report.update(float_neighborhood_report(value))
+    return report
+
+
+def float_neighborhood_report(value: IEEE754Value) -> dict[str, object]:
+    def preview(item: IEEE754Value | None) -> dict[str, object] | None:
+        if item is None:
+            return None
+        exact = item.exact
+        return {"hexadecimal": item.hexadecimal, "exact": str(exact) if exact is not None else None,
+                "classification": item.classification.value}
+
+    previous, next_ = adjacent_float(value, "down"), adjacent_float(value, "up")
+    exact = value.exact
+    previous_exact = previous.exact if previous is not None else None
+    next_exact = next_.exact if next_ is not None else None
+    boundaries = float_boundaries(value.format)
+    tiny, maximum = boundaries["minimum_subnormal"].exact, boundaries["maximum_finite"].exact
+    assert tiny is not None and maximum is not None
+    ulp = analyze_float_precision(maximum, boundaries["maximum_finite"]).ulp
+    assert ulp is not None
+    return {
+        "neighbors": {"previous": preview(previous), "next": preview(next_),
+                      "previous_gap": str(exact - previous_exact) if (
+                          exact is not None and previous_exact is not None
+                      ) else None,
+                      "next_gap": str(next_exact - exact) if (
+                          exact is not None and next_exact is not None
+                      ) else None},
+        "boundaries": {name: preview(item) for name, item in boundaries.items()},
+        "underflow_halfway": str(tiny / ExactValue(2)),
+        "overflow_halfway": str(maximum + ulp / ExactValue(2)),
     }
 
 

@@ -10,6 +10,7 @@ from radixscope.core import (
 )
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
+from radixscope.gui.floating import FloatNavigator
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import ieee_report, integer_report
 
@@ -117,6 +118,10 @@ class IEEEWorkspace(Workspace):
         self.bit_legend = QLabel("Sign · Exponent · Fraction")
         self.form.addRow("Bit fields", self.bit_legend)
         self.form.addRow("Result bits", self.bit_editor)
+        self.float_navigator = FloatNavigator()
+        self.form.addRow("Neighbors / boundaries", self.float_navigator)
+        self.float_navigator.pattern_requested.connect(self.edit_bits)
+        self.result_invalidated.connect(self.float_navigator.clear)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
         self.result_ready.connect(self.show_bits)
         self.result_invalidated.connect(self.bit_editor.clear)
@@ -157,6 +162,7 @@ class IEEEWorkspace(Workspace):
                 f"Fraction: {fraction_width - 1}…0"
             )
             self.bit_editor.set_pattern(int(bits, 2), width, fields)
+            self.float_navigator.set_value(decode_ieee754(int(bits, 2), format_name))
 
     def edit_bits(self, pattern: int) -> None:
         value = decode_ieee754(pattern, self.bit_width.currentText())
