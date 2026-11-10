@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from typing import TextIO
 
 from radixscope import __version__
 from radixscope.core import (
@@ -230,8 +231,16 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         report = run_command(args)
-        print(json.dumps(report, ensure_ascii=False) if args.json else render_report(report))
+        _write_output(json.dumps(report) if args.json else render_report(report), sys.stdout)
     except (ValueError, TypeError, ArithmeticError) as error:
-        print(f"radixscope: {error}", file=sys.stderr)
+        _write_output(f"radixscope: {error}", sys.stderr)
         return 2
     return 0
+
+
+def _write_output(text: str, stream: TextIO) -> None:
+    try:
+        print(text, file=stream)
+    except UnicodeEncodeError:
+        encoding = stream.encoding or "utf-8"
+        print(text.encode(encoding, errors="backslashreplace").decode(encoding), file=stream)
