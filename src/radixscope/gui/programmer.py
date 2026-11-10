@@ -91,13 +91,13 @@ class ProgrammerWorkspace(Workspace):
 class IEEEWorkspace(Workspace):
     def __init__(self) -> None:
         super().__init__(
-            "IEEE 754", "Encode exact expressions or decode raw binary32 / binary64 bits"
+            "IEEE 754", "Encode exact values or decode binary16, bfloat16, binary32 and binary64"
         )
         self.input = QLineEdit("0.1")
         self.mode = QComboBox()
         self.mode.addItems(["encode", "decode"])
         self.bit_width = QComboBox()
-        self.bit_width.addItems(["32", "64"])
+        self.bit_width.addItems(["32", "64", "16", "bfloat16"])
         self.base = base_input(16)
         self.byteorder = QComboBox()
         self.byteorder.addItems(["big", "little"])
@@ -143,9 +143,10 @@ class IEEEWorkspace(Workspace):
 
     def show_bits(self, title: str, report: dict[str, object]) -> None:
         bits = report.get("bits")
-        if isinstance(bits, str) and len(bits) in (32, 64):
+        if isinstance(bits, str) and len(bits) in (16, 32, 64):
             width = len(bits)
-            fraction_width = IEEEFormat(width).fraction_width
+            format_name = str(report.get("format", f"binary{width}"))
+            fraction_width = IEEEFormat[format_name.upper()].fraction_width
             fields = {
                 "sign": (width - 1, width - 1),
                 "exponent": (fraction_width, width - 2),
@@ -158,7 +159,7 @@ class IEEEWorkspace(Workspace):
             self.bit_editor.set_pattern(int(bits, 2), width, fields)
 
     def edit_bits(self, pattern: int) -> None:
-        value = decode_ieee754(pattern, int(self.bit_width.currentText()))
+        value = decode_ieee754(pattern, self.bit_width.currentText())
         blockers = [QSignalBlocker(widget) for widget in (self.input, self.mode)]
         self.mode.setCurrentText("decode")
         self.input.setText(format_integer(ExactValue(pattern), self.base.value()))

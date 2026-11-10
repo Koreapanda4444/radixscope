@@ -13,16 +13,19 @@ def transfer_state(
             raise ValueError("Desktop bit editing supports at most 4096 bits")
         result.update({"input": format(int(bits, 2), "X"), "base": 16})
         if target == "Number Inspector":
-            data_type = f"binary{len(bits)}" if "classification" in report else "integer"
+            data_type = str(report.get("format", f"binary{len(bits)}")) if (
+                "classification" in report
+            ) else "integer"
             result.update({"pattern": True, "bit_width": len(bits),
                            "signed": report.get("signed") is True, "data_type": data_type})
         elif target == "Programmer":
             result.update({"pattern": True, "bit_width": len(bits), "operation": "inspect",
                            "signed": report.get("signed") is True})
-        elif target == "IEEE 754" and len(bits) in (32, 64):
-            result.update({"mode": "decode", "bit_width": str(len(bits))})
+        elif target == "IEEE 754" and len(bits) in (16, 32, 64):
+            format_name = "bfloat16" if report.get("format") == "bfloat16" else str(len(bits))
+            result.update({"mode": "decode", "bit_width": format_name})
         else:
-            raise ValueError("Raw IEEE bits require 32 or 64 bits; Conversion accepts values")
+            raise ValueError("Raw IEEE bits require 16, 32 or 64 bits; Conversion accepts values")
         order = report.get("byteorder")
         if order in ("big", "little"):
             result["byteorder"] = order

@@ -4,6 +4,7 @@ from radixscope.core.fixed_width import FixedWidthInteger
 from radixscope.core.formatting import format_exact
 from radixscope.core.ieee754 import (
     IEEE754Value,
+    IEEEFormat,
     decode_ieee754,
     encode_ieee754,
     encode_ieee754_special,
@@ -27,7 +28,7 @@ class NumberInspection:
     @property
     def width(self) -> int:
         return self.value.width if isinstance(self.value, FixedWidthInteger) else (
-            self.value.format.value
+            self.value.format.bit_width
         )
 
     @property
@@ -65,15 +66,15 @@ def inspect_number(
     order = ByteOrder(byteorder)
     if not isinstance(raw, bool) or not isinstance(signed, bool):
         raise TypeError("raw and signed must be booleans")
-    if data_type not in ("integer", "binary32", "binary64"):
-        raise ValueError("data type must be integer, binary32 or binary64")
+    if data_type not in ("integer", "binary16", "bfloat16", "binary32", "binary64"):
+        raise ValueError("data type must be integer or a supported floating-point format")
     if data_type == "integer":
         exact = parse_integer(text, base)
         integer = FixedWidthInteger.from_bit_pattern(exact.numerator, width, signed) if raw else (
             FixedWidthInteger.from_exact(exact, width, signed)
         )
         return NumberInspection(integer, None if raw else exact, order)
-    float_width = int(data_type.removeprefix("binary"))
+    float_width = IEEEFormat[data_type.upper()]
     if raw:
         floating = decode_ieee754(parse_integer(text, base).numerator, float_width)
         return NumberInspection(floating, byteorder=order)

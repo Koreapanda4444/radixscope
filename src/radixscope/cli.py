@@ -49,7 +49,10 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("value")
     inspect.add_argument("--base", type=int, default=10)
     inspect.add_argument("--width", type=int, default=32)
-    inspect.add_argument("--type", choices=["integer", "binary32", "binary64"], default="integer")
+    inspect.add_argument(
+        "--type", choices=["integer", "binary16", "bfloat16", "binary32", "binary64"],
+        default="integer",
+    )
     inspect.add_argument("--signed", action="store_true")
     inspect.add_argument("--pattern", action="store_true")
     inspect.add_argument("--byteorder", choices=["big", "little"], default="big")
@@ -89,7 +92,11 @@ def build_parser() -> argparse.ArgumentParser:
     ieee.add_argument(
         "value", help="exact expression/special value for encode, raw integer for decode"
     )
-    ieee.add_argument("--width", type=int, choices=[32, 64], default=64)
+    ieee.add_argument("--width", type=int, choices=[16, 32, 64], default=64)
+    ieee.add_argument(
+        "--format", choices=["binary16", "bfloat16", "binary32", "binary64"],
+        help="named format; overrides --width",
+    )
     ieee.add_argument("--base", type=int, default=16, help="raw pattern base for decode")
     ieee.add_argument("--byteorder", choices=["big", "little"], default="big")
     ieee.add_argument("--negative-zero", action="store_true")
@@ -141,11 +148,12 @@ def _integer_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
+    width = getattr(args, "format", None) or args.width
     if args.mode == "decode":
         if args.negative_zero or args.payload or args.signaling:
             raise ValueError("special-value encoding options cannot be used with decode")
         pattern = parse_integer(args.value, args.base).numerator
-        return ieee_report(decode_ieee754(pattern, args.width), args.byteorder)
+        return ieee_report(decode_ieee754(pattern, width), args.byteorder)
     text = args.value.strip().lower()
     sign = int(text.startswith("-"))
     unsigned = text[1:] if text.startswith(("+", "-")) else text
@@ -157,7 +165,7 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         if kind is not FloatClass.NAN and args.signaling:
             raise ValueError("--signaling requires NaN")
         value = encode_ieee754_special(
-            kind, args.width, sign_bit=sign, payload=args.payload, quiet=not args.signaling
+            kind, width, sign_bit=sign, payload=args.payload, quiet=not args.signaling
         )
     else:
         if args.payload or args.signaling:
@@ -165,7 +173,7 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         exact = evaluate_expression(args.value)
         source = exact
         negative_zero = args.negative_zero or (text.startswith("-") and exact == ExactValue(0))
-        value = encode_ieee754(exact, args.width, negative_zero=negative_zero)
+        value = encode_ieee754(exact, width, negative_zero=negative_zero)
     report = ieee_report(value, args.byteorder)
     if source is not None:
         report.update(precision_report(source, value))

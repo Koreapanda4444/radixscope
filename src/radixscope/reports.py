@@ -90,7 +90,8 @@ def ieee_report(value: IEEE754Value, byteorder: str = "big") -> dict[str, object
     exact = value.exact
     significand = value.significand
     return {
-        "width": value.format.value,
+        "width": value.format.bit_width,
+        "format": value.format.label,
         "classification": value.classification.value,
         "sign": value.sign_bit,
         "exponent_bits": value.exponent_bits,
@@ -128,7 +129,7 @@ def inspection_report(inspection: NumberInspection) -> dict[str, object]:
         "twos_complement": interpretation.signed_value,
         "outputs": {str(base): text for base, text in inspection.outputs.items()},
         "data_type": "integer" if isinstance(value, FixedWidthInteger) else (
-            f"binary{value.format.value}"
+            value.format.label
         ),
     })
     if isinstance(value, IEEE754Value) and inspection.source_exact is not None:

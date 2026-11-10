@@ -10,9 +10,11 @@ from fractions import Fraction
 from radixscope.core import (
     ExactValue,
     FixedWidthInteger,
+    IEEEFormat,
     RoundingMode,
     analyze_arithmetic,
     analyze_float_precision,
+    convert_ieee754,
     decode_ieee754,
     encode_ieee754,
     encode_ieee754_special,
@@ -92,6 +94,18 @@ def main() -> None:
     check(precision.relative_error == ExactValue(1, 67108864))
     check(precision.error_ulps == ExactValue(1, 5))
     check(analyze_float_precision(ExactValue(0), encode_ieee754(0)).relative_error is None)
+    for format_, one, tiny, halfway in (
+        (IEEEFormat.BINARY16, 0x3C00, 24, 25),
+        (IEEEFormat.BFLOAT16, 0x3F80, 133, 134),
+    ):
+        check(encode_ieee754(1, format_).pattern == one)
+        check(encode_ieee754(ExactValue(1, 1 << tiny), format_).pattern == 1)
+        check(encode_ieee754(ExactValue(1, 1 << halfway), format_).pattern == 0)
+        check(decode_ieee754(one | 0x8000, format_).exact == ExactValue(-1))
+        check(encode_ieee754(-0.0, format_).pattern == 0x8000)
+    double_rounding = ExactValue(1) + ExactValue(1, 1 << 11) + ExactValue(1, 1 << 25)
+    check(encode_ieee754(double_rounding, 16).pattern == 0x3C01)
+    check(convert_ieee754(encode_ieee754(double_rounding, 32), 16).pattern == 0x3C00)
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],

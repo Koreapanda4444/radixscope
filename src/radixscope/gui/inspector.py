@@ -16,7 +16,7 @@ class InspectorWorkspace(Workspace):
         self.input = QLineEdit("255")
         self.base = base_input()
         self.data_type = QComboBox()
-        self.data_type.addItems(["integer", "binary32", "binary64"])
+        self.data_type.addItems(["integer", "binary32", "binary64", "binary16", "bfloat16"])
         self.bit_width = QSpinBox()
         self.bit_width.setRange(1, 4096)
         self.bit_width.setValue(32)
@@ -65,7 +65,7 @@ class InspectorWorkspace(Workspace):
         self.bit_width.setEnabled(integer)
         self.signed.setEnabled(integer)
         if not integer:
-            self.bit_width.setValue(int(self.data_type.currentText().removeprefix("binary")))
+            self.bit_width.setValue(IEEEFormat[self.data_type.currentText().upper()].bit_width)
 
     def show_bits(self, title: str, report: dict[str, object]) -> None:
         bits = report.get("bits")
@@ -73,7 +73,7 @@ class InspectorWorkspace(Workspace):
             width = len(bits)
             fields = {}
             if self.data_type.currentText() != "integer":
-                fraction = IEEEFormat(width).fraction_width
+                fraction = IEEEFormat[self.data_type.currentText().upper()].fraction_width
                 fields = {"sign": (width - 1, width - 1),
                           "exponent": (fraction, width - 2), "fraction": (0, fraction - 1)}
             elif self.signed.isChecked():

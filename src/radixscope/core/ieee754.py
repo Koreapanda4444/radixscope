@@ -9,16 +9,28 @@ from radixscope.core.value import ExactValue
 
 
 class IEEEFormat(IntEnum):
+    BINARY16 = 16
+    BFLOAT16 = 116
     BINARY32 = 32
     BINARY64 = 64
 
     @property
+    def bit_width(self) -> int:
+        return 16 if self is IEEEFormat.BFLOAT16 else self.value
+
+    @property
+    def label(self) -> str:
+        return self.name.lower()
+
+    @property
     def fraction_width(self) -> int:
-        return 23 if self is IEEEFormat.BINARY32 else 52
+        return {IEEEFormat.BINARY16: 10, IEEEFormat.BFLOAT16: 7,
+                IEEEFormat.BINARY32: 23, IEEEFormat.BINARY64: 52}[self]
 
     @property
     def exponent_width(self) -> int:
-        return 8 if self is IEEEFormat.BINARY32 else 11
+        return {IEEEFormat.BINARY16: 5, IEEEFormat.BFLOAT16: 8,
+                IEEEFormat.BINARY32: 8, IEEEFormat.BINARY64: 11}[self]
 
     @property
     def bias(self) -> int:
@@ -34,12 +46,19 @@ class FloatClass(StrEnum):
 
 
 def _validate_format(width: object) -> IEEEFormat:
+    if isinstance(width, str):
+        labels = {format_.label: format_ for format_ in IEEEFormat}
+        labels.update({str(format_.bit_width): format_ for format_ in IEEEFormat
+                       if format_ is not IEEEFormat.BFLOAT16})
+        if width.lower() in labels:
+            return labels[width.lower()]
+        raise ValueError("format must be binary16, bfloat16, binary32 or binary64")
     if isinstance(width, bool) or not isinstance(width, int):
-        raise TypeError("IEEE format must be 32 or 64")
+        raise TypeError("IEEE format must be 16, 32, 64 or a format name")
     try:
         return IEEEFormat(width)
     except ValueError as error:
-        raise ValueError("IEEE format must be 32 or 64") from error
+        raise ValueError("format must be binary16, bfloat16, binary32 or binary64") from error
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,12 +68,12 @@ class IEEE754Value:
 
     def __post_init__(self) -> None:
         checked_format = _validate_format(self.format)
-        FixedWidthInteger.from_bit_pattern(self.pattern, checked_format.value)
+        FixedWidthInteger.from_bit_pattern(self.pattern, checked_format.bit_width)
         object.__setattr__(self, "format", checked_format)
 
     @property
     def sign_bit(self) -> int:
-        return self.pattern >> (self.format.value - 1)
+        return self.pattern >> (self.format.bit_width - 1)
 
     @property
     def exponent_bits(self) -> int:
@@ -111,24 +130,28 @@ class IEEE754Value:
 
     @property
     def bits(self) -> str:
-        return format(self.pattern, f"0{self.format.value}b")
+        return format(self.pattern, f"0{self.format.bit_width}b")
 
     @property
     def hexadecimal(self) -> str:
-        return format(self.pattern, f"0{self.format.value // 4}X")
+        return format(self.pattern, f"0{self.format.bit_width // 4}X")
 
     def to_bytes(self, byteorder: object = ByteOrder.BIG) -> bytes:
-        return encode_bytes(FixedWidthInteger(self.pattern, self.format.value), byteorder)
+        return encode_bytes(FixedWidthInteger(self.pattern, self.format.bit_width), byteorder)
 
     def to_float(self) -> float:
-        code = ">f" if self.format is IEEEFormat.BINARY32 else ">d"
-        result: float = struct.unpack(code, self.to_bytes())[0]
+        if self.format is IEEEFormat.BFLOAT16:
+            result: float = struct.unpack(">f", (self.pattern << 16).to_bytes(4, "big"))[0]
+            return result
+        code = {IEEEFormat.BINARY16: ">e", IEEEFormat.BINARY32: ">f",
+                IEEEFormat.BINARY64: ">d"}[self.format]
+        result = struct.unpack(code, self.to_bytes())[0]
         return result
 
 
 def decode_ieee754(pattern: object, width: object = IEEEFormat.BINARY64) -> IEEE754Value:
     checked_format = _validate_format(width)
-    value = FixedWidthInteger.from_bit_pattern(pattern, checked_format.value)
+    value = FixedWidthInteger.from_bit_pattern(pattern, checked_format.bit_width)
     return IEEE754Value(value.bit_pattern, checked_format)
 
 
@@ -138,7 +161,7 @@ def decode_ieee754_bytes(
     byteorder: object = ByteOrder.BIG,
 ) -> IEEE754Value:
     checked_format = _validate_format(width)
-    value = decode_bytes(data, byteorder, width=checked_format.value)
+    value = decode_bytes(data, byteorder, width=checked_format.bit_width)
     return IEEE754Value(value.bit_pattern, checked_format)
 
 
@@ -169,7 +192,7 @@ def encode_ieee754_special(
         raise TypeError("quiet must be a boolean")
     if kind is not FloatClass.NAN and payload:
         raise ValueError("only NaN has a payload")
-    pattern = sign_bit << (checked_format.value - 1)
+    pattern = sign_bit << (checked_format.bit_width - 1)
     if kind is not FloatClass.ZERO:
         pattern |= ((1 << checked_format.exponent_width) - 1) << checked_format.fraction_width
     if kind is FloatClass.NAN:
@@ -195,7 +218,7 @@ def _round_scaled_ratio(numerator: int, denominator: int, exponent: int) -> int:
 def _encode_finite(value: ExactValue, format_: IEEEFormat, sign_bit: int) -> IEEE754Value:
     numerator = abs(value.numerator)
     denominator = value.denominator
-    sign_pattern = sign_bit << (format_.value - 1)
+    sign_pattern = sign_bit << (format_.bit_width - 1)
     if numerator == 0:
         return IEEE754Value(sign_pattern, format_)
     exponent = numerator.bit_length() - denominator.bit_length()
@@ -251,3 +274,19 @@ def encode_ieee754(
             raise ValueError("negative_zero requires a zero value")
         sign_bit = 1
     return _encode_finite(exact, checked_format, sign_bit)
+
+
+def convert_ieee754(value: IEEE754Value, width: object) -> IEEE754Value:
+    """Convert the represented value; rounding a previously rounded input may round twice."""
+    if not isinstance(value, IEEE754Value):
+        raise TypeError("value must be an IEEE754Value")
+    target = _validate_format(width)
+    exact = value.exact
+    if exact is not None:
+        return encode_ieee754(
+            exact, target, negative_zero=exact.numerator == 0 and bool(value.sign_bit)
+        )
+    return encode_ieee754_special(
+        value.classification, target, sign_bit=value.sign_bit,
+        payload=value.nan_payload or 0, quiet=value.is_quiet_nan,
+    )
