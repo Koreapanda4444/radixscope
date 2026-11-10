@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from radixscope import __version__
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
+from radixscope.gui.inspector import InspectorWorkspace
 from radixscope.gui.preferences import PreferencesDialog
 from radixscope.gui.programmer import IEEEWorkspace, ProgrammerWorkspace
 from radixscope.gui.widgets import Workspace
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
             TraceWorkspace(),
             ProgrammerWorkspace(),
             IEEEWorkspace(),
+            InspectorWorkspace(),
         ]
         for index, workspace in enumerate(self.workspaces):
             self.tabs.addTab(workspace, workspace.title)

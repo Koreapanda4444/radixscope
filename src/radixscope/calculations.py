@@ -12,11 +12,12 @@ from radixscope.core import (
     RoundingMode,
     convert_bases,
     evaluate_expression,
+    inspect_number,
     parse_number,
     trace_value,
     validate_base,
 )
-from radixscope.reports import StructuredReport, render_report, trace_report
+from radixscope.reports import StructuredReport, inspection_report, render_report, trace_report
 
 MAX_RESULT_BYTES = 8 * 1024 * 1024
 
@@ -41,6 +42,14 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return value
 
     input_text = text("input")
+    if workspace == "Number Inspector":
+        report = inspection_report(inspect_number(
+            input_text, base=integer("base"), width=integer("bit_width"),
+            signed=flag("signed"), data_type=text("data_type"), raw=flag("pattern"),
+            byteorder=text("byteorder"),
+        ))
+        report["input"] = input_text
+        return report
     if workspace == "Conversion":
         value = (
             evaluate_expression(input_text) if text("mode") == "Expression"
@@ -61,7 +70,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             outputs = convert_bases(
                 value, bases, integer("precision"), RoundingMode(text("rounding"))
             )
-        report: dict[str, object] = {
+        report = {
             "input": input_text, "exact": str(value),
             "outputs": {str(base): result for base, result in outputs.items()},
         }
