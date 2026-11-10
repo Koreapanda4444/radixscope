@@ -8,6 +8,8 @@ import sys
 from fractions import Fraction
 
 from radixscope.core import (
+    BitField,
+    BitfieldLayout,
     ExactValue,
     FixedWidthInteger,
     IEEEFormat,
@@ -21,6 +23,7 @@ from radixscope.core import (
     evaluate_expression,
     format_exact,
     format_rounded,
+    inspect_bitfields,
     parse_number,
     trace_value,
 )
@@ -106,6 +109,9 @@ def main() -> None:
     double_rounding = ExactValue(1) + ExactValue(1, 1 << 11) + ExactValue(1, 1 << 25)
     check(encode_ieee754(double_rounding, 16).pattern == 0x3C01)
     check(convert_ieee754(encode_ieee754(double_rounding, 32), 16).pattern == 0x3C00)
+    layout = BitfieldLayout(8, (BitField("signed_byte", 0, 8, True),))
+    check(BitfieldLayout.from_json(layout.to_json()) == layout)
+    check(inspect_bitfields(255, 8, layout.fields)[0].integer.value == -1)
     check(not trace.complete and not trace.terminates and trace.result.endswith("…"))
     for arguments in (
         ["convert", "FF", "--from", "16", "--to", "10"],

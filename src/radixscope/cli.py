@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import TextIO
 
 from radixscope import __version__
@@ -20,6 +21,7 @@ from radixscope.core import (
     parse_number,
     trace_value,
 )
+from radixscope.core.bitfields import BitfieldLayout, inspect_bitfields
 from radixscope.core.comparison import compare_float_formats
 from radixscope.core.inspection import inspect_number
 from radixscope.reports import (
@@ -56,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
     byte_parser.add_argument("--byteorder", choices=["big", "little"], default="big")
     byte_parser.add_argument("--offset", type=int, default=0)
     byte_parser.add_argument("--length", type=int)
+    byte_parser.add_argument("--layout", help="saved bitfield layout JSON for this selection")
     _output_options(byte_parser)
     inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
     inspect.add_argument("value")
@@ -207,7 +210,26 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
     if args.command == "bytes":
-        return byte_report(args.value, args.input_format, args.byteorder, args.offset, args.length)
+        report = byte_report(
+            args.value, args.input_format, args.byteorder, args.offset, args.length
+        )
+        if getattr(args, "layout", None):
+            path = Path(args.layout)
+            if path.stat().st_size > 1024 * 1024:
+                raise ValueError("bitfield layout exceeds 1 MiB")
+            layout = BitfieldLayout.from_json(path.read_text(encoding="utf-8"))
+            if layout.width != report["width"]:
+                raise ValueError("layout width must match the byte selection")
+            bits = report["bits"]
+            assert isinstance(bits, str)
+            values = inspect_bitfields(int(bits, 2), layout.width, layout.fields)
+            report["fields"] = [{
+                "name": value.field.name, "offset": value.field.offset,
+                "width": value.field.width, "signed": value.field.signed,
+                "value": str(value.integer.exact), "bits": value.integer.bits,
+                "hexadecimal": format(value.integer.bit_pattern, "X"),
+            } for value in values]
+        return report
     if args.command == "inspect":
         return inspection_report(inspect_number(
             args.value, base=args.base, width=args.width, signed=args.signed,
@@ -232,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_command(args)
         _write_output(json.dumps(report) if args.json else render_report(report), sys.stdout)
-    except (ValueError, TypeError, ArithmeticError) as error:
+    except (ValueError, TypeError, ArithmeticError, OSError) as error:
         _write_output(f"radixscope: {error}", sys.stderr)
         return 2
     return 0

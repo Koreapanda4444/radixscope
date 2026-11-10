@@ -95,6 +95,10 @@ class BitEditor(QWidget):
             button.setCheckable(True)
             button.setMinimumSize(24, 24)
             field = self.field_name(index)
+            if field in self.fields and field not in ("sign", "exponent", "fraction"):
+                colors = ("#287bc1", "#9165c9", "#a05b20", "#29836a", "#b74466")
+                color = colors[list(self.fields).index(field) % len(colors)]
+                button.setStyleSheet(f"color: {color};")
             button.setProperty("field", field)
             button.setAccessibleName(f"Bit {index} · {field}")
             button.setToolTip(f"Bit {index} · {field} · click or press Space to toggle")

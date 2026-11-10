@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from radixscope.core.byte_inspection import parse_byte_input
+from radixscope.gui.bitfields import BitfieldPanel
 from radixscope.gui.widgets import Workspace
 
 
@@ -74,6 +75,10 @@ class ByteInspectorWorkspace(Workspace):
         self.form.addRow("Byte view page", self._byte_page)
         self.form.addRow("Offset · Hex · ASCII", self.byte_table)
         self.form.addRow("Selected bytes", self.copy_bytes_button)
+        self.bitfields = BitfieldPanel()
+        self.form.addRow("Bitfield layout", self.bitfields)
+        self.bitfields.pattern_requested.connect(self.apply_pattern)
+        self.result_invalidated.connect(self.bitfields.clear)
         self.run_button.setText("Inspect bytes")
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.start_calculation)
@@ -120,6 +125,24 @@ class ByteInspectorWorkspace(Workspace):
         self.copy_bytes_button.setEnabled(True)
         self.byte_table.setEnabled(True)
         self.display_bytes()
+        bits = report.get("bits")
+        if isinstance(bits, str):
+            self.bitfields.set_pattern(int(bits, 2), len(bits))
+
+    def apply_pattern(self, pattern: int) -> None:
+        if self._report is None:
+            return
+        offset, length = self._report["offset"], self._report["length"]
+        assert isinstance(offset, int) and isinstance(length, int)
+        replacement = pattern.to_bytes(
+            length, "little" if self.byteorder.currentText() == "little" else "big"
+        )
+        data = self._buffer[:offset] + replacement + self._buffer[offset + length:]
+        blocker = QSignalBlocker(self.input_format)
+        self.input_format.setCurrentText("hex")
+        del blocker
+        self.input.setPlainText(data.hex(" ").upper())
+        self.start_calculation()
 
     def display_bytes(self) -> None:
         blocker = QSignalBlocker(self.byte_table)
@@ -191,8 +214,15 @@ class ByteInspectorWorkspace(Workspace):
 
     def restore_state(self, state: dict[str, object]) -> None:
         super().restore_state(state)
+        if "bitfields" in state:
+            self.bitfields.restore_state(state["bitfields"])
         self.update_controls()
         self._refresh.stop()
+
+    def snapshot(self) -> dict[str, object]:
+        state = super().snapshot()
+        state["bitfields"] = self.bitfields.snapshot()
+        return state
 
     def cancel_calculation(self) -> None:
         if hasattr(self, "_refresh"):

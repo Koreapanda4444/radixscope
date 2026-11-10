@@ -6,6 +6,7 @@ from radixscope.core.errors import (
     InvalidWidthError,
     NonIntegerValueError,
 )
+from radixscope.core.limits import MAX_COMPUTED_BITS, ComputationLimitError
 from radixscope.core.parse import parse_integer, parse_number
 from radixscope.core.value import ExactValue
 
@@ -15,6 +16,8 @@ def validate_width(width: object) -> int:
         raise InvalidWidthError("width must be an integer")
     if width < 1:
         raise InvalidWidthError("width must be at least one bit")
+    if width > MAX_COMPUTED_BITS:
+        raise ComputationLimitError(f"width exceeds the {MAX_COMPUTED_BITS}-bit computation budget")
     return width
 
 
