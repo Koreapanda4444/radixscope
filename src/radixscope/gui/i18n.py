@@ -27,7 +27,9 @@ _language = "en"
 _KO: dict[str, str] = json.loads(
     (Path(__file__).resolve().parents[1] / "assets" / "ko.json").read_text(encoding="utf-8")
 )
-_REVERSE = {value: key for key, value in _KO.items()}
+_REVERSE: dict[str, str] = {}
+for _source, _translated in _KO.items():
+    _REVERSE.setdefault(_translated, _source)
 
 _PATTERNS = [
     (r"base must be between (\d+) and (\d+)", r"진법은 \1~\2여야 합니다"),
@@ -87,7 +89,7 @@ def set_language(language: object) -> None:
 
 
 def _canonical(text: str) -> str:
-    return _REVERSE.get(text, text)
+    return text if text in _KO else _REVERSE.get(text, text)
 
 
 def tr(text: str) -> str:

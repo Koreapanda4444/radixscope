@@ -47,6 +47,7 @@ def verify_desktop() -> dict[str, object]:
                 before = [workspace.snapshot() for workspace in window.workspaces]
                 store.preferences["language"] = language
                 window.apply_language()
+                assert window._navigation_items[3].text(0) == "IEEE 754"
                 assert before == [workspace.snapshot() for workspace in window.workspaces]
                 for index, workspace in enumerate(window.workspaces):
                     window.tabs.setCurrentIndex(index)
@@ -165,12 +166,14 @@ def verify_desktop() -> dict[str, object]:
             ieee = window.workspaces[3]
             assert isinstance(ieee, IEEEWorkspace)
             ieee.mode.setCurrentText("encode")
-            ieee.bit_width.setCurrentText("binary16")
+            ieee.bit_width.setCurrentText("16")
+            assert ieee.bit_width.currentText() == "16"
             ieee.input.setText("0.1")
             ieee.calculate()
             _settle(ieee, application)
             floating = ieee.current_report()
             assert floating is not None
+            assert len(str(floating["bits"])) == 16
             pattern = int(str(floating["bits"]), 2)
             ieee.float_navigator.next.click()
             floating = ieee.current_report()
