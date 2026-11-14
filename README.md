@@ -14,13 +14,13 @@ The Core is also available through a command line and Python API.
 | Workspace | What you can do |
 | --- | --- |
 | Conversion | Convert bases 2–36; enter fractions, recurring digits or scientific notation; compare all five rounding modes; inspect conversion steps; use presets and swap bases. |
-| Calculation | Evaluate mixed-base expressions or fixed-width integer operations; distinguish exact results, overflow and wrapping; extract bit ranges and inspect required widths. |
+| Calculation | Evaluate mixed-base expressions or fixed-width integer operations; distinguish exact results, overflow and wrapping; compare operations at 8/16/32/64 bits. |
 | Number Inspector | Explore numeric, signed/unsigned, bit and endian byte representations; edit bits/Hex; analyze four floating formats; compare numbers and experiment with rounded arithmetic. |
 | Batch Conversion | Convert values or expressions by line, retain individual errors and export results. |
 
 Floating-point tools support binary16, bfloat16, binary32 and binary64, with exact
 representation errors, ULPs, adjacent values, signed zero and NaN payloads. Arithmetic
-experiments compare rounding operands first against rounding the exact result once.
+experiments compare rounding operands first against rounding the exact result once, with selectable IEEE rounding.
 
 The GUI supports English/Korean, light/dark/system themes, searchable history,
 individual result copying and text/JSON/CSV export. Computations run in cancellable
