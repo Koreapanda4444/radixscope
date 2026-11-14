@@ -73,6 +73,8 @@ also accept fractions. Expressions support Python-style operator precedence.
 
 Fixed-width integer exposes width, signedness, numeric/raw input, operation and operand.
 Arithmetic separates the mathematical result from overflow and the wrapped result.
+Enable **Compare 8/16/32/64-bit results** to see each width's value, overflow,
+and representation; an out-of-range operand is reported separately for that width.
 Signed `shr` extends the sign; `lshr` inserts zero bits. Shift counts are decimal.
 Extract bit range selects an LSB-based offset and width from the result; extracted
 bits use the selected signedness. Editing result bits selects Inspect.
@@ -111,8 +113,9 @@ The Analysis selector exposes specialized tools:
   a format and add/subtract/multiply/divide. Reports preserve each encoded operand and
   distinguish rounding operands first from rounding the exact original calculation once.
   Input-conversion flags, operation flags and errors against the original calculation are
-  separate. Rounding is nearest, ties to even; tiny inexact results set underflow using
-  unbounded-exponent rounding. Nonfinite results have no finite rational error.
+  separate. **IEEE rounding** selects nearest-even (default), toward zero, toward
+  positive infinity or toward negative infinity. Tiny inexact results can set underflow;
+  nonfinite results have no finite rational error.
 
 ## Batch, preferences and history
 
