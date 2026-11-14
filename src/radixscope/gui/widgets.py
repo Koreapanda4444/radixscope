@@ -225,6 +225,7 @@ class Workspace(QWidget):
         self._fit_timer.timeout.connect(self._fit_input_to_content)
         self._splitter.splitterMoved.connect(self._mark_splitter_customized)
         self.form_container.installEventFilter(self)
+        self.form_scroll.viewport().installEventFilter(self)
         self._utilities.installEventFilter(self)
 
     def _mark_splitter_customized(self, position: int, index: int) -> None:
@@ -246,13 +247,16 @@ class Workspace(QWidget):
         form_height = self.form.heightForWidth(width) if self.form.hasHeightForWidth() else -1
         if form_height < 0:
             form_height = self.form.sizeHint().height()
+        form_height = max(form_height, self.form_container.sizeHint().height())
         panel_layout = self._input_panel.layout()
         spacing = panel_layout.spacing() if panel_layout is not None else 6
         overhead = (self.run_button.sizeHint().height() + 14 + 3 * spacing
                     + (self._utilities.sizeHint().height() if self._utilities.isVisible() else 0)
                     + (self.error.sizeHint().height() if self.error.text() else 0))
-        preferred = form_height + overhead + 12
-        result_minimum = 160
+        # Reserve space for form margins and text metrics that vary with the
+        # Windows DPI and selected language; keep results usable underneath.
+        preferred = form_height + overhead + 28
+        result_minimum = 150
         target = min(preferred, max(90, available - result_minimum))
         current = self._splitter.sizes()
         if abs(current[0] - target) >= 4:
@@ -274,6 +278,8 @@ class Workspace(QWidget):
         elif watched in (self.form_container, self._utilities) and (
             event.type() == QEvent.Type.LayoutRequest
         ):
+            self._schedule_input_fit()
+        elif watched is self.form_scroll.viewport() and event.type() == QEvent.Type.Resize:
             self._schedule_input_fit()
         return super().eventFilter(watched, event)
 
