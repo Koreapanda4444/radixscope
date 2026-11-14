@@ -76,6 +76,3 @@ Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있�
 - [CLI](docs/ko/cli.md)
 - [수치 모델과 Python API](docs/ko/specification.md)
 
-개발 검증은 `python scripts/check_numeric.py`로 실행합니다. Qt 확인에는 `--desktop`,
-binary16·bfloat16의 모든 인코딩 확인에는 `--exhaustive`를 추가합니다.
-Windows 검증 워크플로도 같은 BAT로 빌드한 EXE를 검사합니다.
