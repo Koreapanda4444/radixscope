@@ -260,7 +260,9 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         )
     report = ieee_report(value, args.byteorder)
     if source is not None:
-        report.update(precision_report(source, value))
+        report.update(precision_report(
+            source, value, rounding=getattr(args, "rounding", FloatRounding.NEAREST_EVEN)
+        ))
     return report
 
 

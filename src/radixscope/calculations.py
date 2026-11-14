@@ -84,7 +84,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
                                         base=integer("base"))
             report = float_arithmetic_report(experiment_float_arithmetic(
                 left, right, text("float_operation"), fmt,
-                state.get("float_rounding", "nearest-even"),
+                text("float_rounding") if "float_rounding" in state else "nearest-even",
             ), text("byteorder"))
             report["input"] = input_text
             return report

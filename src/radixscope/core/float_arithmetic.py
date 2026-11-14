@@ -85,23 +85,24 @@ def _round_finite(
     encoded = encode_ieee754(
         value, fmt, negative_zero=value.numerator == 0 and bool(sign), rounding=rounding
     )
-    # Directed rounding can saturate at the maximum finite pattern and still overflow.
-    maximum = ExactValue((1 << (fmt.fraction_width + 1)) - 1) * power_of_two(
-        fmt.bias - fmt.fraction_width
-    )
-    exceeds_maximum = abs(value).fraction > maximum.fraction
-    overflow = encoded.classification is FloatClass.INFINITY or (
-        rounding is not FloatRounding.NEAREST_EVEN and exceeds_maximum
-    )
+    magnitude = abs(value).fraction
+    # Saturation overflows only when rounding with an unbounded exponent would
+    # reach the next binade. A value just above max finite may only be inexact.
+    overflow = (encoded.classification is FloatClass.INFINITY
+                or magnitude >= power_of_two(fmt.bias + 1).fraction)
     inexact = overflow or encoded.exact != value
     minimum_normal = power_of_two(1 - fmt.bias)
+    minimum_subnormal = power_of_two(1 - fmt.bias - fmt.fraction_width)
     if rounding is FloatRounding.NEAREST_EVEN:
-        # Preserve the established after-rounding tininess boundary.
-        minimum_subnormal = power_of_two(1 - fmt.bias - fmt.fraction_width)
         threshold = minimum_normal - minimum_subnormal / ExactValue(4)
-        tiny = value.numerator != 0 and abs(value).fraction < threshold.fraction
+        tiny = magnitude < threshold.fraction
+    elif ((rounding is FloatRounding.TOWARD_POSITIVE and value.numerator > 0)
+          or (rounding is FloatRounding.TOWARD_NEGATIVE and value.numerator < 0)):
+        # Below min normal, unbounded precision has half the subnormal spacing.
+        # Rounding outwards can produce min normal yet still signal underflow.
+        tiny = magnitude <= (minimum_normal - minimum_subnormal / ExactValue(2)).fraction
     else:
-        tiny = encoded.classification in (FloatClass.ZERO, FloatClass.SUBNORMAL)
+        tiny = magnitude < minimum_normal.fraction
     return FloatArithmeticPath(value, encoded, FloatFlags(
         overflow=overflow, underflow=tiny and inexact, inexact=inexact
     ))
@@ -135,9 +136,11 @@ def _evaluate(
             return special(FloatClass.INFINITY, sign_a if inf_a else effective_sign_b)
         assert a is not None and b is not None
         result = a + b if operation is FloatOperation.ADD else a - b
-        zero_sign = int(sign_a == effective_sign_b == 1 or (
-            result.numerator == 0 and rounding is FloatRounding.TOWARD_NEGATIVE
-        ))
+        # Equal-sign zeros preserve that sign in every mode. Only opposite-sign
+        # exact cancellation chooses its zero sign from the rounding direction.
+        zero_sign = sign_a if sign_a == effective_sign_b else int(
+            rounding is FloatRounding.TOWARD_NEGATIVE
+        )
         return _round_finite(result, fmt, zero_sign, rounding)
     sign = sign_a ^ sign_b
     if operation is FloatOperation.MULTIPLY:

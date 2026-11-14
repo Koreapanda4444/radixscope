@@ -15,7 +15,13 @@ from radixscope.core.batch import BatchConversion
 from radixscope.core.comparison import FloatFormatComparison
 from radixscope.core.float_arithmetic import FloatArithmeticExperiment, FloatArithmeticPath
 from radixscope.core.formatting import format_preview
-from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
+from radixscope.core.ieee754 import (
+    FloatClass,
+    FloatRounding,
+    IEEEFormat,
+    convert_ieee754,
+    encode_ieee754,
+)
 from radixscope.core.inspection import NumberInspection
 from radixscope.core.neighbors import adjacent_float, float_boundaries
 from radixscope.core.numeric_comparison import NumericComparison, NumericOperand, operand_exact
@@ -182,7 +188,11 @@ def inspection_report(inspection: NumberInspection) -> dict[str, object]:
     return report
 
 
-def precision_report(source: ExactValue, encoded: IEEE754Value) -> dict[str, object]:
+def precision_report(
+    source: ExactValue, encoded: IEEE754Value, *,
+    rounding: FloatRounding | str = FloatRounding.NEAREST_EVEN,
+) -> dict[str, object]:
+    mode = FloatRounding(rounding)
     analysis = analyze_float_precision(source, encoded)
     rational_fields = {
         "absolute_error": analysis.absolute_error, "relative_error": analysis.relative_error,
@@ -194,7 +204,9 @@ def precision_report(source: ExactValue, encoded: IEEE754Value) -> dict[str, obj
     report.update({
         "source_exact": str(source), "exactly_represented": analysis.exactly_represented,
         "rounding_direction": analysis.rounding_direction,
-        "rounding_rule": experiment.rounding.value,
+        "rounding_rule": (
+            "nearest, ties to even" if mode is FloatRounding.NEAREST_EVEN else mode.value
+        ),
         "overflowed": encoded.classification.value == "infinity",
         "underflowed_to_zero": encoded.classification.value == "zero" and source.numerator != 0,
     })
@@ -363,19 +375,19 @@ def float_arithmetic_report(
             "exact_operation": str(value.exact) if value.exact is not None else None,
                   "result": compact(value.value), "flags": asdict(value.flags)}
         if reference is not None:
-            report["error_against_original_math"] = precision_report(reference, value.value)
+            report["error_against_original_math"] = precision_report(
+                reference, value.value, rounding=experiment.rounding
+            )
         if value.exact is not None:
-            report["operation_rounding_error"] = precision_report(value.exact, value.value)
+            report["operation_rounding_error"] = precision_report(
+                value.exact, value.value, rounding=experiment.rounding
+            )
         return report
     result = ieee_report(experiment.rounded_operands.value, byteorder)
     result.update({
         "operation": experiment.operation.value,
-        "rounding_rule": "nearest, ties to even",
-        "tininess_rule": (
-            "after rounding with an unbounded exponent range"
-            if experiment.rounding.value == "nearest-even"
-            else "after directed rounding at destination precision"
-        ),
+        "rounding_rule": experiment.rounding.value,
+        "tininess_rule": "after rounding with an unbounded exponent range",
         "left_source_exact": str(operand_exact(experiment.left_source)) if (
             operand_exact(experiment.left_source) is not None
         ) else None,
@@ -391,5 +403,8 @@ def float_arithmetic_report(
                          != experiment.exact_then_round.value.pattern),
     })
     if reference is not None:
-        result.update(precision_report(reference, experiment.rounded_operands.value))
+        result.update(precision_report(
+            reference, experiment.rounded_operands.value, rounding=experiment.rounding
+        ))
+    result["overflowed"] = experiment.rounded_operands.flags.overflow
     return result
