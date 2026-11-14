@@ -367,7 +367,6 @@ class MainWindow(QMainWindow):
             f"QWidget {{ font-size: 13px; color: {foreground}; }}"
             f"QMainWindow, QDialog {{ background-color: {background}; }}"
             "QLabel#heading { font-size: 22px; font-weight: 600; margin: 4px 0; }"
-            f"QLabel#subtitle {{ color: {muted}; margin-bottom: 4px; }}"
             "QLabel#error { color: #c94e5a; }"
             f"QPushButton, QToolButton {{ border: 1px solid {border}; border-radius: 2px;"
             "padding: 5px 9px; min-height: 20px; }"
