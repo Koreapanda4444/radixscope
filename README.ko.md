@@ -2,6 +2,8 @@
 
 한국어 | [English](README.md)
 
+## 소개
+
 RadixScope는 정확한 수 변환과 수치 표현 분석을 위한 Python·PySide6 프로그램입니다.
 분수, 고정 비트 정수, 부동소수점 형식과 원시 바이트를 하나의 데스크톱 화면에서
 다루며, 같은 연산을 CLI와 Python API로도 사용할 수 있습니다.
@@ -39,20 +41,6 @@ Hex·Binary·Base64·UTF-8 입력에서 바이트 범위를 선택하고 원하�
 이전 계산을 검색하고 입력을 복원하거나 결과를 다른 작업 화면에서 재사용한 뒤
 텍스트·JSON·CSV로 내보낼 수 있습니다. 데스크톱은 한국어·영어와 라이트·다크·시스템 테마를 지원합니다.
 
-## 화면
-
-데스크톱 사이드바는 작업 화면을 세 그룹으로 나눕니다.
-
-| 그룹 | 작업 화면 | 역할 |
-| --- | --- | --- |
-| Inspect | Number Inspector, Byte Inspector, IEEE 754, Programmer | 수치·비트·바이트와 고정 비트 연산 분석 |
-| Calculate | Conversion, Batch Conversion, Trace | 수 변환, 여러 입력 처리와 계산 과정 확인 |
-| Compare | Binary Comparison | 원시 패턴 사이의 차이 비교 |
-
-각 작업 화면에는 입력 영역, 구조화된 결과 표와 텍스트 리포트가 배치됩니다.
-결과를 복사하거나 다른 작업 화면으로 전달하고 내보낼 수 있습니다.
-**Ctrl+H**로 검색 가능한 최근 기록 패널을 엽니다.
-
 ## 사용 방법
 
 ### GUI에서 값 살펴보기
@@ -72,14 +60,15 @@ Hex·Binary·Base64·UTF-8 입력에서 바이트 범위를 선택하고 원하�
 
 ```sh
 python -m radixscope convert FF --from 16 --to 2 8 10 16
+python -m radixscope expression "(0xFF & 0x0F) << 2" --to 2 10 16
 python -m radixscope inspect FF --base 16 --width 8 --signed --pattern
 python -m radixscope ieee compare "1/10" --json
 ```
 
-첫 명령은 십육진수 `FF`를 네 진법으로 변환합니다. 두 번째는 그 8비트를 부호 있는
-정수로 재해석하고, 세 번째는 정확한 분수의 부동소수점 표현을 형식별로 비교합니다.
-각 명령에 `--help`를 붙여 옵션을 확인할 수 있습니다. Python API도 같은 수치 모델과
-연산을 제공하며, 수치 처리 명세에서 예시를 볼 수 있습니다.
+위 예시는 십육진수 `FF`의 네 진법 변환, 비트 연산 수식 계산, 8비트 패턴의 부호 있는
+정수 재해석, 정확한 분수의 부동소수점 형식별 비교를 보여줍니다. 각 명령에 `--help`를
+붙여 옵션을 확인할 수 있습니다. Python API도 같은 수치 모델과 연산을 제공하며,
+수치 처리 명세에서 예시를 볼 수 있습니다.
 
 ## 실행 방법
 

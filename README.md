@@ -2,6 +2,8 @@
 
 English | [한국어](README.ko.md)
 
+## Overview
+
 RadixScope is a Python and PySide6 application for exact number conversion and
 analysis of numeric representations. It connects fractions, fixed-width integers,
 floating-point formats and raw bytes in one desktop interface, with the same
@@ -44,20 +46,6 @@ and errors. Search previous calculations, restore inputs and reuse results acros
 workspaces, then export text, JSON or CSV. The desktop supports English/Korean and
 light, dark and system themes.
 
-## Preview
-
-The desktop sidebar organizes the workspaces into three groups:
-
-| Group | Workspaces | Purpose |
-| --- | --- | --- |
-| Inspect | Number Inspector, Byte Inspector, IEEE 754, Programmer | Examine values, bits, bytes and fixed-width operations |
-| Calculate | Conversion, Batch Conversion, Trace | Convert numbers, process multiple inputs and follow calculation steps |
-| Compare | Binary Comparison | Examine differences between raw patterns |
-
-Each workspace provides input controls, a structured result table and a text report.
-Result controls let you copy values, transfer them to another workspace or export
-them. **Ctrl+H** opens the searchable Recent panel.
-
 ## Usage
 
 ### Explore a value in the GUI
@@ -77,14 +65,16 @@ After installation, the same operations can be run from a terminal:
 
 ```sh
 python -m radixscope convert FF --from 16 --to 2 8 10 16
+python -m radixscope expression "(0xFF & 0x0F) << 2" --to 2 10 16
 python -m radixscope inspect FF --base 16 --width 8 --signed --pattern
 python -m radixscope ieee compare "1/10" --json
 ```
 
-The first command converts hexadecimal `FF` to four bases. The second reinterprets
-its eight bits as a signed integer; the third compares floating-point formats for
-an exact fraction. Use `--help` on any command for its options. The Python API exposes
-the same numeric models and operations; examples are in the numeric specification.
+These examples convert hexadecimal `FF` to four bases, evaluate a bitwise expression,
+reinterpret an eight-bit pattern as a signed integer, and compare floating-point
+formats for an exact fraction. Use `--help` on any command for its options. The Python
+API exposes the same numeric models and operations; examples are in the numeric
+specification.
 
 ## Getting Started
 
