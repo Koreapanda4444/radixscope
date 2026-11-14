@@ -405,17 +405,31 @@ class MainWindow(QMainWindow):
             f"QSplitter::handle {{ background: {border}; height: 3px; }}"
         )
         stylesheet += (
-            f"QMenuBar {{ background: {header}; border-bottom: 1px solid {border}; padding: 3px 8px; }}"
+            f"QMenuBar {{ background: {header}; border-bottom: 1px solid {border};"
+            "padding: 3px 8px; }"
             "QMenuBar::item { padding: 7px 14px; background: transparent; }"
             f"QMenuBar::item:selected {{ background: {blue}; color: white; }}"
             f"QMenu {{ background: {base}; border: 1px solid {border}; padding: 4px; }}"
             "QMenu::item { padding: 7px 24px 7px 12px; }"
             f"QMenu::item:selected {{ background: {blue}; color: white; }}"
-            f"QTabBar#workspaceNavigation {{ background: {header}; border-bottom: 1px solid {border}; }}"
+            f"QTabBar#workspaceNavigation {{ background: {header};"
+            f"border-bottom: 1px solid {border}; }}"
             "QTabBar#workspaceNavigation::tab { padding: 10px 16px; margin-right: 2px; }"
             f"QTabBar#workspaceNavigation::tab:hover {{ background: {base}; }}"
             f"QTabBar#workspaceNavigation::tab:selected {{ background: {base}; color: {blue};"
             f"border-bottom: 3px solid {blue}; font-weight: 600; }}"
+        )
+        stylesheet += (
+            f"QWidget#inputPanel {{ background: {base}; border: 1px solid {border}; }}"
+            f"QWidget#inputForm {{ background: {base}; }}"
+            "QLineEdit, QSpinBox, QComboBox { min-height: 24px; padding: 4px 6px; }"
+            f"QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border: 2px solid {blue};"
+            "padding: 3px 5px; }"
+            f"QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {{ background: {header};"
+            f"color: {muted}; border-color: {border}; }}"
+            "QComboBox::drop-down { width: 24px; border: 0; }"
+            "QCheckBox { spacing: 7px; padding: 3px 0; }"
+            f"QCheckBox::indicator:disabled {{ background: {header}; border-color: {border}; }}"
         )
         self.setStyleSheet(stylesheet)
 

@@ -16,6 +16,8 @@ class PreferencesDialog(QDialog):
     def __init__(self, store: SettingsStore, parent: QWidget) -> None:
         super().__init__(parent)
         self.setWindowTitle("Preferences")
+        self.setMinimumWidth(360)
+        self.resize(420, 260)
         self.theme = LocalizedComboBox()
         self.theme.addItems(["System", "Light", "Dark"])
         theme = store.preferences.get("theme", "System")
@@ -32,6 +34,8 @@ class PreferencesDialog(QDialog):
         self.limit.setRange(1, 100)
         self.limit.setValue(store.history_limit)
         form = QFormLayout()
+        form.setSpacing(14)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("Theme", self.theme)
         form.addRow("Language", self.language)
         form.addRow("Recent history", self.remember)
