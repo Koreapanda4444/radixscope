@@ -8,7 +8,12 @@ if errorlevel 1 (
   popd
   exit /b 1
 )
-python -m pip install ".[desktop-build]"
+python packaging\windows_resources.py --check-dependencies >nul 2>&1
+if errorlevel 1 (
+  python -m pip install ".[desktop-build]"
+  if errorlevel 1 goto failed
+)
+python packaging\windows_resources.py --check-notices
 if errorlevel 1 goto failed
 python packaging\windows_resources.py
 if errorlevel 1 goto failed

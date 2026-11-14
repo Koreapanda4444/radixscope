@@ -1,7 +1,6 @@
 import hashlib
 import html
 import json
-import urllib.request
 import importlib.metadata
 import struct
 import sys
@@ -87,23 +86,25 @@ def copy_licenses() -> None:
     if python_license.is_file():
         components["Python"] = {"version": sys.version.split()[0],
                                 "notices": [retain("Python-LICENSE.txt", python_license.read_bytes())]}
-    urls = {
-        "LGPL-3.0.txt": "https://www.gnu.org/licenses/lgpl-3.0.txt",
-        "GPL-3.0.txt": "https://www.gnu.org/licenses/gpl-3.0.txt",
-        "Qt-for-Python-notices.html": "https://doc.qt.io/qtforpython-6/licenses.html",
-        "Qt-third-party-notices.html": "https://doc.qt.io/qt-6/licenses-used-in-qt.html",
-        "Python-notices.html": "https://docs.python.org/3/license.html",
-    }
-    references = []
-    for filename, url in urls.items():
-        with urllib.request.urlopen(url, timeout=60) as response:
-            data = response.read()
-        if not data:
-            raise RuntimeError("empty upstream license notice")
-        references.append((filename, retain(filename, data)))
     from PySide6.QtCore import qVersion
     qt_version = qVersion()
     pyside_version = importlib.metadata.version("PySide6")
+    manifest = json.loads((ROOT / "packaging/notices/sources.json").read_text(encoding="utf-8"))
+    actual = {"Qt": qt_version, **{name: importlib.metadata.version(name)
+                                   for name in manifest["reviewed_versions"] if name != "Qt"}}
+    if actual != manifest["reviewed_versions"]:
+        raise RuntimeError(
+            "Runtime versions differ from packaging/notices/sources.json. "
+            "Review matching upstream notices and source locations before building: " + str(actual)
+        )
+    references = []
+    for filename, source in manifest["files"].items():
+        data = (ROOT / "packaging/notices" / filename).read_bytes()
+        if hashlib.sha256(data).hexdigest() != source["sha256"]:
+            raise RuntimeError("Local notice checksum mismatch: " + filename)
+        references.append((filename, retain(filename, data)))
+    if sys.platform == "win32" and "Python" not in components:
+        raise RuntimeError("The matching Python installation LICENSE.txt is required")
     qt_source = ("https://download.qt.io/official_releases/qt/"
                  + ".".join(qt_version.split(".")[:2]) + "/" + qt_version + "/single/")
     pyside_source = ("https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-"
@@ -128,7 +129,8 @@ copying its build-tool license. Other unknown component notices are retained.</p
     document += "<h2>License texts and attributions</h2><ul>"
     for label, filename in references:
         document += '<li><a href="' + filename + '">' + label + '</a></li>'
-    for filename in sorted(notices.values()):
+    referenced = {filename for _, filename in references}
+    for filename in sorted(set(notices.values()) - referenced):
         document += '<li><a href="' + filename + '">' + html.escape(filename) + '</a></li>'
     for name, component in components.items():
         document += '<li>' + html.escape(name) + ' ' + html.escape(str(component)) + '</li>'
@@ -136,10 +138,37 @@ copying its build-tool license. Other unknown component notices are retained.</p
     (destination / "NOTICE.html").write_text(document, encoding="utf-8")
     (destination / "inventory.json").write_text(json.dumps(
         {"components": components, "runtime_files": inventory, "source_urls": [qt_source, pyside_source],
-         "notice_files": sorted(notices.values())}, indent=2), encoding="utf-8")
+         "notice_files": sorted(notices.values()), "notice_sources": manifest}, indent=2), encoding="utf-8")
+
+
+def check_dependencies() -> None:
+    import tomllib
+    from packaging.requirements import Requirement
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    for spec in project["optional-dependencies"]["desktop-build"]:
+        requirement = Requirement(spec)
+        if importlib.metadata.version(requirement.name) not in requirement.specifier:
+            raise RuntimeError("Missing or incompatible build dependency: " + spec)
 
 
 def main() -> None:
+    if sys.argv[1:] == ["--check-dependencies"]:
+        check_dependencies()
+        return
+    if sys.argv[1:] == ["--check-notices"]:
+        import tempfile
+        import shutil
+        global ROOT
+        original = ROOT
+        with tempfile.TemporaryDirectory() as temporary:
+            staging = Path(temporary)
+            shutil.copytree(original / "packaging/notices", staging / "packaging/notices")
+            ROOT = staging
+            try:
+                copy_licenses()
+            finally:
+                ROOT = original
+        return
     if sys.argv[1:] == ["--licenses"]:
         copy_licenses()
         return

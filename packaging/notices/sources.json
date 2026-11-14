@@ -1,0 +1,32 @@
+{
+  "retrieved": "2026-11-14",
+  "reviewed_versions": {
+    "Qt": "6.11.3",
+    "PySide6": "6.11.3",
+    "PySide6-Essentials": "6.11.3",
+    "PySide6-Addons": "6.11.3",
+    "shiboken6": "6.11.3"
+  },
+  "files": {
+    "LGPL-3.0.txt": {
+      "url": "https://www.gnu.org/licenses/lgpl-3.0.txt",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118"
+    },
+    "GPL-3.0.txt": {
+      "url": "https://www.gnu.org/licenses/gpl-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    "Qt-for-Python-notices.html": {
+      "url": "https://doc.qt.io/qtforpython-6/licenses.html",
+      "sha256": "be84bd3364cd42ee2e600ddcffdd50e6d55ae7adbc1c48086ee21e7a01b5a845"
+    },
+    "Qt-third-party-notices.html": {
+      "url": "https://doc.qt.io/qt-6/licenses-used-in-qt.html",
+      "sha256": "4a3901f264ad2dca648d451efb51e638dd7e8e70a31f9d7001019b04b59fe55c"
+    },
+    "Python-notices.html": {
+      "url": "https://docs.python.org/3/license.html",
+      "sha256": "796dec6f09413ec55193dca7afb8cf3cc046dcb370e114c146ec231dff117871"
+    }
+  }
+}
