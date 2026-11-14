@@ -1,5 +1,9 @@
-from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit, QSpinBox
+from PySide6.QtCore import QSignalBlocker, Qt
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import (
+    QAbstractItemView, QApplication, QCheckBox, QLabel, QLineEdit, QPushButton,
+    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+)
 
 from radixscope.core import ExactValue, FixedWidthInteger, RoundingMode, format_integer
 from radixscope.gui.bits import BitEditor
@@ -49,6 +53,8 @@ class CalculationWorkspace(Workspace):
         self.extract.toggled.connect(lambda shown: self.form.setRowVisible(self._range_row, shown))
         self.bit_editor = BitEditor()
         self.form.addRow(self.bit_editor)
+        self.compare_widths = QCheckBox("Compare 8/16/32/64-bit results")
+        self.form.addRow(self.compare_widths)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
         self.result_ready.connect(self.show_bits)
         self.result_invalidated.connect(self.bit_editor.clear)
@@ -79,6 +85,33 @@ class CalculationWorkspace(Workspace):
         self.form.insertRow(4, "Rounded output", self._exact_rounding)
         self.calculation_mode.currentIndexChanged.connect(self.update_controls)
         self.exact_output.toggled.connect(self.update_controls)
+        self.compare_widths.toggled.connect(self.update_controls)
+        self._width_table = QTableWidget(0, 6)
+        self._width_table.setHorizontalHeaderLabels([
+            "Bits", "Result", "Mathematical result", "Overflow", "Hex", "Error"
+        ])
+        self._width_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._width_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._width_table.setAlternatingRowColors(True)
+        self._width_table.verticalHeader().setVisible(False)
+        self._width_table.horizontalHeader().setStretchLastSection(True)
+        self._width_table.cellDoubleClicked.connect(self.copy_width_comparison)
+        copy_action = QAction(self._width_table)
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        copy_action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        copy_action.triggered.connect(self.copy_width_comparison)
+        self._width_table.addAction(copy_action)
+        copy_button = QPushButton("Copy comparison")
+        copy_button.clicked.connect(self.copy_width_comparison)
+        panel = QWidget()
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(0, 6, 0, 0)
+        panel_layout.addWidget(copy_button)
+        panel_layout.addWidget(self._width_table)
+        self._width_tab = self.result_views.addTab(panel, "Width comparison")
+        self.result_ready.connect(self.show_width_comparison)
+        self.result_invalidated.connect(self.clear_width_comparison)
+        self.clear_width_comparison()
         self.update_controls()
         self.bind_inputs()
 
@@ -97,12 +130,53 @@ class CalculationWorkspace(Workspace):
         self.form.setRowVisible(self._range_row, fixed and self.extract.isChecked())
         # Keep the empty bit editor out of the form until there is a real result.
         self.form.setRowVisible(self.bit_editor, fixed and self.bit_editor.pattern is not None)
+        self.form.setRowVisible(self.compare_widths, fixed)
         self.form.setRowVisible(self.targets, not fixed)
         self.form.setRowVisible(self.exact_output, not fixed)
         self.form.setRowVisible(
             self._exact_rounding, not fixed and not self.exact_output.isChecked()
         )
         self.input.setPlaceholderText("Fixed-width integer" if fixed else "0xFF + 1/3")
+
+    def clear_width_comparison(self) -> None:
+        self._width_table.setRowCount(0)
+        self.result_views.setTabEnabled(self._width_tab, False)
+
+    def show_width_comparison(self, title: str, report: dict[str, object]) -> None:
+        rows = report.get("width_comparison")
+        if not self.compare_widths.isChecked() or not isinstance(rows, list):
+            self.clear_width_comparison()
+            return
+        self._width_table.setRowCount(len(rows))
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                continue
+            overflow = row.get("overflow")
+            texts = [
+                str(row["width"]), str(row["value"]) if row["value"] is not None else "—",
+                str(row["mathematical"]) if row["mathematical"] is not None else "—",
+                "Yes" if overflow is True else "No" if overflow is False else "—",
+                str(row["hexadecimal"]) if row["hexadecimal"] is not None else "—",
+                str(row.get("error") or ""),
+            ]
+            for column, value in enumerate(texts):
+                self._width_table.setItem(index, column, QTableWidgetItem(value))
+        self._width_table.resizeColumnsToContents()
+        self.result_views.setTabEnabled(self._width_tab, True)
+        self.result_views.setCurrentIndex(self._width_tab)
+        self.translate_ui()
+
+    def copy_width_comparison(self) -> None:
+        rows = sorted({index.row() for index in self._width_table.selectedIndexes()})
+        if not rows:
+            rows = list(range(self._width_table.rowCount()))
+        QApplication.clipboard().setText("\n".join(
+            "\t".join(
+                self._width_table.item(row, col).text()
+                if self._width_table.item(row, col) is not None else ""
+                for col in range(self._width_table.columnCount())
+            ) for row in rows
+        ))
 
     def calculate(self) -> None:
         self.start_calculation()
