@@ -73,7 +73,7 @@ class Workspace(QWidget):
     result_invalidated = Signal()
     transfer_requested = Signal(str, bool, object)
 
-    def __init__(self, title: str, description: str) -> None:
+    def __init__(self, title: str) -> None:
         super().__init__()
         self.title = title
         self._report: dict[str, object] | None = None
@@ -217,11 +217,7 @@ class Workspace(QWidget):
         layout = QVBoxLayout(self)
         heading = QLabel(title)
         heading.setObjectName("heading")
-        subtitle = QLabel(description)
-        subtitle.setObjectName("subtitle")
-        subtitle.setWordWrap(True)
         layout.addWidget(heading)
-        layout.addWidget(subtitle)
         input_panel = QWidget()
         input_panel.setObjectName("inputPanel")
         self.form_container.setObjectName("inputForm")
@@ -484,7 +480,7 @@ class Workspace(QWidget):
         self.clear_output()
         self.error.clear()
         self.error.hide()
-        self.status.setText("Input changed · Run to update")
+        self.status.setText("Ready")
         self.result_invalidated.emit()
         self.translate_ui()
 
