@@ -22,7 +22,6 @@ from radixscope.core import (
 from radixscope.reports import (
     StructuredReport,
     batch_report,
-    binary_comparison_report,
     byte_report,
     inspection_report,
     render_report,
@@ -59,13 +58,6 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             precision=None if flag("exact_output") else integer("precision"),
             rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
         ))
-    if workspace == "Binary Comparison":
-        report = binary_comparison_report(
-            input_text, text("other_input"), text("input_format"), text("byteorder"),
-            text("length_policy"), text("layout"),
-        )
-        report["input"] = input_text
-        return report
     if workspace == "Byte Inspector":
         report = byte_report(
             input_text, text("input_format"), text("byteorder"), integer("offset"),

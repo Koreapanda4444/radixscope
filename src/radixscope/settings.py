@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from radixscope.exports import json_safe
+from radixscope.workspaces import RETIRED_WORKSPACES, restored_workspace
 
 MAX_SETTINGS_BYTES = 32 * 1024 * 1024
 MAX_HISTORY_REPORT_BYTES = 256 * 1024
@@ -36,7 +37,16 @@ class SettingsStore:
             if not isinstance(preferences, dict) or not isinstance(history, list):
                 raise ValueError("invalid settings structure")
             self.preferences = preferences
-            valid_history = [entry for entry in history if self._valid_entry(entry)]
+            for key in ("workspaces", "workspace_views"):
+                states = self.preferences.get(key)
+                if isinstance(states, dict):
+                    for title in RETIRED_WORKSPACES:
+                        states.pop(title, None)
+            active = self.preferences.get("active_workspace")
+            if isinstance(active, str) and active in RETIRED_WORKSPACES:
+                self.preferences["active_workspace"] = restored_workspace(self.preferences)
+            valid_history = [entry for entry in history if self._valid_entry(entry)
+                             and entry["workspace"] not in RETIRED_WORKSPACES]
             self.history = valid_history[:self.history_limit]
         except (OSError, ValueError, UnicodeError) as error:
             self.warning = f"Could not load preferences: {error}"

@@ -305,9 +305,6 @@ UTF-8 대체 미리보기는 원본 버퍼를 바꾸지 않으며 유효성은 `
 `BitField(name, offset, width, signed=False)`는 엔디언 적용 후 LSB를 0번으로 셉니다.
 `inspect_bitfields`는 겹침·이름 중복·범위 초과를 거부합니다.
 `BitfieldLayout.to_json/from_json`은 스키마 1과 명시적인 `lsb0` 번호 체계를 사용합니다.
-`compare_binary`는 기본적으로 길이가 다른 바이트열을 거부합니다.
-명시적 0 확장은 선택한 엔디언의 최상위 쪽을 채웁니다.
-XOR·전체 변경 개수·필드 차이를 계산하고 한도가 있는 위치 목록은 부분 목록임을 표시합니다.
 
 ```python
 from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input

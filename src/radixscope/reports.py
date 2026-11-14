@@ -11,8 +11,6 @@ from radixscope.core import (
     represent_bytes,
 )
 from radixscope.core.batch import BatchConversion
-from radixscope.core.binary_comparison import compare_binary
-from radixscope.core.bitfields import BitfieldLayout
 from radixscope.core.byte_inspection import parse_byte_input, select_bytes
 from radixscope.core.comparison import FloatFormatComparison
 from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
@@ -280,42 +278,6 @@ def trace_report(trace: ConversionTrace) -> dict[str, object]:
     }
 
 
-def binary_comparison_report(
-    left_text: str, right_text: str, input_format: str = "hex", byteorder: str = "big",
-    length_policy: str = "equal", layout_json: str = "",
-) -> dict[str, object]:
-    layout = BitfieldLayout.from_json(layout_json) if layout_json else None
-    difference = compare_binary(
-        parse_byte_input(left_text, input_format), parse_byte_input(right_text, input_format),
-        byteorder=byteorder, length_policy=length_policy, fields=layout.fields if layout else (),
-    )
-    if layout is not None and layout.width != difference.width:
-        raise ValueError("layout width must match the aligned pattern width")
-    left, right = difference.aligned
-    positions = difference.changed_bit_positions
-    return {
-        "width": difference.width, "byteorder": byteorder, "length_policy": length_policy,
-        "left_original_length": len(difference.left),
-        "right_original_length": len(difference.right),
-        "left_zero_padding": len(left) - len(difference.left),
-        "right_zero_padding": len(right) - len(difference.right),
-        "original_bytes_equal": difference.left == difference.right,
-        "patterns_equal": difference.changed_bits == 0,
-        "left_bytes": left.hex(" ").upper(), "right_bytes": right.hex(" ").upper(),
-        "xor_bytes": difference.xor.hex(" ").upper(),
-        "left_bits": format(int.from_bytes(left, difference.byteorder.value),
-                            f"0{difference.width}b"),
-        "right_bits": format(int.from_bytes(right, difference.byteorder.value),
-                             f"0{difference.width}b"),
-        "changed_bits": difference.changed_bits,
-        "changed_bytes": len(difference.changed_byte_offsets),
-        "changed_byte_offsets": list(difference.changed_byte_offsets[:4096]),
-        "changed_bit_positions": list(positions[:4096]),
-        "bit_positions_complete": len(positions) <= 4096,
-        "byte_positions_complete": len(difference.changed_byte_offsets) <= 4096,
-        "bit_numbering": "lsb0 after byte-order decoding",
-        "fields": list(difference.field_differences),
-    }
 
 
 def batch_report(batch: BatchConversion) -> dict[str, object]:

@@ -27,7 +27,6 @@ from radixscope import __version__
 from radixscope.exports import report_json, table_csv, write_export
 from radixscope.gui.batch import BatchWorkspace
 from radixscope.gui.byte_inspector import ByteInspectorWorkspace
-from radixscope.gui.comparison import ComparisonWorkspace
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
 from radixscope.gui.i18n import (
     LocalizedComboBox,
@@ -66,7 +65,7 @@ class MainWindow(QMainWindow):
             "Conversion": ConversionWorkspace, "Trace": TraceWorkspace,
             "Programmer": ProgrammerWorkspace, "IEEE 754": IEEEWorkspace,
             "Number Inspector": InspectorWorkspace, "Byte Inspector": ByteInspectorWorkspace,
-            "Binary Comparison": ComparisonWorkspace, "Batch Conversion": BatchWorkspace,
+            "Batch Conversion": BatchWorkspace,
         }
         self.workspaces = [workspace_factories[item.title]() for item in WORKSPACES]
         for index, workspace in enumerate(self.workspaces):
@@ -195,8 +194,6 @@ class MainWindow(QMainWindow):
             summary = report.get("source_exact")
         if summary is None and "processed" in report:
             summary = f"{report['processed']}/{report['total']} rows · {report['errors']} errors"
-        if summary is None and "changed_bits" in report:
-            summary = f"{report['changed_bits']} bits · {report['changed_bytes']} bytes changed"
         if summary is None:
             summary = report.get("classification", "comparison")
         self.store.record(title, workspace.snapshot(), str(summary), report)
@@ -213,12 +210,7 @@ class MainWindow(QMainWindow):
             return
         destination.restore_state(state)
         self.tabs.setCurrentWidget(destination)
-        if title == "Binary Comparison":
-            self.show_status(
-                "Left pattern transferred · Enter the right pattern and compare"
-            )
-        else:
-            destination.start_calculation()
+        destination.start_calculation()
 
     def refresh_history(self) -> None:
         self.recent.clear()

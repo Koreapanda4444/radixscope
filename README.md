@@ -33,11 +33,11 @@ representations of the same input. Inspect sign, exponent, significand, signed z
 and NaN payloads, then explore absolute/relative error, ULP spacing, neighboring
 values and normal/subnormal boundaries.
 
-### Bytes, bitfields and binary comparison
+### Bytes and bitfields
 
 Read Hex, Binary, Base64 or UTF-8 input, select a byte range and interpret it with
 the chosen byte order. Define named signed or unsigned bitfields and save their
-layouts. Compare two buffers through XOR, changed bits/bytes and field-level differences.
+layouts.
 
 ### Batch work, history and exports
 

@@ -69,16 +69,13 @@ radixscope ieee compare "1/10" --json
 인코딩하고 중간 형식을 거치는 이중 반올림 차이도 표시합니다.
 페이로드·signaling 옵션은 단일 형식의 NaN 인코딩에만 사용합니다.
 
-## 바이트·필드·차이
+## 바이트·필드
 
 ```sh
 radixscope bytes "3F 80 00 00" --byteorder big
 radixscope bytes "00 FF 80 01" --offset 1 --length 2 --byteorder little
 radixscope bytes "hello" --input-format utf8 --json
 radixscope bytes "FF 80" --layout layout.json
-radixscope compare "FF 00" "FE 80" --json
-radixscope compare "FF" "00 FF" --length-policy zero-extend
-radixscope compare "FF 00" "FE 80" --layout layout.json
 ```
 
 입력 형식은 `hex`, `binary`, `base64`, `utf8`입니다.
@@ -87,9 +84,8 @@ Hex는 붙여 쓴 두 자리 바이트, 공백·쉼표·콜론으로 나눈 그�
 UTF-8 미리보기에서 잘못된 문자는 대체하고 유효성 여부를 따로 표시합니다.
 
 데스크톱 바이트 분석 화면에서 저장한 레이아웃은 `--layout`으로 재사용합니다.
-레이아웃 폭은 선택·비교 패턴과 같아야 합니다. 오프셋은 엔디언을 적용한 숫자의 LSB를
-0번으로 셉니다. 길이가 다른 패턴은 명시적으로 0 확장을 선택하지 않으면 거부합니다.
-XOR, 전체 변경 개수와 필드별 차이를 표시하며 긴 위치 목록은 부분 목록임을 명시합니다.
+레이아웃 폭은 선택 패턴과 같아야 합니다. 오프셋은 엔디언을 적용한 숫자의 LSB를
+0번으로 셉니다.
 
 ## 일괄 변환과 내보내기
 

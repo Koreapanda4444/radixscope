@@ -49,7 +49,7 @@ def transfer_state(
         elif target == "IEEE 754" and len(bits) in (16, 32, 64):
             format_name = "bfloat16" if report.get("format") == "bfloat16" else str(len(bits))
             result.update({"mode": "decode", "bit_width": format_name, "compare": False})
-        elif target in ("Byte Inspector", "Binary Comparison"):
+        elif target == "Byte Inspector":
             data = int(bits, 2).to_bytes((len(bits) + 7) // 8, order)
             result.update({"input": data.hex(" ").upper(), "input_format": "hex"})
             if target == "Byte Inspector":
@@ -82,7 +82,7 @@ def transfer_state(
         result["source_base"] = 10
         if target != "Trace":
             result["mode"] = "Number"
-    elif target in ("Byte Inspector", "Binary Comparison"):
+    elif target == "Byte Inspector":
         if exact.is_integer:
             signed = exact.numerator < 0
             width = ((_integer_width(exact.numerator) + 7) // 8) * 8

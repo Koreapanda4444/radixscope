@@ -14,8 +14,7 @@ retain the following order:
 | Ctrl+4 | IEEE 754 | Float precision and four-format comparison |
 | Ctrl+5 | Number Inspector | Synchronized numeric, raw-bit and byte views |
 | Ctrl+6 | Byte Inspector | Byte selections and bitfields |
-| Ctrl+7 | Binary Comparison | XOR and field differences |
-| Ctrl+8 | Batch Conversion | One value or expression per line |
+| Ctrl+7 | Batch Conversion | One value or expression per line |
 | Ctrl+H | Recent panel | Search and restore history |
 
 ## Shared controls
@@ -28,7 +27,6 @@ copy and export even when table previews are shortened.
 Reuse / export reveals workspace transfer and text/JSON/CSV export. Numeric value
 transfer uses the exact value where available. Raw bits transfer preserves the
 pattern and width. The destination's data type determines its interpretation.
-A transfer to Binary Comparison fills the left side and waits for a right side.
 Float comparison and batch workspaces transfer the selected result row.
 
 Each calculation runs in a separate process. Cancel terminates the process; changing
@@ -102,13 +100,7 @@ colored regions. Edit bits to update the actual byte buffer. Save/load layout us
 layout width must match the selection. Interactive editing is limited to 512 selected
 bytes; Core byte interpretation supports up to 64 KiB.
 
-## Binary comparison and batch
-
-Binary Comparison accepts two buffers in the same selected input format.
-Lengths must match unless Zero extend is explicitly chosen. Results include XOR,
-changed bit/byte counts, paged byte differences and optional layout field differences.
-Show bit differences enables colored bit views for patterns up to 4096 bits.
-Larger inputs retain byte/text views and complete counts; position lists indicate truncation.
+## Batch conversion
 
 Batch Conversion skips empty lines but retains original line numbers. Choose Number,
 Expression or Auto, target bases, precision and a row limit. Default output uses

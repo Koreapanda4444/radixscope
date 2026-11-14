@@ -1,5 +1,4 @@
 from radixscope.core.batch import BatchConversion, BatchEntry, convert_batch
-from radixscope.core.binary_comparison import BinaryDifference, compare_binary
 from radixscope.core.bitfields import BitField, BitfieldLayout, BitFieldValue, inspect_bitfields
 from radixscope.core.byte_inspection import ByteInterpretation, parse_byte_input, select_bytes
 from radixscope.core.comparison import FloatFormatComparison, compare_float_formats
@@ -106,7 +105,6 @@ __all__ = [
     "ArithmeticOperation",
     "BatchConversion",
     "BatchEntry",
-    "BinaryDifference",
     "BinaryExpression",
     "BitField",
     "BitFieldValue",
@@ -146,7 +144,6 @@ __all__ = [
     "analyze_arithmetic",
     "analyze_float_precision",
     "analyze_range",
-    "compare_binary",
     "compare_float_formats",
     "convert_bases",
     "convert_batch",

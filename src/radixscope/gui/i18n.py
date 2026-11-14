@@ -121,7 +121,7 @@ def tr(text: str) -> str:
             return translated + tr(text[len(prefix):])
     for name in (
         "Number Inspector", "Byte Inspector", "Programmer", "Conversion", "Trace",
-        "IEEE 754", "Binary Comparison", "Batch Conversion",
+        "IEEE 754", "Batch Conversion",
     ):
         for suffix, translated in (
             (" complete", " 완료"), (" result", " 결과"), (" output items", " 출력 항목"),

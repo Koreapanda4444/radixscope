@@ -304,9 +304,6 @@ UTF-8 replacement previews do not modify the buffer; `utf8_valid` distinguishes 
 `BitField(name, offset, width, signed=False)` counts from LSB 0 after endian decoding.
 `inspect_bitfields` rejects overlaps, duplicate names and out-of-range fields.
 `BitfieldLayout.to_json/from_json` uses schema 1 and explicit `lsb0` numbering.
-`compare_binary` rejects unequal byte lengths by default; explicit zero extension
-pads at the most-significant end for the selected byte order. It computes XOR,
-complete counts and field differences, while marking bounded position lists as partial.
 
 ```python
 from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input
