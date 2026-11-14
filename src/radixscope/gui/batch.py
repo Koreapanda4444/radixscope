@@ -19,11 +19,13 @@ from radixscope.gui.widgets import Workspace, control_row
 class BatchWorkspace(Workspace):
     def __init__(self) -> None:
         super().__init__("Batch Conversion", "Convert one number or expression per nonempty line")
+        self.form.setVerticalSpacing(6)
         self._rows: list[dict[str, object]] = []
         self._columns: list[str] = []
         self.input = QPlainTextEdit("255\n1/3\n0.1")
-        self.input.setMinimumHeight(90)
-        self.input.setMaximumHeight(160)
+        # Three source lines remain visible while long batches scroll inside this editor.
+        self.input.setMinimumHeight(88)
+        self.input.setMaximumHeight(112)
         self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Expression", "Auto"])
         self.source_base = base_input()
