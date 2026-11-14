@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from radixscope.core import ExactValue, FixedWidthInteger, RoundingMode, format_integer
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
-from radixscope.gui.i18n import LocalizedComboBox
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox
 from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import integer_report
 
@@ -52,9 +52,9 @@ class CalculationWorkspace(Workspace):
         self.form.setRowVisible(self._range_row, False)
         self.extract.toggled.connect(lambda shown: self.form.setRowVisible(self._range_row, shown))
         self.bit_editor = BitEditor()
-        self.form.addRow(self.bit_editor)
         self.compare_widths = QCheckBox("Compare 8/16/32/64-bit results")
         self.form.addRow(self.compare_widths)
+        self.form.addRow(self.bit_editor)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
         self.result_ready.connect(self.show_bits)
         self.result_invalidated.connect(self.bit_editor.clear)
@@ -102,6 +102,7 @@ class CalculationWorkspace(Workspace):
         copy_action.triggered.connect(self.copy_width_comparison)
         self._width_table.addAction(copy_action)
         copy_button = QPushButton("Copy comparison")
+        copy_button.setMaximumWidth(180)
         copy_button.clicked.connect(self.copy_width_comparison)
         panel = QWidget()
         panel_layout = QVBoxLayout(panel)
@@ -160,7 +161,10 @@ class CalculationWorkspace(Workspace):
                 str(row.get("error") or ""),
             ]
             for column, value in enumerate(texts):
-                self._width_table.setItem(index, column, QTableWidgetItem(value))
+                item = QTableWidgetItem(value)
+                if column == 3 and value in ("Yes", "No"):
+                    item.setData(UI_TEXT_ROLE, value)
+                self._width_table.setItem(index, column, item)
         self._width_table.resizeColumnsToContents()
         self.result_views.setTabEnabled(self._width_tab, True)
         self.result_views.setCurrentIndex(self._width_tab)
