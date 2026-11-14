@@ -213,6 +213,10 @@ def _integer_command(args: argparse.Namespace) -> dict[str, object]:
 
 def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
     width = getattr(args, "format", None) or args.width
+    if args.mode != "encode" and getattr(
+        args, "rounding", FloatRounding.NEAREST_EVEN
+    ) != FloatRounding.NEAREST_EVEN:
+        raise ValueError("--rounding applies to IEEE encoding, not decode or format comparison")
     if args.mode == "compare":
         if args.payload or args.signaling:
             raise ValueError("NaN payload options require single-format encoding")
@@ -251,7 +255,8 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         source = exact
         negative_zero = args.negative_zero or (text.startswith("-") and exact == ExactValue(0))
         value = encode_ieee754(
-            exact, width, negative_zero=negative_zero, rounding=args.rounding
+            exact, width, negative_zero=negative_zero,
+            rounding=getattr(args, "rounding", FloatRounding.NEAREST_EVEN),
         )
     report = ieee_report(value, args.byteorder)
     if source is not None:
