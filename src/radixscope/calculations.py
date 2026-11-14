@@ -24,7 +24,7 @@ from radixscope.core import (
     trace_value,
     validate_base,
 )
-from radixscope.core.formatting import format_preview
+from radixscope.core.formatting import format_integer, format_preview
 from radixscope.reports import (
     StructuredReport,
     batch_report,
@@ -150,7 +150,12 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             else parse_numeric_input(input_text) if text("mode") == "Auto"
             else parse_number(input_text, integer("source_base"))
         )
-        bases = [validate_base(int(part.strip())) for part in text("targets").split(",")]
+        swap_to = state.get("swap_to", 0)
+        swapping = type(swap_to) is int and swap_to != 0
+        original_base = integer("source_base") if text("mode") == "Number" else 10
+        bases = [original_base] if swapping else [
+            validate_base(int(part.strip())) for part in text("targets").split(",")
+        ]
         if len(set(bases)) != len(bases):
             raise ValueError("target bases must be unique")
         incomplete: list[int] = []
@@ -168,6 +173,15 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             "input": input_text, "exact": str(value),
             "outputs": {str(base): result for base, result in outputs.items()},
         }
+        if swapping:
+            assert isinstance(swap_to, int)
+            target = validate_base(swap_to)
+            swapped_input = format_integer(value, target) if value.is_integer else (
+                format_integer(type(value)(value.numerator), target) + "/" +
+                format_integer(type(value)(value.denominator), target)
+            )
+            report.update(input=swapped_input, swapped_input=swapped_input,
+                          swapped_source_base=target, swapped_target_base=original_base)
         if incomplete:
             report["display_limit_reached_in_bases"] = incomplete
         if state.get("show_trace") is True:

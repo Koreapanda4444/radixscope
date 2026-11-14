@@ -556,5 +556,16 @@
   "left_input_flags": "첫 번째 입력 변환 플래그",
   "right_input_flags": "두 번째 입력 변환 플래그",
   "error_against_original_math": "원래 수학적 연산값과의 오차",
-  "operation_rounding_error": "연산 자체의 반올림 오차"
+  "operation_rounding_error": "연산 자체의 반올림 오차",
+  "Preset": "프리셋",
+  "Custom": "직접 설정",
+  "Common bases": "자주 쓰는 진법",
+  "Decimal to Hex": "10진수 → 16진수",
+  "Hex to Decimal": "16진수 → 10진수",
+  "Decimal to Binary": "10진수 → 2진수",
+  "Binary to Decimal": "2진수 → 10진수",
+  "Quick swap": "빠른 교환",
+  "Swap source and target": "원본·대상 교환",
+  "Valid number in selected base": "선택한 진법의 올바른 숫자",
+  "Run to validate long input": "긴 입력은 변환 실행으로 확인"
 }

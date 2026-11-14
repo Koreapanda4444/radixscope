@@ -1,3 +1,4 @@
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from radixscope.core import ExactValue, RoundingMode
+from radixscope.core import ExactValue, RoundingMode, parse_number
 from radixscope.core.input_syntax import detect_input_syntax
 from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
 from radixscope.gui.widgets import Workspace, control_row
@@ -30,7 +31,7 @@ class ConversionWorkspace(Workspace):
         super().__init__("Conversion", "Convert exact numbers or evaluate mixed-base expressions")
         self.input = QLineEdit("255")
         self.mode = LocalizedComboBox()
-        self.mode.addItems(["Number", "Expression", "Auto"])
+        self.mode.addItems(["Number", "Auto"])
         self._syntax_hint = QLabel()
         self._syntax_hint.setWordWrap(True)
         self._detect_button = QPushButton("Use automatic input")
@@ -38,6 +39,17 @@ class ConversionWorkspace(Workspace):
         self.input.textChanged.connect(self.update_input_hint)
         self.source_base = base_input()
         self.targets = QLineEdit("2, 8, 10, 16")
+        self.preset = LocalizedComboBox()
+        self.preset.addItems(["Custom", "Common bases", "Decimal to Hex", "Hex to Decimal",
+                              "Decimal to Binary", "Binary to Decimal"])
+        self._swap_to = 0
+        self._swap_target = LocalizedComboBox()
+        self._swap_button = QPushButton("Swap source and target")
+        self._swap_button.clicked.connect(self.swap_bases)
+        self.targets.textChanged.connect(self.update_swap_targets)
+        self.source_base.valueChanged.connect(self.mark_custom)
+        self.targets.textChanged.connect(self.mark_custom)
+        self.preset.currentIndexChanged.connect(self.apply_preset)
         self.exact_output = QCheckBox(
             "Exact expansion · 1000 digit display limit"
         )
@@ -52,7 +64,9 @@ class ConversionWorkspace(Workspace):
         self.form.addRow("Input format", control_row(self.mode, "Base", self.source_base,
                                                      self._detect_button))
         self.form.addRow(self._syntax_hint)
+        self.form.addRow("Preset", self.preset)
         self.form.addRow("Target bases", self.targets)
+        self.form.addRow("Quick swap", control_row(self._swap_target, self._swap_button))
         self.form.addRow("Output", self.exact_output)
         self.show_trace = QCheckBox("Show conversion steps")
         self.target_base = base_input(2)
@@ -88,6 +102,9 @@ class ConversionWorkspace(Workspace):
         self.clear_trace()
         self.update_controls()
         self.update_input_hint()
+        self.update_swap_targets()
+        self.source_base.valueChanged.connect(self.update_input_hint)
+        self.mode.currentIndexChanged.connect(self.update_input_hint)
         self.bind_inputs()
 
     def update_controls(self) -> None:
@@ -97,14 +114,87 @@ class ConversionWorkspace(Workspace):
         self.rounding.setEnabled(not self.exact_output.isChecked())
         self.form.setRowVisible(self._rounding_row, not self.exact_output.isChecked())
 
-    def calculate(self) -> None:
-        self.start_calculation()
-
     def update_input_hint(self) -> None:
         syntax = detect_input_syntax(self.input.text())
-        self._syntax_hint.setText(syntax.description)
+        description = syntax.description
+        if self.mode.currentText() == "Number":
+            if len(self.input.text()) > 4096:
+                description = tr("Run to validate long input")
+            else:
+                try:
+                    parse_number(self.input.text(), self.source_base.value())
+                    description = tr("Valid number in selected base")
+                except (ValueError, TypeError) as error:
+                    description = tr(str(error))
+            description = f"{self.source_base.value()} · " + description
+        self._syntax_hint.setText(description)
         self._detect_button.setEnabled(syntax.kind != "invalid")
 
+    def mark_custom(self) -> None:
+        blocker = QSignalBlocker(self.preset)
+        self.preset.setCurrentText("Custom")
+        del blocker
+
+    def apply_preset(self) -> None:
+        presets = {"Common bases": (10, "2, 8, 10, 16"), "Decimal to Hex": (10, "16"),
+                   "Hex to Decimal": (16, "10"), "Decimal to Binary": (10, "2"),
+                   "Binary to Decimal": (2, "10")}
+        label = self.preset.currentText()
+        selected = presets.get(label)
+        if selected is None:
+            return
+        blocker = QSignalBlocker(self.preset)
+        self.mode.setCurrentText("Number")
+        self.source_base.setValue(selected[0])
+        self.targets.setText(selected[1])
+        self.preset.setCurrentText(label)
+        del blocker
+
+    def update_swap_targets(self) -> None:
+        previous = self._swap_target.currentText()
+        self._swap_target.clear()
+        try:
+            bases = [int(value.strip()) for value in self.targets.text().split(",")]
+            if any(not 2 <= base <= 36 for base in bases):
+                raise ValueError("invalid target base")
+        except ValueError:
+            self._swap_button.setEnabled(False)
+            return
+        self._swap_target.addItems([str(base) for base in dict.fromkeys(bases)])
+        if previous in [str(base) for base in bases]:
+            self._swap_target.setCurrentText(previous)
+        self._swap_button.setEnabled(bool(bases))
+
+    def swap_bases(self) -> None:
+        if self._swap_target.currentText():
+            self._swap_to = int(self._swap_target.currentText())
+            self.start_calculation()
+
+    def snapshot(self) -> dict[str, object]:
+        state = super().snapshot()
+        state["swap_to"] = self._swap_to
+        return state
+
+    def set_result(self, report: dict[str, object], text: str | None = None) -> None:
+        swapped = report.get("swapped_input")
+        if isinstance(swapped, str):
+            blockers = [QSignalBlocker(w) for w in (self.input, self.mode, self.source_base,
+                                                   self.targets, self.preset)]
+            self.input.setText(swapped)
+            self.mode.setCurrentText("Number")
+            self.source_base.setValue(int(str(report["swapped_source_base"])))
+            self.targets.setText(str(report["swapped_target_base"]))
+            self.preset.setCurrentText("Custom")
+            del blockers
+            self._swap_to = 0
+            self.update_controls()
+            self.update_input_hint()
+            self.update_swap_targets()
+        super().set_result(report, text)
+
+    def calculate(self) -> None:
+        self._swap_to = 0
+        self.start_calculation()
 
     def clear_trace(self) -> None:
         self._trace_table.setRowCount(0)
@@ -156,6 +246,10 @@ class ConversionWorkspace(Workspace):
             self.result_views.setCurrentIndex(self._trace_index)
 
     def restore_state(self, state: dict[str, object]) -> None:
+        blocker = QSignalBlocker(self.preset)
         super().restore_state(state)
+        del blocker
+        self._swap_to = 0
+        self.update_swap_targets()
         self.update_controls()
         self.update_input_hint()
