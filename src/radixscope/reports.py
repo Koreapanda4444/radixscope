@@ -371,7 +371,11 @@ def float_arithmetic_report(
     result.update({
         "operation": experiment.operation.value,
         "rounding_rule": "nearest, ties to even",
-        "tininess_rule": "after rounding with an unbounded exponent range",
+        "tininess_rule": (
+            "after rounding with an unbounded exponent range"
+            if experiment.rounding.value == "nearest-even"
+            else "after directed rounding at destination precision"
+        ),
         "left_source_exact": str(operand_exact(experiment.left_source)) if (
             operand_exact(experiment.left_source) is not None
         ) else None,
