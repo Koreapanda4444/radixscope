@@ -49,6 +49,7 @@ from radixscope.gui.i18n import (
     localize,
     tr,
 )
+from radixscope.gui.presentation import field_heading, field_order, is_detail
 from radixscope.reports import ReportField, StructuredReport, render_report
 from radixscope.workspaces import transfer_destinations
 
@@ -329,34 +330,33 @@ class Workspace(QWidget):
         self.status.setText("Complete")
         self._english_report = render_report(report) if text is None else text
         self.output.setPlainText(self._english_report)
-        priorities = {key: index for index, key in enumerate((
-            "exact", "source_exact", "paths_differ", "changed_bit_count",
-            "value", "outputs", "hexadecimal", "bytes",
-            "unsigned", "twos_complement", "absolute_error", "relative_error", "error_ulps",
-            "ulp", "classification", "format", "bits", "width", "signed",
-        ))}
         self.report_fields = tuple(sorted(
-            StructuredReport(report).fields,
-            key=lambda field: {
-                "exact_then_round.result.exact": 1,
-                "numeric_comparison.left.exact": 0, "numeric_comparison.right.exact": 1,
-                "numeric_comparison.relation": 2, "numeric_comparison.difference": 3,
-                "numeric_comparison.absolute_difference": 4,
-            }.get(field.path, priorities.get(field.path.split(".")[0], 99)),
+            StructuredReport(report).fields, key=lambda field: field_order(field, report),
         ))
-        self.result_table.setColumnCount(2)
-        self.result_table.setHorizontalHeaderLabels(["Representation", "Value"])
+        self.result_table.setColumnCount(3)
+        self.result_table.setHorizontalHeaderLabels(["Group", "Item", "Value"])
+        for column in (0, 1):
+            self.result_table.horizontalHeader().setSectionResizeMode(
+                column, QHeaderView.ResizeMode.ResizeToContents
+            )
+        self.result_table.horizontalHeader().setMaximumSectionSize(270)
         self.result_table.setRowCount(len(self.report_fields))
+        previous_group = ""
         for row, field in enumerate(self.report_fields):
-            path = field.path
-            if "rounded_operands" in report:
-                path = {"exact": "Result with rounded operands",
-                        "exact_then_round.result.exact": "Round exact result once",
-                        "source_exact": "Exact mathematical result"}.get(path, path)
-            label = QTableWidgetItem(path.replace("_", " "))
-            label.setData(UI_TEXT_ROLE, path)
+            group, heading = field_heading(field, report)
+            group_item = QTableWidgetItem(group if group != previous_group else "")
+            group_item.setData(UI_TEXT_ROLE, group if group != previous_group else "")
+            font = group_item.font()
+            font.setBold(True)
+            group_item.setFont(font)
+            group_item.setToolTip(group)
+            self.result_table.setItem(row, 0, group_item)
+            previous_group = group
+            label = QTableWidgetItem(heading)
+            label.setData(UI_TEXT_ROLE, heading)
             label.setData(UI_CONTEXT_ROLE, "field")
-            self.result_table.setItem(row, 0, label)
+            label.setToolTip(field.path)
+            self.result_table.setItem(row, 1, label)
             display = field.text if not isinstance(field.value, list) else (
                 f"{len(field.value)} items · Text report / Copy selected"
             )
@@ -371,7 +371,7 @@ class Workspace(QWidget):
                 item.setData(UI_TEXT_ROLE, display[:4000])
             item.setFont(self.output.font())
             item.setToolTip(display[:300])
-            self.result_table.setItem(row, 1, item)
+            self.result_table.setItem(row, 2, item)
         self.copy_button.setEnabled(True)
         self.copy_selected_button.setEnabled(True)
         self.filter_results()
@@ -394,13 +394,12 @@ class Workspace(QWidget):
                 range(self.result_table.columnCount())
             )]
             filtered = bool(query) and not any(
-                query in item.text().casefold() for item in values if item is not None
+                query in (item.text() + " " + item.toolTip()).casefold()
+                for item in values if item is not None
             )
             detailed = False
-            if self.result_table.columnCount() == 2 and row < len(self.report_fields):
-                root = self.report_fields[row].path.split(".")[0]
-                detailed = root in ("neighbors", "boundaries", "field_bits", "trace",
-                                   "underflow_halfway", "overflow_halfway")
+            if self.result_table.columnCount() == 3 and row < len(self.report_fields):
+                detailed = is_detail(self.report_fields[row].path)
             self.result_table.setRowHidden(
                 row, filtered or (detailed and not self._show_details.isChecked() and not query)
             )
@@ -409,6 +408,7 @@ class Workspace(QWidget):
         self.clear_output()
         self.result_invalidated.emit()
         self.error.setText(message)
+        self._empty_result.setText("Calculation failed · check the input above")
         self.status.setText("Error")
         position = re.search(r"at position (\d+)", message)
         input_widget = getattr(self, "input", None)
@@ -419,6 +419,7 @@ class Workspace(QWidget):
 
     def clear_output(self) -> None:
         self._report = None
+        self._empty_result.setText("Run a calculation to see results")
         self._empty_result.show()
         self._english_report = ""
         self._transfer_button.setEnabled(False)

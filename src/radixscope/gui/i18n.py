@@ -143,6 +143,10 @@ def tr(text: str) -> str:
 
 
 def tr_field(path: str) -> str:
+    if " · " in path:
+        return " · ".join(tr_field(part) for part in path.split(" · "))
+    if path.startswith("Base ") and path[5:].isdigit():
+        return path[5:] + "진수" if _language == "ko" else path
     if _language != "ko":
         return path.replace("_", " ")
     if re.fullmatch(r"outputs\.\d+", path):
