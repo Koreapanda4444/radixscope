@@ -154,6 +154,19 @@ def check_desktop() -> list[tuple[str, dict[str, object]]]:
                         window.resize(width, height)
                         app.processEvents()
                         assert window.width() == width and workspace.run_button.isVisible()
+        # The default conversion layout should fit at a normal desktop size without
+        # requiring the nested input scrollbar. Old splitter sizes were not user choices.
+        conversion = window.workspaces[0]
+        window.tabs.setCurrentIndex(0)
+        window.resize(1280, 900)
+        app.processEvents()
+        app.processEvents()
+        assert not conversion.form_scroll.verticalScrollBar().isVisible()
+        conversion.restore_view_state({"splitter": [100, 600]})
+        app.processEvents()
+        app.processEvents()
+        assert not conversion.form_scroll.verticalScrollBar().isVisible()
+        assert conversion.view_state()["splitter_customized"] is False
         for workspace in window.workspaces:
             states.append((workspace.title, workspace.snapshot()))
         inspector = window.workspaces[2]
