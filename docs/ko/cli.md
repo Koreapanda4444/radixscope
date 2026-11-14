@@ -69,6 +69,48 @@ radixscope ieee compare "1/10" --json
 인코딩하고 중간 형식을 거치는 이중 반올림 차이도 표시합니다.
 페이로드·signaling 옵션은 단일 형식의 NaN 인코딩에만 사용합니다.
 
+## 필요한 비트 폭과 숫자 비교
+
+```sh
+radixscope integer 256 --width 8 --requirements --json
+radixscope integer FF --base 16 --width 8 --extract 4 4
+radixscope compare-numbers 255 127 --width 8 --json
+radixscope compare-numbers "1/3" "2/3"
+radixscope compare-numbers "0xFF" "0b11111111" --expressions --width 8
+radixscope compare-numbers "0.1" "0.1000000001" --type binary16
+```
+
+`--requirements`는 선택 범위에 들어가지 않는 정수도 분석합니다. Signed/Unsigned 최소 폭,
+선택 범위와 표준 비트 폭 수용 여부를 표시하며, 연산·원시 패턴 옵션과 함께 사용하지 않습니다.
+`--extract OFFSET WIDTH`는 결과의 LSB 0 기준 범위를 추출하고 선택한 부호 해석을 적용합니다.
+
+`compare-numbers`는 두 입력에 공통 진법·자료형·폭·부호 옵션을 사용합니다.
+대소 관계와 차이는 정확한 원본 값으로 계산하고 부동소수점 패턴은 따로 반올림합니다.
+분수나 범위 밖 정수도 비트 패턴 없이 수학적으로 비교할 수 있습니다.
+호환되는 패턴에는 XOR, Signed/Unsigned 해석과 다른 비트 위치를 표시합니다.
+NaN은 `unordered`이며 무한대 피연산자에는 유한한 차이를 부여하지 않습니다.
+위치 목록은 최대 4096개이고 `positions_complete`로 전체 목록인지 구분합니다.
+
+## 부동소수점 연산 실험
+
+```sh
+radixscope float-op add 0.1 0.2 --format binary16 --json
+radixscope float-op subtract "1 + 1/1000" 1 --format bfloat16
+radixscope float-op divide 1 0 --format binary32
+radixscope float-op add 7C01 3C00 --patterns --format binary16
+```
+
+`float-op`는 add·subtract·multiply·divide를 지원합니다. 숫자는 정확한 수식으로 입력하고,
+`--patterns`는 두 값을 선택 형식의 원시 패턴으로 디코딩합니다. 원시 진법 기본값은 16입니다.
+네 형식 모두 가장 가까운 값, 동률이면 짝수로 반올림합니다.
+
+`rounded_operands`는 두 입력을 먼저 인코딩한 뒤 연산 결과를 반올림하고,
+`exact_then_round`는 원래 값을 정확히 계산한 뒤 한 번 반올림합니다.
+원래 정확한 입력, 인코딩된 피연산자, 입력 변환 플래그, 연산 플래그,
+연산 자체의 반올림 오차와 원래 수학적 값과의 오차를 구분합니다.
+오버플로·언더플로·유효하지 않은 연산·0으로 나눔·정확하지 않음을 별도 플래그로 표시합니다.
+특수값과 NaN 전파는 [수치 규칙](specification.md#부동소수점-연산)을 따릅니다.
+
 ## 일괄 변환과 내보내기
 
 ```sh

@@ -208,8 +208,6 @@ primary    = literal | "(" expression ")"
 `represent_bytes`는 순서가 적용된 바이트, 공백으로 구분한 대문자 16진 문자열,
 ASCII 미리보기를 반환합니다. 미리보기는 `20`~`7E`의 출력 가능한 바이트를 표시하고
 그 밖의 바이트는 점으로 표시하며 원래 데이터는 바꾸지 않습니다.
-`encode_ascii`, `decode_ascii`는 제어 문자를 포함한 엄격하고 손실 없는 7비트 ASCII
-변환입니다. ASCII 밖의 문자와 바이트는 대체하지 않고 거부합니다.
 
 ## IEEE 754 디코딩
 
@@ -295,6 +293,91 @@ assert analysis.absolute_error == ExactValue(1, 671088640)
 assert analysis.error_ulps == ExactValue(1, 5)
 ```
 
+## 최소 비트 폭과 범위 추출
+
+`analyze_integer_width(value, width=32, signed=False)`는 래핑 없이
+`IntegerWidthAnalysis`를 반환합니다. 0은 두 해석에서 모두 1비트가 필요하며,
+양의 Signed 값에는 부호 비트가 추가됩니다. 음수의 최소 폭은 2의 보수 범위를 따르고
+`minimum_unsigned_width=None`입니다. `fits(width, signed)`로 다른 범위도 확인합니다.
+
+```python
+from radixscope.core import FixedWidthInteger, analyze_integer_width
+
+analysis = analyze_integer_width(256, 8)
+assert analysis.minimum_unsigned_width == 9
+assert analysis.minimum_signed_width == 10
+assert not analysis.fits_selected
+assert analysis.fits(16)
+assert FixedWidthInteger(255, 8).extract_bits(4, 4, signed=True).value == -1
+```
+
+`extract_bits(offset, width, signed=False)`는 LSB 0 기준으로 새 고정 비트 값을 만듭니다.
+원본 폭을 벗어나는 범위를 거부하며 필드 레이아웃을 관리하지 않습니다.
+
+## 숫자 비교
+
+`compare_numeric_values(left, right, width=32, signed=False, data_type="integer")`는
+`ExactValue`, `FixedWidthInteger`, `IEEE754Value`를 받습니다. 정확한 숫자 입력은
+표현 반올림 전에 비교하고, 이미 인코딩된 패턴은 디코딩된 수학적 해석을 유지합니다.
+`compare_numeric_inputs`는 텍스트·진법·원시 패턴·수식 옵션을 추가합니다.
+두 피연산자에 같은 선택 형식과 폭을 적용합니다.
+
+```python
+from radixscope.core import compare_numeric_inputs
+
+comparison = compare_numeric_inputs("255", "127", width=8)
+assert comparison.difference.numerator == 128
+assert comparison.xor == 128
+assert comparison.changed_positions == (7,)
+assert compare_numeric_inputs("1/3", "2/3").xor is None
+```
+
+비교 관계는 less/equal/greater/unordered입니다. NaN은 unordered이고 같은 부호의
+무한대는 같다고 비교하지만 유리수 차이는 유한한 두 값에만 정의합니다.
+범위 오류나 패턴 부재 때문에 유효한 수학적 비교를 버리지 않습니다.
+보고서에는 진법별 미리보기, Signed/Unsigned 패턴 차이와 위치 목록의 완전성 표시가
+포함됩니다. 다른 위치는 최대 4096개까지 나열하고 전체 개수는 완전한 XOR로 계산합니다.
+
+## 부동소수점 연산
+
+`experiment_float_arithmetic(left, right, operation="add", format_=32)`는 정확한 값 또는
+디코딩된 IEEE 값을 받아 네 형식의 add·subtract·multiply·divide를 수행합니다.
+`parse_float_operand`는 정확한 수식, 부호 있는 0, nan/inf 또는 명시적인 원시 패턴을 받습니다.
+
+```python
+from radixscope.core import experiment_float_arithmetic, parse_float_operand
+
+experiment = experiment_float_arithmetic(
+    parse_float_operand("0.1", "binary16"),
+    parse_float_operand("0.2", "binary16"),
+    "add", "binary16",
+)
+assert str(experiment.exact_then_round.exact) == "3/10"
+assert experiment.rounded_operands.value.pattern != experiment.exact_then_round.value.pattern
+```
+
+피연산자를 먼저 반올림하는 경로는 두 입력을 인코딩하고 그 표현값으로 정확히 연산한 뒤
+목적 형식으로 반올림합니다. 기준 경로는 원래 값을 정확히 계산한 뒤 한 번 반올림합니다.
+둘 다 가장 가까운 값, 동률이면 짝수를 사용합니다. 입력 변환 플래그와 연산 플래그를
+구분하고, 원래 수학적 값 및 인코딩된 피연산자의 연산값에 대한 오차를 따로 계산합니다.
+
+특수값 정책은 다음과 같습니다.
+
+- 첫 NaN의 부호·페이로드를 사용해 Quiet NaN을 반환합니다. 어느 쪽이든 Signaling NaN이면
+  invalid를 표시합니다. 기존 형식 변환과 같이 목적 형식에 맞는 페이로드만 허용합니다.
+- 반대 부호 무한대의 덧셈, 같은 무한대의 뺄셈, 무한대와 0의 곱셈, 0/0, 무한대/무한대는
+  양의 기본 Quiet NaN과 invalid를 반환합니다.
+- 유한한 0 아닌 값을 부호 있는 0으로 나누면 부호 있는 무한대와 divide-by-zero를 반환합니다.
+  무한대/0은 해당 플래그 없이 부호 있는 무한대입니다.
+- 곱셈·나눗셈의 0 부호는 XOR를 따릅니다. 정확한 상쇄는 양의 0이고,
+  덧셈·뺄셈에서 두 유효 피연산자가 모두 음의 0이면 음의 0입니다.
+- 유한한 값의 오버플로에는 overflow·inexact를 표시하며 정확한 비정규수에는 underflow가
+  없습니다. 작은 값 판정은 지수 범위를 제한하지 않은 목적 정밀도의 반올림 후 수행하므로,
+  최종 인코딩이 최소 정규수여도 정확하지 않은 결과에는 underflow가 생길 수 있습니다.
+  이 경계는 [SoftFloat 설명](https://www.jhauser.us/arithmetic/SoftFloat-3/doc/SoftFloat-FAQ.html)을 따릅니다.
+- 유한하지 않은 값에는 유리수 오차를 정의하지 않습니다. 예외 플래그가 실험을 중단하지
+  않으므로 두 경로의 결과를 계속 확인할 수 있습니다.
+
 ## 일괄 처리와 구조화된 보고서
 
 `convert_batch`는 숫자·수식·자동 모드로 빈 줄을 제외한 입력을 처리하고,
@@ -320,9 +403,6 @@ CLI는 파일·표준 입력과 CSV·JSON을, GUI는 텍스트 내보내기도 �
 | 완전한 소수부 전개 | 100000자리와 나머지 비트 예산 64 MiB |
 | 변환 과정 | 단계별 10000단계, 더 작은 소수부 `max_steps` 지정 가능 |
 | GUI 정확한 변환 미리보기 | 소수부 1000자리, 제한 시 부분 전개 명시 |
-| 바이트 버퍼 | 65536바이트 |
-| 비트필드 레이아웃 | 256필드, JSON 최대 1 MiB |
-| 대화형 바이트 비트필드 편집 | 선택한 512바이트 |
 | 일괄 변환 | 빈 줄 제외 1000행, 서식화 결과 2 MiB |
 | 데스크톱 계산 응답 | 8 MiB |
 | 설정 | 스키마 1, 파일 32 MiB, 기록 최대 100개 |

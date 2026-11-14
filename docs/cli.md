@@ -68,6 +68,49 @@ when defined, adjacent values and boundaries. Compare encodes the same exact sou
 directly in all four formats and indicates differences caused by intermediate rounding.
 NaN payload/signaling options apply only to single-format NaN encoding.
 
+## Required widths and numeric comparison
+
+```sh
+radixscope integer 256 --width 8 --requirements --json
+radixscope integer FF --base 16 --width 8 --extract 4 4
+radixscope compare-numbers 255 127 --width 8 --json
+radixscope compare-numbers "1/3" "2/3"
+radixscope compare-numbers "0xFF" "0b11111111" --expressions --width 8
+radixscope compare-numbers "0.1" "0.1000000001" --type binary16
+```
+
+`--requirements` analyzes the mathematical integer even when it cannot fit the selected
+width. It reports minimum signed/unsigned widths, selected bounds and standard-width
+fits; it is used without operations or raw-pattern input. `--extract OFFSET WIDTH`
+extracts a checked result range from LSB 0 and applies the selected signedness.
+
+`compare-numbers` uses shared base/type/width/signedness options. Mathematical ordering
+and differences use exact input values; float patterns are rounded separately. Fractions
+or out-of-range integers can still be compared without a bit pattern. For compatible
+patterns, reports include XOR, signed/unsigned interpretations and differing positions.
+NaN gives `unordered`; finite differences are undefined for infinite operands.
+Position lists are capped at 4096, with `positions_complete` distinguishing partial lists.
+
+## Floating-point arithmetic experiments
+
+```sh
+radixscope float-op add 0.1 0.2 --format binary16 --json
+radixscope float-op subtract "1 + 1/1000" 1 --format bfloat16
+radixscope float-op divide 1 0 --format binary32
+radixscope float-op add 7C01 3C00 --patterns --format binary16
+```
+
+`float-op` accepts add, subtract, multiply and divide. Numeric operands are exact
+expressions; `--patterns` decodes both operands in the selected format and raw base
+(default 16). All four formats use nearest, ties to even.
+
+`rounded_operands` first encodes both inputs and then rounds their operation result.
+`exact_then_round` calculates from the original values and rounds once. Reports retain
+original exact inputs, encoded operands, input-conversion flags, operation flags,
+operation-rounding errors and errors against the original mathematics. Overflow,
+underflow, invalid operation, divide-by-zero and inexact are distinct flags.
+Special values and NaN propagation follow the documented [numeric rules](specification.md#floating-point-arithmetic).
+
 ## Batch conversion and exports
 
 ```sh

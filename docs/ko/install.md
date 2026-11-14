@@ -58,3 +58,23 @@ sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
 
 XCB 데스크톱에는 `libxcb-cursor0`과 배포판의 일반 X11 라이브러리가 추가로 필요할 수 있습니다.
 GUI 의존성은 프로젝트의 버전 조건에 따라 설치하세요.
+
+## 검증과 아이콘 리소스
+
+소스 패키지 설치 후 `python scripts/check_numeric.py`로 Core·CLI를 확인합니다.
+Qt 검증에는 `--desktop`, binary16·bfloat16 전체 패턴 확인에는 `--exhaustive`를 추가합니다.
+Windows 빌드 후에는 다음 명령을 사용합니다.
+
+```powershell
+python scripts/check_numeric.py --desktop --exe dist/RadixScope/RadixScope.exe
+```
+
+x64 리소스, 패키징된 계산, 실제 창 아이콘과 정상 종료를 확인합니다.
+`build/windows/`에 ICO, 일곱 크기의 PNG와 제품 메타데이터를 생성합니다.
+`src/radixscope/assets/`의 두 SVG가 Qt와 EXE의 공통 아이콘 원본이며,
+고정 Windows 앱 식별자로 실행 중인 창을 묶습니다.
+폴더 교체 후 탐색기에 예전 아이콘이 남으면 새 EXE 리소스를 먼저 확인해
+셸 캐시와 렌더링 문제를 구분할 수 있습니다.
+
+데스크톱 검증 워크플로도 같은 BAT를 사용합니다. 워크플로 아티팩트에는 아이콘 검증
+리소스를 보관하며, 프로그램 빌드 결과는 BAT가 생성하는 프로그램 폴더에 있습니다.

@@ -59,3 +59,23 @@ sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
 
 A desktop session using XCB may also need `libxcb-cursor0` and the distribution's
 usual X11 libraries. Install GUI dependencies using the project's version constraints.
+
+## Verification and icon resources
+
+After installing the source package, `python scripts/check_numeric.py` checks Core and
+CLI behavior. Add `--desktop` for Qt and `--exhaustive` for all binary16/bfloat16 patterns.
+After building on Windows, run:
+
+```powershell
+python scripts/check_numeric.py --desktop --exe dist/RadixScope/RadixScope.exe
+```
+
+This checks x64 resources, frozen calculations, native window icons and normal shutdown.
+`build/windows/` contains the ICO, seven rendered PNG sizes and product metadata.
+The two SVG sources in `src/radixscope/assets/` supply the same icon family to Qt and
+the EXE; a stable Windows application identity groups its running windows.
+Explorer may cache an older icon after a folder replacement. Inspect the freshly built
+EXE resources before treating a cached shell image as a rendering failure.
+
+The desktop validation workflow builds with this same BAT. Its artifacts contain icon
+validation resources; application builds remain in the BAT's generated program folder.

@@ -2,72 +2,33 @@
 
 한국어 | [English](README.md)
 
-## 소개
+<img src="src/radixscope/assets/radixscope.svg" width="80" alt="RadixScope RS 아이콘">
 
-RadixScope는 정확한 수 변환과 수치 표현 분석을 위한 Python·PySide6 프로그램입니다.
-분수, 고정 비트 정수, 부동소수점 형식과 원시 바이트를 하나의 데스크톱 화면에서
-다루며, 같은 연산을 CLI와 Python API로도 사용할 수 있습니다.
-숫자의 수학적 값과 그 값을 표현하는 비트를 함께 살펴보는 데 적합합니다.
+RadixScope는 진법 변환을 중심으로 정확한 수치 계산과 숫자 표현 분석을 제공하는
+데스크톱 도구입니다. Python 정수·유리수 연산으로 수학적 값을 보존하면서,
+고정 비트 정수와 부동소수점이 실제로 어떻게 인코딩되는지 살펴볼 수 있습니다.
+Core 기능은 CLI와 Python API로도 사용할 수 있습니다.
 
-## 주요 기능
+## 기능
 
-### 정확한 수와 수식 계산
+| 작업 화면 | 주요 기능 |
+| --- | --- |
+| 진법 변환 | 2~36진법 변환, 분수·순환소수·과학적 표기법, 반올림, 변환 과정, 진법 프리셋과 원본·대상 교환 |
+| 수치 계산 | 혼합 진법 수식과 고정 비트 정수 연산, 정확한 결과·오버플로·래핑 구분, 비트 범위 추출과 최소 비트 폭 분석 |
+| 숫자 분석 | 진법별 값, Signed/Unsigned, 비트·엔디언 바이트 표현, 비트·Hex 편집, 부동소수점 분석, 숫자 비교와 연산 실험 |
+| 일괄 변환 | 숫자·수식을 줄 단위로 처리하고 개별 오류를 유지하며 결과 내보내기 |
 
-정수·분수·순환소수·과학적 표기법을 사용해 2~36진법을 변환합니다.
-여러 진법이 섞인 수식을 계산하고 Trace에서 변환 과정을 따라갈 수 있습니다.
-정확한 계산은 유리수 값을 유지하며, 정밀도와 반올림 설정으로 결과의 표시 방식을 선택합니다.
+부동소수점은 binary16·bfloat16·binary32·binary64를 지원합니다. 정확한 표현 오차,
+ULP, 인접 값, 부호 있는 0과 NaN 페이로드를 확인할 수 있습니다.
+연산 실험은 피연산자를 먼저 반올림한 결과와 정확히 계산한 뒤 한 번 반올림한 결과를 비교합니다.
 
-### Number Inspector와 정수 연산
+GUI는 한국어·영어, 라이트·다크·시스템 테마, 기록 검색, 개별 결과 복사와
+텍스트·JSON·CSV 내보내기를 지원합니다. 계산은 취소 가능한 별도 프로세스에서 수행하며,
+입력이 바뀌면 이전 결과를 무효화합니다.
 
-하나의 값을 이진수·팔진수·십진수·십육진수, 부호 있는/없는 정수와 엔디언 바이트로
-살펴봅니다. 원시 비트나 Hex 패턴을 편집해 해석이 어떻게 바뀌는지도 확인할 수 있습니다.
-고정 비트 정수 연산은 정확한 결과·오버플로 여부·래핑 결과를 구분하며 비트 연산과 시프트를 지원합니다.
+## 소스에서 실행
 
-### 부동소수점 분석
-
-binary16·bfloat16·binary32·binary64를 인코딩·디코딩하거나 같은 입력의 표현을
-형식별로 비교합니다. 부호·지수·유효숫자, 부호 있는 0과 NaN 페이로드를 살펴보고,
-절대·상대 오차, ULP 간격, 인접 값과 정규수·비정규수 경계를 탐색할 수 있습니다.
-
-### 일괄 처리·기록·내보내기
-
-여러 값이나 수식을 한꺼번에 변환하고 입력별 결과와 오류를 확인합니다.
-이전 계산을 검색하고 입력을 복원하거나 결과를 다른 작업 화면에서 재사용한 뒤
-텍스트·JSON·CSV로 내보낼 수 있습니다. 데스크톱은 한국어·영어와 라이트·다크·시스템 테마를 지원합니다.
-
-## 사용 방법
-
-### GUI에서 값 살펴보기
-
-- **Number Inspector**에서 `FF`를 입력하고 진법 `16`, 정수 형식, 비트 폭 `8`을
-  선택한 뒤 **Signed**와 **Raw bits**를 켭니다. 같은 패턴을 부호 있는 정수 `-1`,
-  부호 없는 정수 `255`, 이진수 `11111111`과 바이트 표현으로 확인합니다.
-- **IEEE 754**에서 `1/10`을 `binary32`로 인코딩합니다. `3DCCCCCD` 패턴과 반올림
-  오차를 확인한 뒤 다른 형식과 비교하거나 인접 값으로 이동해 봅니다.
-  **Interpret as**의 `binary32`를 선택하면 `1.0`을 확인할 수 있습니다. 다른 범위를
-  선택하거나 비트필드 레이아웃을 적용해 개별 필드를 살펴볼 수 있습니다.
-
-### 명령줄에서 사용하기
-
-설치 후 터미널에서도 같은 연산을 실행할 수 있습니다.
-
-```sh
-python -m radixscope convert FF --from 16 --to 2 8 10 16
-python -m radixscope expression "(0xFF & 0x0F) << 2" --to 2 10 16
-python -m radixscope inspect FF --base 16 --width 8 --signed --pattern
-python -m radixscope ieee compare "1/10" --json
-```
-
-위 예시는 십육진수 `FF`의 네 진법 변환, 비트 연산 수식 계산, 8비트 패턴의 부호 있는
-정수 재해석, 정확한 분수의 부동소수점 형식별 비교를 보여줍니다. 각 명령에 `--help`를
-붙여 옵션을 확인할 수 있습니다. Python API도 같은 수치 모델과 연산을 제공하며,
-수치 처리 명세에서 예시를 볼 수 있습니다.
-
-## 실행 방법
-
-### 소스에서 실행
-
-Python 3.11 이상을 사용합니다. 저장소 폴더에서 실행하세요.
+Python 3.11 이상으로 저장소 폴더에서 실행합니다.
 
 ```sh
 python -m pip install ".[gui]"
@@ -75,10 +36,28 @@ python -m radixscope.gui
 ```
 
 별도 실행 의존성이 없는 Core·CLI만 필요하면 `python -m pip install .`로 설치합니다.
-설치 후 `radixscope`, `radixscope-gui` 명령도 사용할 수 있습니다.
-운영체제별 실행 환경과 설정 위치는 설치 안내에 정리되어 있습니다.
+설치 후 `radixscope`, `radixscope-gui` 명령을 사용할 수 있습니다.
 
-### Windows 실행 파일 만들기
+GUI에서는 진법 변환에 `1/3`을 입력하고 **변환 과정 보기**를 선택해 보세요.
+숫자 분석에서는 8비트 정수 `255` 또는 `binary16`의 `0.1`을 살펴볼 수 있습니다.
+**분석 방식**에서 부동소수점 형식 비교, 숫자 비교, 부동소수점 연산 실험을 선택합니다.
+
+## CLI
+
+```sh
+python -m radixscope convert FF --from 16 --to 2 8 10 16
+python -m radixscope expression "(0xFF & 0x0F) << 2"
+python -m radixscope integer 256 --width 8 --requirements
+python -m radixscope inspect FF --base 16 --width 8 --signed --pattern
+python -m radixscope compare-numbers 255 127 --width 8 --json
+python -m radixscope float-op add 0.1 0.2 --format binary16 --json
+```
+
+각 명령의 `--help`로 옵션을 확인할 수 있습니다.
+입력 문법은 [CLI 문서](docs/ko/cli.md), Python 사용법은
+[수치 모델과 API](docs/ko/specification.md)를 참고하세요.
+
+## Windows 프로그램
 
 Windows에서 64비트 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
 
@@ -86,14 +65,17 @@ Windows에서 64비트 Python 3.11 이상을 `python` 명령으로 사용할 수
 .\build_windows.bat
 ```
 
-BAT는 현재 Python 환경에 빌드 의존성을 설치하고
-`dist/RadixScope/RadixScope.exe`를 만듭니다. 생성된 폴더에서 EXE를 실행하고
-`_internal/`, `licenses/`를 함께 유지하세요. 빌드한 프로그램에는 Python과 Qt가
-포함되며, 이 저장소의 소스코드에서 직접 생성하는 방식입니다.
+현재 Python 환경에 빌드 의존성을 설치하고 `dist/RadixScope/RadixScope.exe`를 만듭니다.
+`_internal/`, `licenses/`를 포함한 생성 폴더 전체를 함께 유지하세요.
+해당 폴더에는 실행에 필요한 Python과 Qt가 포함됩니다.
 
 ## 문서
 
-- [설치와 실행](docs/ko/install.md) — 실행 환경, 설정과 업데이트.
-- [데스크톱 사용법](docs/ko/usage.md) — 작업 화면의 조작, 결과 재사용, 기록과 내보내기.
-- [명령줄 사용법](docs/ko/cli.md) — 명령, 입력 형식과 출력 옵션.
-- [수치 처리 규칙과 Python API](docs/ko/specification.md) — 정확한 값, 비트 표현, 부동소수점 규칙과 API 예시.
+- [설치와 실행](docs/ko/install.md)
+- [데스크톱 사용법](docs/ko/usage.md)
+- [CLI](docs/ko/cli.md)
+- [수치 모델과 Python API](docs/ko/specification.md)
+
+개발 검증은 `python scripts/check_numeric.py`로 실행합니다. Qt 확인에는 `--desktop`,
+binary16·bfloat16의 모든 인코딩 확인에는 `--exhaustive`를 추가합니다.
+Windows 검증 워크플로도 같은 BAT로 빌드한 EXE를 검사합니다.

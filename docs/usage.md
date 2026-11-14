@@ -2,111 +2,120 @@
 
 English | [한국어](ko/usage.md)
 
-Start with `radixscope-gui`, `python -m radixscope.gui`, or the Windows desktop EXE.
-The sidebar groups inspection, calculation and comparison tools. Workspace shortcuts
-retain the following order:
+Start with `radixscope-gui`, `python -m radixscope.gui`, or the Windows EXE.
+The top tabs and shortcuts select four workspaces:
 
 | Shortcut | Workspace | Main task |
 | --- | --- | --- |
-| Ctrl+1 | Conversion | Exact conversion or expressions |
-| Ctrl+2 | Trace | Division and remainder steps |
-| Ctrl+3 | Integer operations / Programmer | Fixed-width integer operations |
-| Ctrl+4 | IEEE 754 | Float precision and four-format comparison |
-| Ctrl+5 | Number Inspector | Synchronized numeric, raw-bit and byte views |
-| Ctrl+7 | Batch Conversion | One value or expression per line |
-| Ctrl+H | Recent panel | Search and restore history |
+| Ctrl+1 | Conversion | Radix conversion and optional conversion steps |
+| Ctrl+2 | Calculation | Exact expressions and fixed-width operations |
+| Ctrl+3 | Number Inspector | Numeric representations and specialized analysis |
+| Ctrl+4 | Batch Conversion | Line-by-line conversion |
+| Ctrl+H | Recent | Search, restore and export history |
 
-## Shared controls
+## Results and execution
 
-Results open in a structured table with a field filter; Text report displays the
-complete text. Select rows and use Copy selected (or Ctrl+C) to copy their underlying
-values. Copy all copies the current text report. Long values remain accessible through
-copy and export even when table previews are shortened.
+Results shows a structured table; Text report retains the complete report. Select rows
+and use Copy selected, Ctrl+C or double-click to copy underlying values. Copy all copies
+the text report. Long table previews are shortened without truncating copied/exported data.
+Detailed fields reveals additional float boundaries and internal fields; the filter
+can also find hidden detail fields.
 
-Reuse / export reveals workspace transfer and text/JSON/CSV export. Numeric value
-transfer uses the exact value where available. Raw bits transfer preserves the
-pattern and width. The destination's data type determines its interpretation.
-Float comparison and batch workspaces transfer the selected result row.
+Reuse / export reveals value/raw-pattern transfer and text/JSON/CSV export.
+Numeric transfer uses the exact finite value. Raw transfer preserves the pattern and
+width. Select a row in format comparison or batch results before transferring it;
+numeric comparison has a Number to reuse selector.
 
-Each calculation runs in a separate process. Cancel terminates the process; changing
-input also cancels it and clears the previous result. A result is accepted only if
-its input snapshot still matches. Invalid input shows an error and invalidates copy,
-export and reuse. Closing the window terminates active calculations.
-Desktop worker responses are limited to 8 MiB.
+Run starts a worker process. Cancel stops it; input changes cancel pending work and clear
+old results. Responses are accepted only for the matching input snapshot. Invalid input
+disables result copying and reuse. Closing the app terminates its workers. Responses
+are limited to 8 MiB.
 
-The input/results divider is resizable. Optional tools stay hidden until selected;
-tables and input panels scroll when needed. The minimum window size is 640 × 480.
-Divider positions and optional panel visibility are restored separately from inputs.
+Resize the input/results divider as needed. The minimum window is 640 × 480; smaller
+layouts scroll their input controls while keeping Run and results accessible. Divider,
+detail-panel and bit-group preferences are saved separately from numeric input.
 
-## Conversion and Trace
+## Conversion
 
-Conversion supports Number (explicit base), Expression and Auto modes. The hint
-suggests recognized syntax; switching to Auto explicitly adopts automatic parsing.
-Exact conversion shows at most 1000 fractional digits, marking partial expansions
-and affected bases. The rational source stays exact. Disable exact output to select
-fractional digits and a rounding mode.
+Number uses the explicit source base. Auto recognizes supported input syntax; the hint
+and Use automatic input button make that choice explicit. Fractions and recurring
+groups preserve their exact rational value. Exact output displays up to 1000 fractional
+digits and marks incomplete expansions. Rounded output selects fractional digits and
+one of five rounding modes.
 
-Trace shows integer divisions and fractional multiplications, including recurrence.
-Set the maximum fractional steps. A partial trace has `complete=False`; this is
-different from proving that the expansion terminates.
+Choose a preset for common bases or a decimal/binary/Hex pair. Manual base edits select
+Custom. Quick swap chooses one target and exchanges it with the source. The input is
+rewritten from the exact value, using a fraction if needed; a rounded preview is never
+treated as the new source value.
 
-## Number Inspector and integer operations
+Show conversion steps enables a detailed tab. Choose its base and fractional step limit.
+It lists integer divisions and fractional multiplications, highlighting recurring digits.
+A step-limited partial trace is explicitly marked and does not imply termination.
 
-Number Inspector combines base 2/8/10/16 output, signed and unsigned interpretations,
-editable raw bits/Hex, fixed width and endian bytes. Choose integer or one of four
-floating formats. The raw-pattern option reinterprets digits as a bit pattern;
-otherwise input represents a mathematical value. Integer values must fit the selected
-width. Signedness changes the interpretation of a fixed-width pattern.
+## Calculation
 
-Editing bits or Hex changes the input to the raw-pattern path and refreshes the
-other representations. Changing byte order changes serialization. It does not
-numerically swap the source value. Bit controls display at most 32 positions per page;
-click a bit or focus it and press Space.
+Exact expression uses mixed-base literals and rational arithmetic. Select target bases
+and display rounding independently. Bitwise operators require integers; `//` and `%`
+also accept fractions. Expressions support Python-style operator precedence.
 
-Integer operations retains the Programmer workspace for arithmetic, shifts and bitwise
-operations. Arithmetic separates the exact result, overflow flag and wrapped value.
-Editing result bits selects Inspect so the previous arithmetic operation is not repeated.
-The GUI supports integer widths 1–4096; Core also applies its documented work budget.
+Fixed-width integer exposes width, signedness, numeric/raw input, operation and operand.
+Arithmetic separates the mathematical result from overflow and the wrapped result.
+Signed `shr` extends the sign; `lshr` inserts zero bits. Shift counts are decimal.
+Extract bit range selects an LSB-based offset and width from the result; extracted
+bits use the selected signedness. Editing result bits selects Inspect.
 
-## IEEE 754
+Integer reports show minimum signed/unsigned widths, standard 8/16/32/64-bit fits and
+selected bounds. Negative integers have no unsigned width. GUI integer widths are 1–4096.
 
-Encode accepts exact expressions, NaN and infinity. Decode interprets raw digits in
-the chosen base. Select binary16, bfloat16, binary32 or binary64. Results separate
-sign, exponent and fraction; preserve signed zero, quiet/signaling NaNs and payloads;
-and expose exact rational values, errors and ULP spacing when defined.
+## Number Inspector
 
-Signed-zero options apply to zero encoding. NaN controls apply to NaN encoding;
-a signaling NaN needs a nonzero payload. Disabled encoding controls are ignored
-during raw decoding. Editing bits switches to Decode and keeps all pattern bits.
+Select Number or Expression input, a data type, width, signedness and byte order.
+Numeric input converts a mathematical value; Raw bits reinterprets the entered pattern.
+An integer outside the selected range still shows its exact value and required widths,
+with a range error and no fabricated bit pattern. The byte row supports direct copying.
 
-Previous/next controls navigate representable neighbors. Boundary controls jump to
-zero, the smallest subnormal, minimum normal, maximum finite and infinity patterns.
-Compare formats creates a table for the same source across all four formats,
-including effective significand bits and intermediate-rounding differences.
-Select a comparison row before copying or transferring it.
+Edit bits and explore neighbors reveals the Hex editor and bit controls. Groups of four
+bits correspond to Hex digits; groups of eight correspond to numeric bytes. Positions
+count from LSB 0, and sign/exponent/fraction regions have distinct styling. A page contains
+at most 32 interactive bits. Editing a bit or Hex pattern updates the other representations.
+Byte order changes serialization without changing the mathematical value.
 
-## Batch conversion
+The Analysis selector exposes specialized tools:
 
-Batch Conversion skips empty lines but retains original line numbers. Choose Number,
-Expression or Auto, target bases, precision and a row limit. Default output uses
-16 fractional digits; Exact output requests expansions within work limits.
-An invalid row does not discard successful rows. Check the summary for errors
-and unprocessed inputs. Exports preserve per-row values and errors.
+- **Number representation:** integer interpretation or floating encoding/decoding, exact
+  error, relative error and ULP. Float types are binary16, bfloat16, binary32 and binary64.
+  Special value options exposes negative zero and quiet/signaling NaN payload controls.
+  Raw decoding preserves every input bit. Neighbor and boundary controls operate on the
+  displayed float pattern.
+- **Format comparison:** a table of the same exact input encoded directly in all four
+  formats, with error, effective precision and intermediate-rounding differences.
+- **Numeric comparison:** two inputs under shared base/type/width options. Reports exact
+  mathematical ordering, difference, absolute difference and radix outputs. Representable
+  patterns additionally show XOR, differing positions and signed/unsigned differences.
+  Expand bit controls for highlighted differences. Fractions can be compared mathematically
+  even when an integer representation is unavailable. NaN ordering is undefined.
+- **Floating-point arithmetic:** enter two exact expressions or two raw patterns, select
+  a format and add/subtract/multiply/divide. Reports preserve each encoded operand and
+  distinguish rounding operands first from rounding the exact original calculation once.
+  Input-conversion flags, operation flags and errors against the original calculation are
+  separate. Rounding is nearest, ties to even; tiny inexact results set underflow using
+  unbounded-exponent rounding. Nonfinite results have no finite rational error.
 
-## Language, themes and history
+## Batch, preferences and history
 
-Settings → Preferences selects English/Korean and System/Light/Dark themes.
-The initial language follows the system locale. Switching language preserves inputs,
-options, active calculations, result data and history. JSON/CSV keys remain canonical;
-UI language does not change exported numeric values.
+Batch accepts Number, Expression or Auto input, one value per nonempty line. Original line
+numbers and individual errors are retained. Choose targets, rounding, exact output and a
+row limit. The summary identifies errors, limits and unprocessed input. Exports preserve
+per-row data; one invalid row does not discard successful rows.
 
-Recent history is hidden until Ctrl+H. Search by input, result or work type, or filter
-by category. Restore a saved result directly when cached; larger records restore
-inputs/options and require Run. Repeating the same input/options moves the entry
-to the front. Clear history removes entries. Disabling history prevents new entries
-but still saves the current workspace state.
+Settings → Preferences selects English/Korean and System/Light/Dark themes. Language
+changes preserve input and result data. Export keys and numeric strings remain canonical.
 
-History defaults to 20 entries and supports 1–100. Individual cached reports are
-limited to 256 KiB. Settings keep their compatible schema, use atomic replacement
-and have a 32 MiB file limit. Read/write failures display a status message;
-a failed save preserves the previous file. The CLI does not modify GUI settings.
+Recent is initially hidden. Search by input/result/work type and filter by category.
+Restore cached results directly; larger reports restore inputs and options for recalculation.
+History defaults to 20 entries and allows 1–100. Each cached report is limited to 256 KiB.
+Disabling history stops new records while preserving current workspace settings.
+
+Settings retain schema 1 and a 32 MiB limit. Supported historical tasks migrate to the new
+workspaces; retired buffer/layout tasks are omitted. Atomic writes preserve the last valid
+file after save failures. The CLI does not modify desktop settings.

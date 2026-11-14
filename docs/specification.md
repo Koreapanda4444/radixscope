@@ -209,9 +209,7 @@ Empty data cannot represent a fixed-width integer.
 
 `represent_bytes` returns the ordered bytes, spaced uppercase hexadecimal text and
 an ASCII preview. The preview displays printable bytes `20` through `7E` and uses a
-dot for every other byte without altering the underlying data. `encode_ascii` and
-`decode_ascii` are strict, lossless seven-bit ASCII codecs, including control characters;
-they reject non-ASCII text or bytes rather than substituting characters.
+dot for every other byte without altering the underlying data.
 
 ## IEEE 754 decoding
 
@@ -294,6 +292,93 @@ assert analysis.absolute_error == ExactValue(1, 671088640)
 assert analysis.error_ulps == ExactValue(1, 5)
 ```
 
+## Integer width requirements and extraction
+
+`analyze_integer_width(value, width=32, signed=False)` returns `IntegerWidthAnalysis`
+without wrapping. Zero needs one bit in either interpretation. Positive signed values
+need a sign bit; negative signed widths follow two's-complement bounds. Negative values
+have `minimum_unsigned_width=None`. `fits(width, signed)` checks an additional range.
+
+```python
+from radixscope.core import FixedWidthInteger, analyze_integer_width
+
+analysis = analyze_integer_width(256, 8)
+assert analysis.minimum_unsigned_width == 9
+assert analysis.minimum_signed_width == 10
+assert not analysis.fits_selected
+assert analysis.fits(16)
+assert FixedWidthInteger(255, 8).extract_bits(4, 4, signed=True).value == -1
+```
+
+`extract_bits(offset, width, signed=False)` counts from LSB 0 and rejects ranges outside
+the source width. It produces a new fixed-width value and does not manage field layouts.
+
+## Numeric comparison
+
+`compare_numeric_values(left, right, width=32, signed=False, data_type="integer")`
+accepts `ExactValue`, `FixedWidthInteger` or `IEEE754Value` operands. Exact numeric inputs
+are compared before representational rounding. Existing numeric patterns retain their
+decoded mathematical interpretation. `compare_numeric_inputs` adds text, base, raw-pattern
+and expression options. The selected format and width apply to both operands.
+
+```python
+from radixscope.core import compare_numeric_inputs
+
+comparison = compare_numeric_inputs("255", "127", width=8)
+assert comparison.difference.numerator == 128
+assert comparison.xor == 128
+assert comparison.changed_positions == (7,)
+assert compare_numeric_inputs("1/3", "2/3").xor is None
+```
+
+The relation is less/equal/greater/unordered. NaN is unordered; same-sign infinities
+compare equal, but only finite operands have a rational difference. A missing pattern
+or range error does not erase a valid mathematical comparison. Reports carry radix
+previews, signed/unsigned pattern differences and an explicit position-list completeness
+flag. At most 4096 changed positions are enumerated; total counts use the complete XOR.
+
+## Floating-point arithmetic
+
+`experiment_float_arithmetic(left, right, operation="add", format_=32)` accepts exact
+values or decoded IEEE values and supports add/subtract/multiply/divide in all four formats.
+`parse_float_operand` accepts exact expressions, signed zero, nan/inf or explicit raw patterns.
+
+```python
+from radixscope.core import experiment_float_arithmetic, parse_float_operand
+
+experiment = experiment_float_arithmetic(
+    parse_float_operand("0.1", "binary16"),
+    parse_float_operand("0.2", "binary16"),
+    "add", "binary16",
+)
+assert str(experiment.exact_then_round.exact) == "3/10"
+assert experiment.rounded_operands.value.pattern != experiment.exact_then_round.value.pattern
+```
+
+The rounded-operands path quantizes each operand first, computes exactly with those
+representations, then rounds to the destination. The reference path performs the original
+exact operation and rounds once. Both use nearest, ties to even. Input-conversion flags
+are separate from operation flags. Rational errors against original mathematics and
+against the quantized-operand operation distinguish cumulative loss from operation rounding.
+
+Special-value policy:
+
+- The first NaN operand supplies sign and payload; the result is quiet. Any signaling
+  NaN raises invalid. Payloads must fit the destination, following existing conversion rules.
+- Opposite infinities in addition, equal infinities in subtraction, infinity times zero,
+  zero divided by zero and infinity divided by infinity return canonical positive quiet
+  NaN with invalid.
+- Finite nonzero divided by signed zero returns signed infinity with divide-by-zero.
+  Infinity divided by zero remains signed infinity without that flag.
+- Multiplication/division use the XOR sign for zero. Exact cancellation gives positive
+  zero; two effective negative zeros in addition/subtraction produce negative zero.
+- Finite overflow sets overflow and inexact. An exact subnormal does not set underflow.
+  Tininess is detected after rounding at destination precision with an unbounded exponent
+  range; an inexact result can therefore set underflow even if the final encoding is the
+  minimum normal. This boundary follows the [SoftFloat explanation](https://www.jhauser.us/arithmetic/SoftFloat-3/doc/SoftFloat-FAQ.html).
+- Nonfinite results have no rational representation error. Flags do not trap or terminate
+  the experiment; both paths remain inspectable.
+
 ## Batch and structured reports
 
 `convert_batch` processes nonempty lines with number/expression/auto modes, retaining
@@ -319,7 +404,6 @@ clamped. Use rounded output or a bounded trace for long recurring expansions.
 | Complete fractional expansion | 100000 digits and a 64 MiB remainder-bit budget |
 | Trace | 10000 steps per phase; optional smaller fractional `max_steps` |
 | GUI exact-conversion preview | 1000 fractional digits, explicitly partial when limited |
-| Byte buffer | 65536 bytes |
 | Batch | 1000 nonempty rows; 2 MiB formatted content |
 | Desktop worker response | 8 MiB |
 | Settings | Schema 1; 32 MiB file; at most 100 history entries |
