@@ -167,6 +167,22 @@ def check_desktop() -> list[tuple[str, dict[str, object]]]:
         app.processEvents()
         assert not conversion.form_scroll.verticalScrollBar().isVisible()
         assert conversion.view_state()["splitter_customized"] is False
+        # Check all four compact default layouts. Previously only Conversion was
+        # checked, so Calculation, Inspector and Batch still had clipped controls.
+        for workspace in window.workspaces:
+            workspace.invalidate_result()
+            window.tabs.setCurrentWidget(workspace)
+            for width, height in ((1440, 960), (1280, 900)):
+                window.resize(width, height)
+                for _ in range(12):
+                    app.processEvents()
+                assert workspace.form_scroll.viewport().height() > 0
+                assert workspace.form_scroll.verticalScrollBar().maximum() == 0, (
+                    workspace.title, width, height,
+                    workspace.form_scroll.verticalScrollBar().maximum(),
+                    workspace._splitter.sizes(),
+                )
+                assert workspace.run_button.isVisible()
         for workspace in window.workspaces:
             states.append((workspace.title, workspace.snapshot()))
         inspector = window.workspaces[2]
