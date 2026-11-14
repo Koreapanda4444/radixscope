@@ -132,6 +132,7 @@ __all__ = [
     "LiteralExpression",
     "NonIntegerValueError",
     "NumberInspection",
+    "NumericComparison",
     "RadixScopeError",
     "RangeAnalysis",
     "RoundingMode",
@@ -143,6 +144,8 @@ __all__ = [
     "analyze_integer_width",
     "analyze_range",
     "compare_float_formats",
+    "compare_numeric_inputs",
+    "compare_numeric_values",
     "convert_bases",
     "convert_batch",
     "convert_ieee754",
@@ -192,3 +195,8 @@ __all__ = [
     "validate_width",
 ]
 from radixscope.core.conversion import convert_bases, convert_text
+from radixscope.core.numeric_comparison import (
+    NumericComparison,
+    compare_numeric_inputs,
+    compare_numeric_values,
+)

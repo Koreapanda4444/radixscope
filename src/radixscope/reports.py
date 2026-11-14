@@ -13,9 +13,11 @@ from radixscope.core import (
 )
 from radixscope.core.batch import BatchConversion
 from radixscope.core.comparison import FloatFormatComparison
+from radixscope.core.formatting import format_preview
 from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
 from radixscope.core.inspection import NumberInspection
 from radixscope.core.neighbors import adjacent_float, float_boundaries
+from radixscope.core.numeric_comparison import NumericComparison, NumericOperand, operand_exact
 from radixscope.core.precision import analyze_float_precision
 from radixscope.exports import json_safe
 
@@ -288,3 +290,57 @@ def integer_width_report(value: int, width: int = 32, signed: bool = False) -> d
             for bits in (8, 16, 32, 64)
         },
     }
+
+
+def numeric_comparison_report(
+    comparison: NumericComparison, byteorder: str = "big",
+) -> dict[str, object]:
+    def numeric(value: NumericOperand) -> dict[str, object]:
+        exact = operand_exact(value)
+        return {
+            "exact": str(exact) if exact is not None else None,
+            "classification": value.classification.value if (
+                isinstance(value, IEEE754Value)
+            ) else "finite",
+            "outputs": {str(base): format_preview(exact, base)[0] for base in (2, 8, 10, 16)}
+            if exact is not None else {},
+        }
+    def pattern(value: FixedWidthInteger | IEEE754Value | None) -> dict[str, object] | None:
+        if value is None:
+            return None
+        bits = value.bits
+        integer = FixedWidthInteger.from_bits(bits)
+        result: dict[str, object] = {"bits": bits, "hexadecimal": format(integer.value, "X"),
+                "unsigned": integer.value, "twos_complement": integer.reinterpret(True).value,
+                "bytes": represent_bytes(integer, byteorder).hexadecimal,
+                "exact": str(value.exact) if value.exact is not None else None}
+        if isinstance(value, IEEE754Value):
+            result.update(format=value.format.label, classification=value.classification.value)
+        return result
+    xor = comparison.xor
+    positions = comparison.changed_positions
+    left, right = pattern(comparison.left_pattern), pattern(comparison.right_pattern)
+    result: dict[str, object] = {
+        "numeric_comparison": {"left": numeric(comparison.left), "right": numeric(comparison.right),
+                               "relation": comparison.relation,
+                               "difference": str(comparison.difference) if comparison.difference
+                               is not None else None,
+                               "absolute_difference": str(ExactValue(
+                                   abs(comparison.difference.numerator),
+                                   comparison.difference.denominator
+                               ))
+                               if comparison.difference is not None else None},
+        "left_representation": left, "right_representation": right,
+        "width": comparison.width, "byteorder": byteorder,
+        "pattern_error": comparison.pattern_error or None,
+        "xor_bits": format(xor, f"0{comparison.width}b") if xor is not None else None,
+        "changed_bit_count": xor.bit_count() if xor is not None else None,
+        "changed_positions": list(positions),
+        "positions_complete": xor is not None and len(positions) == xor.bit_count(),
+    }
+    if left is not None and right is not None:
+        for key in ("unsigned", "twos_complement"):
+            a, b = left[key], right[key]
+            assert isinstance(a, int) and isinstance(b, int)
+            result[key + "_difference"] = a - b
+    return result

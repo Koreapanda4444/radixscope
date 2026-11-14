@@ -12,6 +12,7 @@ from radixscope.core import (
     FloatClass,
     RoundingMode,
     analyze_arithmetic,
+    compare_numeric_inputs,
     convert_bases,
     decode_ieee754,
     encode_ieee754,
@@ -34,6 +35,7 @@ from radixscope.reports import (
     inspection_report,
     integer_report,
     integer_width_report,
+    numeric_comparison_report,
     precision_report,
     render_report,
     trace_report,
@@ -68,6 +70,18 @@ def build_parser() -> argparse.ArgumentParser:
     output = batch.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true")
     output.add_argument("--csv", action="store_true")
+    comparison = commands.add_parser("compare-numbers", help="compare numeric values and patterns")
+    comparison.add_argument("left")
+    comparison.add_argument("right")
+    comparison.add_argument("--base", type=int, default=10)
+    comparison.add_argument("--width", type=int, default=32)
+    comparison.add_argument("--signed", action="store_true")
+    comparison.add_argument("--pattern", action="store_true")
+    comparison.add_argument("--expressions", action="store_true")
+    comparison.add_argument("--type", default="integer",
+                            choices=["integer", "binary16", "bfloat16", "binary32", "binary64"])
+    comparison.add_argument("--byteorder", choices=["big", "little"], default="big")
+    _output_options(comparison)
     inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
     inspect.add_argument("value")
     inspect.add_argument("--base", type=int, default=10)
@@ -224,6 +238,11 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "compare-numbers":
+        return numeric_comparison_report(compare_numeric_inputs(
+            args.left, args.right, base=args.base, width=args.width, signed=args.signed,
+            data_type=args.type, raw=args.pattern, expressions=args.expressions,
+        ), args.byteorder)
     if args.command == "batch":
         if args.file:
             with Path(args.file).open(encoding="utf-8-sig") as handle:

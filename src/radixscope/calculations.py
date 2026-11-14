@@ -12,6 +12,7 @@ from radixscope.core import (
     IEEEFormat,
     IntegerRangeError,
     RoundingMode,
+    compare_numeric_inputs,
     convert_bases,
     convert_batch,
     evaluate_expression,
@@ -27,6 +28,7 @@ from radixscope.reports import (
     batch_report,
     inspection_report,
     integer_width_report,
+    numeric_comparison_report,
     render_report,
     trace_report,
 )
@@ -71,6 +73,14 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
         ))
     if workspace == "Number Inspector":
+        if state.get("analysis") == "Numeric comparison":
+            report = numeric_comparison_report(compare_numeric_inputs(
+                input_text, text("other_input"), base=integer("base"), width=integer("bit_width"),
+                signed=flag("signed"), data_type=text("data_type"), raw=flag("pattern"),
+                expressions=state.get("input_mode") == "Expression",
+            ), text("byteorder"))
+            report["input"] = input_text
+            return report
         raw = flag("pattern") and state.get("analysis") != "Format comparison"
         special = input_text.strip().lower().lstrip("+-") in ("nan", "inf", "infinity")
         expression = state.get("input_mode") == "Expression" and not raw

@@ -47,7 +47,12 @@ class InspectorWorkspace(Workspace):
         self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.analysis = LocalizedComboBox()
-        self.analysis.addItems(["Number representation", "Format comparison"])
+        self.analysis.addItems(["Number representation", "Format comparison", "Numeric comparison"])
+        self.other_input = QLineEdit("256")
+        self._numeric_transfer = LocalizedComboBox()
+        self._numeric_transfer.addItems(["First number", "Other number"])
+        self._other_bits = BitEditor()
+        self._other_bits.read_only = True
         self.negative_zero = QCheckBox("Encode a zero value as -0")
         self.payload = QLineEdit("0")
         self.quiet = QCheckBox("Quiet NaN")
@@ -63,6 +68,8 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("Input", self.input)
         self.form.addRow("Input format", self.input_mode)
         self.form.addRow("Analysis", self.analysis)
+        self.form.addRow("Other number", self.other_input)
+        self.form.addRow("Number to reuse", self._numeric_transfer)
         self.form.addRow("Representation", control_row("Base", self.base, self.data_type,
                                                        "Width", self.bit_width))
         self.form.addRow("Interpretation", control_row(self.pattern, self.signed, "Bytes",
@@ -87,6 +94,7 @@ class InspectorWorkspace(Workspace):
         self.bit_editor = BitEditor()
         self.bit_editor.setToolTip("Raw result bits; numeric conversion uses the input above")
         self.form.addRow(self.bit_editor)
+        self.form.addRow("Other number bits", self._other_bits)
         self.float_navigator = FloatNavigator()
         self.form.addRow(self.float_navigator)
         self.float_navigator.pattern_requested.connect(self.edit_pattern)
@@ -95,6 +103,7 @@ class InspectorWorkspace(Workspace):
         self.bit_editor.pattern_changed.connect(self.edit_pattern)
         self.raw_hex.editingFinished.connect(self.edit_hex)
         self.result_invalidated.connect(self.bit_editor.clear)
+        self.result_invalidated.connect(self._other_bits.clear)
         self.data_type.currentIndexChanged.connect(self.update_controls)
         self.analysis.currentIndexChanged.connect(self.update_controls)
         self.input.textChanged.connect(self.update_controls)
@@ -121,6 +130,11 @@ class InspectorWorkspace(Workspace):
     def update_controls(self) -> None:
         integer = self.data_type.currentText() == "integer"
         comparison = self.analysis.currentText() == "Format comparison"
+        numeric = self.analysis.currentText() == "Numeric comparison"
+        self.form.setRowVisible(self.other_input, numeric)
+        self.form.setRowVisible(self._numeric_transfer, numeric)
+        self.form.setRowVisible(self._other_bits, numeric and self._show_bits.isChecked())
+        self.bit_editor.read_only = numeric
         raw = self.pattern.isChecked() and not comparison
         self.bit_width.setEnabled(integer and not comparison)
         self.signed.setEnabled(integer and not comparison)
@@ -135,22 +149,42 @@ class InspectorWorkspace(Workspace):
             self.form.setRowVisible(widget, not comparison and self._show_bits.isChecked())
         byte_row = self._byte_preview.parentWidget()
         if byte_row is not None:
-            self.form.setRowVisible(byte_row, not comparison)
+            self.form.setRowVisible(byte_row, not comparison and not numeric)
         self.form.setRowVisible(
-            self.float_navigator, not integer and not comparison and self._show_bits.isChecked()
+            self.float_navigator, not integer and not comparison and not numeric
+            and self._show_bits.isChecked()
         )
-        self.form.setRowVisible(self._show_special, not integer and not raw and not comparison)
-        self.form.setRowVisible(self.negative_zero, not integer and not raw and special)
+        self.form.setRowVisible(self._show_special, not integer and not raw
+                                and not comparison and not numeric)
         self.form.setRowVisible(
-            self.payload, not integer and not raw and special and not comparison
+            self.negative_zero, not integer and not raw and special and not numeric
         )
-        self.form.setRowVisible(self.quiet, not integer and not raw and special and not comparison)
+        self.form.setRowVisible(
+            self.payload, not integer and not raw and special and not comparison and not numeric
+        )
+        self.form.setRowVisible(
+            self.quiet, not integer and not raw and special and not comparison and not numeric
+        )
         if not integer and not comparison:
             self.bit_width.setValue(IEEEFormat[self.data_type.currentText().upper()].bit_width)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         super().set_result(report, text)
         rows = report.get("comparison")
+        numeric = report.get("numeric_comparison")
+        if isinstance(numeric, dict):
+            changed = report.get("changed_positions", [])
+            positions = {p for p in changed if isinstance(p, int)} if (
+                isinstance(changed, list)
+            ) else set()
+            for key, editor in (("left_representation", self.bit_editor),
+                                ("right_representation", self._other_bits)):
+                item = report.get(key)
+                if isinstance(item, dict) and isinstance(item.get("bits"), str):
+                    bits = item["bits"]
+                    editor.set_pattern(int(bits, 2), len(bits), changed=positions)
+                else:
+                    editor.clear()
         self._comparison_rows = [row for row in rows if isinstance(row, dict)] if (
             isinstance(rows, list)
         ) else []
@@ -185,6 +219,22 @@ class InspectorWorkspace(Workspace):
         ))
 
     def request_transfer(self) -> None:
+        report = self.current_report()
+        if report is not None and isinstance(report.get("numeric_comparison"), dict):
+            numeric = report["numeric_comparison"]
+            assert isinstance(numeric, dict)
+            side = "right" if self._numeric_transfer.currentIndex() == 1 else "left"
+            selected = report.get(side + "_representation") if (
+                self._transfer_mode.currentIndex()
+            ) else (
+                numeric.get(side)
+            )
+            if isinstance(selected, dict):
+                self.transfer_requested.emit(
+                    self._destination.currentText(), self._transfer_mode.currentIndex() == 1,
+                    selected,
+                )
+            return
         if not self._comparison_rows:
             super().request_transfer()
             return
