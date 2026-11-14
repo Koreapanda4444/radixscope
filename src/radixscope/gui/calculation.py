@@ -19,7 +19,7 @@ from radixscope.core import ExactValue, FixedWidthInteger, RoundingMode, format_
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
 from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
-from radixscope.gui.widgets import Workspace, control_row
+from radixscope.gui.widgets import Workspace, control_row, error_preview
 from radixscope.reports import integer_report
 
 
@@ -209,8 +209,13 @@ class CalculationWorkspace(Workspace):
             item = self._width_table.item(row, 5)
             source = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
             if item is not None and isinstance(source, str):
-                item.setText(tr(source)[:400])
-                item.setToolTip(tr(source)[:2000])
+                item.setText(error_preview(tr(source), 400))
+                item.setToolTip(error_preview(tr(source), 2000))
+        report = self.current_report()
+        selected_error = report.get("selected_width_error") if report is not None else None
+        if isinstance(selected_error, str):
+            self.error.setText(error_preview(tr(selected_error), 240))
+            self.error.setToolTip(error_preview(tr(selected_error), 2000))
         header = self._width_table.horizontalHeader()
         for column in (0, 3):
             header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)

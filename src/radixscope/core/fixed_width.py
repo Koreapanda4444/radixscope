@@ -55,8 +55,8 @@ class FixedWidthInteger:
         if not minimum <= self.value <= maximum:
             kind = "signed" if self.signed else "unsigned"
             raise IntegerRangeError(
-                f"{self.value} is outside the {checked_width}-bit {kind} range "
-                f"{minimum} through {maximum}"
+                f"{ExactValue(self.value)} is outside the {checked_width}-bit {kind} range "
+                f"{ExactValue(minimum)} through {ExactValue(maximum)}"
             )
         object.__setattr__(self, "width", checked_width)
 
@@ -129,7 +129,7 @@ class FixedWidthInteger:
         maximum = (1 << checked_width) - 1
         if not 0 <= pattern <= maximum:
             raise IntegerRangeError(
-                f"bit pattern must be between 0 and {maximum} for width {checked_width}"
+                f"bit pattern must be between 0 and {ExactValue(maximum)} for width {checked_width}"
             )
         sign_bit = 1 << (checked_width - 1)
         value = pattern - (1 << checked_width) if signed and pattern & sign_bit else pattern

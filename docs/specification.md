@@ -249,9 +249,10 @@ use `ExactValue` and the numeric parser for exact decimal input.
 
 Rounding defaults to nearest-even; encoding also supports toward-zero, toward-positive and
 toward-negative. It covers significand carries, gradual underflow,
-the subnormal-to-normal transition and overflow to signed infinity. Values smaller than
-half the minimum subnormal round to signed zero. At the halfway value, zero is the even
-choice. The halfway overflow threshold rounds to infinity.
+the subnormal-to-normal transition and overflow to infinity or the largest finite value,
+depending on direction and sign. In nearest-even, values smaller than half the minimum
+subnormal round to signed zero; the halfway value chooses zero, and the halfway overflow
+threshold rounds to infinity.
 
 Host `-0.0` retains its sign. Rational zero has no sign, so `negative_zero=True` explicitly
 creates negative zero and is rejected for nonzero inputs. Host infinities retain their sign;
@@ -372,9 +373,13 @@ Special-value policy:
   NaN with invalid.
 - Finite nonzero divided by signed zero returns signed infinity with divide-by-zero.
   Infinity divided by zero remains signed infinity without that flag.
-- Multiplication/division use the XOR sign for zero. Exact cancellation gives positive
-  zero; two effective negative zeros in addition/subtraction produce negative zero.
-- Finite overflow sets overflow and inexact. An exact subnormal does not set underflow.
+- Multiplication/division use the XOR sign for zero. Addition/subtraction preserve the
+  sign of two equal-sign effective zeros in every rounding mode (subtraction first flips
+  the right operand's sign). Opposite-sign exact cancellation gives negative zero only
+  for toward-negative, and positive zero otherwise.
+- Finite overflow sets overflow and inexact. A result rounded toward the finite side
+  just above the maximum finite value can be inexact without overflow; overflow tests
+  the unbounded-exponent rounded result. An exact subnormal does not set underflow.
   Tininess is detected after rounding at destination precision with an unbounded exponent
   range; an inexact result can therefore set underflow even if the final encoding is the
   minimum normal. This boundary follows the [SoftFloat explanation](https://www.jhauser.us/arithmetic/SoftFloat-3/doc/SoftFloat-FAQ.html).

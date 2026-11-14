@@ -68,6 +68,13 @@ def control_row(*controls: QWidget | str) -> QWidget:
     return row
 
 
+def error_preview(message: str, limit: int) -> str:
+    if len(message) <= limit:
+        return message
+    half = limit // 2
+    return message[:half] + "…" + message[-half:]
+
+
 class Workspace(QWidget):
     result_ready = Signal(str, object)
     result_invalidated = Signal()
@@ -339,6 +346,7 @@ class Workspace(QWidget):
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         self.error.clear()
+        self.error.setToolTip("")
         self.error.hide()
         self._empty_result.hide()
         self._report = report
@@ -436,7 +444,8 @@ class Workspace(QWidget):
     def set_error(self, message: str) -> None:
         self.clear_output()
         self.result_invalidated.emit()
-        self.error.setText(message)
+        self.error.setText(error_preview(message, 240))
+        self.error.setToolTip(error_preview(message, 2000))
         self.error.setVisible(bool(message))
         self._empty_result.setText("Calculation failed · check the input above")
         self.status.setText("Error")
@@ -480,6 +489,7 @@ class Workspace(QWidget):
         self.cancel_calculation()
         self.clear_output()
         self.error.clear()
+        self.error.setToolTip("")
         self.error.hide()
         self.status.setText("Ready")
         self.result_invalidated.emit()

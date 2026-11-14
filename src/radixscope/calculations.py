@@ -275,7 +275,10 @@ def execute_request(directory: Path) -> int:
         if len(content) > MAX_RESULT_BYTES:
             raise ValueError("Result exceeds the desktop size limit; reduce input or trace steps")
     except (ValueError, TypeError, ArithmeticError, KeyError, OSError, RecursionError) as error:
-        content = json.dumps({"error": str(error)[:2000]}).encode("utf-8")
+        message = str(error)
+        if len(message) > 2000:
+            message = message[:1000] + "…" + message[-999:]
+        content = json.dumps({"error": message}).encode("utf-8")
     temporary = directory / "result.tmp"
     temporary.write_bytes(content)
     os.replace(temporary, directory / "result.json")

@@ -74,7 +74,11 @@ also accept fractions. Expressions support Python-style operator precedence.
 Fixed-width integer exposes width, signedness, numeric/raw input, operation and operand.
 Arithmetic separates the mathematical result from overflow and the wrapped result.
 Enable **Compare 8/16/32/64-bit results** to see each width's value, overflow,
-and representation; an out-of-range operand is reported separately for that width.
+and representation. Each width is independent, so a failure at the selected width still
+leaves the other widths available. For unsigned `300 + 1` with 8 bits selected, the 8-bit
+row reports a range error while 16/32/64 bits return `301`. Invalid numeric syntax or
+an unsupported operation fails the whole request. Mathematical-result and overflow
+columns apply to arithmetic operations; width comparisons use the full, unextracted result.
 Signed `shr` extends the sign; `lshr` inserts zero bits. Shift counts are decimal.
 Extract bit range selects an LSB-based offset and width from the result; extracted
 bits use the selected signedness. Editing result bits selects Inspect.
