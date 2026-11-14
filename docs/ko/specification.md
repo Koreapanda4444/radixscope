@@ -302,20 +302,6 @@ assert analysis.error_ulps == ExactValue(1, 5)
 부호 있는 값과 없는 값, ASCII·UTF-8 미리보기와 길이가 맞는 부동소수점을 해석합니다.
 UTF-8 대체 미리보기는 원본 버퍼를 바꾸지 않으며 유효성은 `utf8_valid`로 구분합니다.
 
-`BitField(name, offset, width, signed=False)`는 엔디언 적용 후 LSB를 0번으로 셉니다.
-`inspect_bitfields`는 겹침·이름 중복·범위 초과를 거부합니다.
-`BitfieldLayout.to_json/from_json`은 스키마 1과 명시적인 `lsb0` 번호 체계를 사용합니다.
-
-```python
-from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input
-
-data = parse_byte_input("FF 80")
-layout = BitfieldLayout(16, (BitField("low", 0, 8, True), BitField("high", 8, 8)))
-values = inspect_bitfields(int.from_bytes(data, "big"), 16, layout.fields)
-assert values[0].integer.value == -128
-assert BitfieldLayout.from_json(layout.to_json()) == layout
-```
-
 ## 일괄 처리와 구조화된 보고서
 
 `convert_batch`는 숫자·수식·자동 모드로 빈 줄을 제외한 입력을 처리하고,

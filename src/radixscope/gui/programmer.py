@@ -51,6 +51,18 @@ class ProgrammerWorkspace(Workspace):
         self.form.addRow("Interpretation", control_row(self.pattern, "Bytes", self.byteorder))
         self.form.addRow("Operation", self.operation)
         self.form.addRow(self.operand_label, self.operand)
+        self.extract = QCheckBox("Extract bit range")
+        self.extract_offset = QSpinBox()
+        self.extract_offset.setRange(0, 4095)
+        self.extract_width = QSpinBox()
+        self.extract_width.setRange(1, 4096)
+        self.extract_width.setValue(1)
+        self.form.addRow(self.extract)
+        self._range_row = control_row("Offset (LSB 0)", self.extract_offset,
+                                      "Width", self.extract_width)
+        self.form.addRow(self._range_row)
+        self.form.setRowVisible(self._range_row, False)
+        self.extract.toggled.connect(lambda shown: self.form.setRowVisible(self._range_row, shown))
         self.bit_editor = BitEditor()
         self.form.addRow(self.bit_editor)
         self.bit_editor.pattern_changed.connect(self.edit_bits)
@@ -66,6 +78,7 @@ class ProgrammerWorkspace(Workspace):
         self.bind_inputs()
 
     def update_controls(self) -> None:
+        self.form.setRowVisible(self._range_row, self.extract.isChecked())
         operation = self.operation.currentText()
         self.operand.setEnabled(operation not in ("inspect", "not"))
         self.form.setRowVisible(self.operand, operation not in ("inspect", "not"))

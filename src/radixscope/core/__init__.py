@@ -1,5 +1,4 @@
 from radixscope.core.batch import BatchConversion, BatchEntry, convert_batch
-from radixscope.core.bitfields import BitField, BitfieldLayout, BitFieldValue, inspect_bitfields
 from radixscope.core.byte_inspection import ByteInterpretation, parse_byte_input, select_bytes
 from radixscope.core.comparison import FloatFormatComparison, compare_float_formats
 from radixscope.core.digits import (
@@ -106,9 +105,6 @@ __all__ = [
     "BatchConversion",
     "BatchEntry",
     "BinaryExpression",
-    "BitField",
-    "BitFieldValue",
-    "BitfieldLayout",
     "ByteInterpretation",
     "ByteOrder",
     "ByteRepresentation",
@@ -170,7 +166,6 @@ __all__ = [
     "format_rounded",
     "format_twos_complement",
     "format_value",
-    "inspect_bitfields",
     "inspect_number",
     "integer_bounds",
     "interpret_bit_pattern",

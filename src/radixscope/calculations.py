@@ -126,6 +126,8 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             width=integer("bit_width"), signed=flag("signed"), pattern=flag("pattern"),
             byteorder=text("byteorder"), op=None if operation == "inspect" else operation,
             operand=text("operand") if operation not in ("inspect", "not") else None,
+            extract=(integer("extract_offset"), integer("extract_width"))
+            if state.get("extract") is True else None,
         ))
         report["operation"] = operation
     elif workspace == "IEEE 754":

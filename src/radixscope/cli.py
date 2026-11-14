@@ -22,7 +22,6 @@ from radixscope.core import (
     trace_value,
 )
 from radixscope.core.batch import convert_batch
-from radixscope.core.bitfields import BitfieldLayout, inspect_bitfields
 from radixscope.core.comparison import compare_float_formats
 from radixscope.core.input_syntax import parse_numeric_input
 from radixscope.core.inspection import inspect_number
@@ -76,7 +75,6 @@ def build_parser() -> argparse.ArgumentParser:
     byte_parser.add_argument("--byteorder", choices=["big", "little"], default="big")
     byte_parser.add_argument("--offset", type=int, default=0)
     byte_parser.add_argument("--length", type=int)
-    byte_parser.add_argument("--layout", help="saved bitfield layout JSON for this selection")
     _output_options(byte_parser)
     inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
     inspect.add_argument("value")
@@ -122,6 +120,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     integer.add_argument("--operand", help="same-base operand; shifts use a decimal count")
     integer.add_argument("--byteorder", choices=["big", "little"], default="big")
+    integer.add_argument("--extract", type=int, nargs=2, metavar=("OFFSET", "WIDTH"),
+                         help="extract a result bit range, counting from LSB zero")
     _output_options(integer)
     ieee = commands.add_parser("ieee", help="encode values or decode IEEE 754 raw bits")
     ieee.add_argument("mode", choices=["encode", "decode", "compare"])
@@ -245,22 +245,6 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         report = byte_report(
             args.value, args.input_format, args.byteorder, args.offset, args.length
         )
-        if getattr(args, "layout", None):
-            path = Path(args.layout)
-            if path.stat().st_size > 1024 * 1024:
-                raise ValueError("bitfield layout exceeds 1 MiB")
-            layout = BitfieldLayout.from_json(path.read_text(encoding="utf-8"))
-            if layout.width != report["width"]:
-                raise ValueError("layout width must match the byte selection")
-            bits = report["bits"]
-            assert isinstance(bits, str)
-            values = inspect_bitfields(int(bits, 2), layout.width, layout.fields)
-            report["fields"] = [{
-                "name": value.field.name, "offset": value.field.offset,
-                "width": value.field.width, "signed": value.field.signed,
-                "value": str(value.integer.exact), "bits": value.integer.bits,
-                "hexadecimal": format(value.integer.bit_pattern, "X"),
-            } for value in values]
         return report
     if args.command == "inspect":
         return inspection_report(inspect_number(
@@ -268,7 +252,15 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             data_type=args.type, raw=args.pattern, byteorder=args.byteorder,
         ))
     if args.command == "integer":
-        return _integer_command(args)
+        report = _integer_command(args)
+        selection = getattr(args, "extract", None)
+        if selection is not None:
+            offset, width = selection
+            bits = report["bits"]
+            assert isinstance(bits, str)
+            extracted = FixedWidthInteger.from_bits(bits).extract_bits(offset, width, args.signed)
+            report["extracted"] = integer_report(extracted, args.byteorder)
+        return report
     if args.command == "ieee":
         return _ieee_command(args)
     if args.command == "expression":

@@ -301,20 +301,6 @@ assert analysis.error_ulps == ExactValue(1, 5)
 with signed/unsigned integers, ASCII/UTF-8 previews and compatible float interpretations.
 UTF-8 replacement previews do not modify the buffer; `utf8_valid` distinguishes invalid input.
 
-`BitField(name, offset, width, signed=False)` counts from LSB 0 after endian decoding.
-`inspect_bitfields` rejects overlaps, duplicate names and out-of-range fields.
-`BitfieldLayout.to_json/from_json` uses schema 1 and explicit `lsb0` numbering.
-
-```python
-from radixscope.core import BitField, BitfieldLayout, inspect_bitfields, parse_byte_input
-
-data = parse_byte_input("FF 80")
-layout = BitfieldLayout(16, (BitField("low", 0, 8, True), BitField("high", 8, 8)))
-values = inspect_bitfields(int.from_bytes(data, "big"), 16, layout.fields)
-assert values[0].integer.value == -128
-assert BitfieldLayout.from_json(layout.to_json()) == layout
-```
-
 ## Batch and structured reports
 
 `convert_batch` processes nonempty lines with number/expression/auto modes, retaining
@@ -341,8 +327,6 @@ clamped. Use rounded output or a bounded trace for long recurring expansions.
 | Trace | 10000 steps per phase; optional smaller fractional `max_steps` |
 | GUI exact-conversion preview | 1000 fractional digits, explicitly partial when limited |
 | Byte buffer | 65536 bytes |
-| Bitfield layout | 256 fields; JSON at most 1 MiB |
-| Interactive byte bitfield editing | 512 selected bytes |
 | Batch | 1000 nonempty rows; 2 MiB formatted content |
 | Desktop worker response | 8 MiB |
 | Settings | Schema 1; 32 MiB file; at most 100 history entries |

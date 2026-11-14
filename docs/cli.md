@@ -68,23 +68,18 @@ when defined, adjacent values and boundaries. Compare encodes the same exact sou
 directly in all four formats and indicates differences caused by intermediate rounding.
 NaN payload/signaling options apply only to single-format NaN encoding.
 
-## Bytes and fields
+## Bytes
 
 ```sh
 radixscope bytes "3F 80 00 00" --byteorder big
 radixscope bytes "00 FF 80 01" --offset 1 --length 2 --byteorder little
 radixscope bytes "hello" --input-format utf8 --json
-radixscope bytes "FF 80" --layout layout.json
 ```
 
 Input formats are `hex`, `binary`, `base64` and `utf8`. Hex accepts contiguous
 pairs or whitespace/comma/colon-separated groups, with optional `0x` prefixes.
 Integer interpretation covers the selected bytes; float interpretation is available
 for selections of 2, 4 or 8 bytes. UTF-8 replacement previews include a separate validity flag.
-
-Layouts saved in the desktop byte inspector can be reused with `--layout`.
-Their width must match the selected pattern. Offsets count from LSB 0
-after byte-order decoding.
 
 ## Batch conversion and exports
 

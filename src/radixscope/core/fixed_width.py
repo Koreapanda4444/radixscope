@@ -135,6 +135,18 @@ class FixedWidthInteger:
         value = pattern - (1 << checked_width) if signed and pattern & sign_bit else pattern
         return cls(value, checked_width, signed)
 
+    def extract_bits(
+        self, offset: int, width: int, signed: bool = False,
+    ) -> "FixedWidthInteger":
+        """Extract a checked bit range, with bit zero at the least significant bit."""
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("bit offset must be a nonnegative integer")
+        checked_width = validate_width(width)
+        if offset + checked_width > self.width:
+            raise IntegerRangeError("bit range exceeds the selected integer width")
+        pattern = (self.bit_pattern >> offset) & ((1 << checked_width) - 1)
+        return type(self).from_bit_pattern(pattern, checked_width, signed)
+
     def reinterpret(self, signed: bool) -> "FixedWidthInteger":
         return self.from_bit_pattern(self.bit_pattern, self.width, signed)
 

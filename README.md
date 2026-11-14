@@ -33,11 +33,7 @@ representations of the same input. Inspect sign, exponent, significand, signed z
 and NaN payloads, then explore absolute/relative error, ULP spacing, neighboring
 values and normal/subnormal boundaries.
 
-### Bytes and bitfields
-
-Read Hex, Binary, Base64 or UTF-8 input, select a byte range and interpret it with
-the chosen byte order. Define named signed or unsigned bitfields and save their
-layouts.
+### Bytes
 
 ### Batch work, history and exports
 
@@ -49,15 +45,6 @@ light, dark and system themes.
 ## Usage
 
 ### Explore a value in the GUI
-
-- In **Number Inspector**, enter `FF`, select base `16`, integer type and an
-  eight-bit width, then enable **Signed** and **Raw bits**. Inspect the same pattern
-  as signed `-1`, unsigned `255`, binary `11111111` and a byte representation.
-- In **IEEE 754**, encode `1/10` as `binary32`. Inspect the `3DCCCCCD` pattern and its
-  rounding error, then compare formats or step through neighboring values.
-- In **Byte Inspector**, enter `3F 80 00 00` as Hex, choose big-endian order and set
-  **Interpret as** to `binary32` to see `1.0`. Select other ranges or apply a bitfield
-  layout to examine individual fields.
 
 ### Use the command line
 
