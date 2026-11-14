@@ -83,7 +83,8 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             right = parse_float_operand(text("other_input"), fmt, raw=flag("pattern"),
                                         base=integer("base"))
             report = float_arithmetic_report(experiment_float_arithmetic(
-                left, right, text("float_operation"), fmt
+                left, right, text("float_operation"), fmt,
+                state.get("float_rounding", "nearest-even"),
             ), text("byteorder"))
             report["input"] = input_text
             return report
@@ -210,6 +211,33 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             if state.get("extract") is True else None,
         ))
         report["operation"] = operation
+        if state.get("compare_widths") is True:
+            comparisons = []
+            for width in (8, 16, 32, 64):
+                try:
+                    version = run_command(argparse.Namespace(
+                        command="integer", value=input_text, base=integer("base"),
+                        width=width, signed=flag("signed"), pattern=flag("pattern"),
+                        byteorder=text("byteorder"),
+                        op=None if operation == "inspect" else operation,
+                        operand=text("operand") if operation not in ("inspect", "not") else None,
+                        extract=None,
+                    ))
+                    comparisons.append({
+                        "width": width, "value": version["value"],
+                        "mathematical": version.get("exact_result"),
+                        "overflow": version.get("overflowed"),
+                        "hexadecimal": version["hexadecimal"],
+                        "bits": version["bits"], "error": None,
+                    })
+                except (ValueError, ArithmeticError) as error:
+                    # A value may be representable at 32 bits but not at 8.
+                    comparisons.append({
+                        "width": width, "value": None, "mathematical": None,
+                        "overflow": None, "hexadecimal": None, "bits": None,
+                        "error": str(error),
+                    })
+            report["width_comparison"] = comparisons
     else:
         raise ValueError("unknown workspace")
     report["input"] = input_text
