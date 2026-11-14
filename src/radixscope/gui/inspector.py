@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from radixscope.core import (
     ExactValue,
     IEEEFormat,
+    FloatRounding,
     decode_ieee754,
     format_integer,
     inspect_number,
@@ -51,6 +52,8 @@ class InspectorWorkspace(Workspace):
                                 "Floating-point arithmetic"])
         self.float_operation = LocalizedComboBox()
         self.float_operation.addItems(["add", "subtract", "multiply", "divide"])
+        self.float_rounding = LocalizedComboBox()
+        self.float_rounding.addItems([mode.value for mode in FloatRounding])
         self.other_input = QLineEdit("256")
         self._numeric_transfer = LocalizedComboBox()
         self._numeric_transfer.addItems(["First number", "Other number"])
@@ -75,6 +78,7 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("Analysis", self.analysis)
         self.form.addRow("Other number", self.other_input)
         self.form.addRow("Floating-point operation", self.float_operation)
+        self.form.addRow("IEEE rounding", self.float_rounding)
         self.form.addRow("Number to reuse", self._numeric_transfer)
         self.form.addRow("Representation", control_row(
             self.data_type, self._width_label, self.bit_width
@@ -141,6 +145,7 @@ class InspectorWorkspace(Workspace):
         if arithmetic and self.data_type.currentText() == "integer":
             self.data_type.setCurrentText("binary32")
         self.form.setRowVisible(self.float_operation, arithmetic)
+        self.form.setRowVisible(self.float_rounding, arithmetic)
         integer = self.data_type.currentText() == "integer"
         comparison = self.analysis.currentText() == "Format comparison"
         numeric = self.analysis.currentText() == "Numeric comparison"
