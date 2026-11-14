@@ -10,6 +10,7 @@ from radixscope.core import (
     ExactValue,
     FixedWidthInteger,
     FloatClass,
+    FloatRounding,
     RoundingMode,
     analyze_arithmetic,
     compare_numeric_inputs,
@@ -84,6 +85,8 @@ def build_parser() -> argparse.ArgumentParser:
     arithmetic.add_argument("--patterns", action="store_true", help="decode raw operand patterns")
     arithmetic.add_argument("--base", type=int, default=16, help="base of raw patterns")
     arithmetic.add_argument("--byteorder", choices=["big", "little"], default="big")
+    arithmetic.add_argument("--rounding", choices=list(FloatRounding),
+                            default=FloatRounding.NEAREST_EVEN)
     _output_options(arithmetic)
     comparison = commands.add_parser("compare-numbers", help="compare numeric values and patterns")
     comparison.add_argument("left")
@@ -161,6 +164,8 @@ def build_parser() -> argparse.ArgumentParser:
     ieee.add_argument("--negative-zero", action="store_true")
     ieee.add_argument("--payload", type=int, default=0, help="NaN payload excluding the quiet bit")
     ieee.add_argument("--signaling", action="store_true", help="construct a signaling NaN")
+    ieee.add_argument("--rounding", choices=list(FloatRounding),
+                      default=FloatRounding.NEAREST_EVEN)
     _output_options(ieee)
     return parser
 
@@ -245,7 +250,9 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
         exact = evaluate_expression(args.value)
         source = exact
         negative_zero = args.negative_zero or (text.startswith("-") and exact == ExactValue(0))
-        value = encode_ieee754(exact, width, negative_zero=negative_zero)
+        value = encode_ieee754(
+            exact, width, negative_zero=negative_zero, rounding=args.rounding
+        )
     report = ieee_report(value, args.byteorder)
     if source is not None:
         report.update(precision_report(source, value))
@@ -257,7 +264,7 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         left = parse_float_operand(args.left, args.format, raw=args.patterns, base=args.base)
         right = parse_float_operand(args.right, args.format, raw=args.patterns, base=args.base)
         return float_arithmetic_report(experiment_float_arithmetic(
-            left, right, args.operation, args.format
+            left, right, args.operation, args.format, args.rounding
         ), args.byteorder)
     if args.command == "compare-numbers":
         return numeric_comparison_report(compare_numeric_inputs(
