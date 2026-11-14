@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QObject, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -87,7 +87,7 @@ class Workspace(QWidget):
         self.form_scroll = QScrollArea()
         self.form_scroll.setWidgetResizable(True)
         self.form_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.form_scroll.setMinimumHeight(100)
+        self.form_scroll.setMinimumHeight(70)
         self.form_scroll.setWidget(self.form_container)
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
@@ -129,7 +129,9 @@ class Workspace(QWidget):
         self._empty_result = QLabel("Run a calculation to see results")
         self._empty_result.setWordWrap(True)
         self._empty_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        results_layout.addWidget(self._empty_result)
+        self._empty_result.setParent(self.result_table.viewport())
+        self._empty_result.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.result_table.viewport().installEventFilter(self)
         results_layout.addWidget(self.result_table)
         self.result_views.addTab(results_page, "Results")
         self.result_views.addTab(self.output, "Text report")
@@ -157,13 +159,14 @@ class Workspace(QWidget):
         actions.addWidget(self.cancel_button)
         actions.addWidget(self.status, 1)
         copies = QHBoxLayout()
+        results_layout.removeWidget(self._result_filter)
+        copies.addWidget(self._result_filter, 1)
         self._show_details = QCheckBox("Detailed fields")
         self._show_details.toggled.connect(self.filter_results)
         copies.addWidget(self._show_details)
-        copies.addStretch(1)
         copies.addWidget(self.copy_selected_button)
         copies.addWidget(self.copy_button)
-        results_layout.insertLayout(1, copies)
+        results_layout.insertLayout(0, copies)
         self._destination = LocalizedComboBox()
         self._destination.addItems(transfer_destinations(title))
         self._transfer_mode = LocalizedComboBox()
@@ -213,8 +216,13 @@ class Workspace(QWidget):
         self._splitter.addWidget(self.result_views)
         self._splitter.setStretchFactor(0, 3)
         self._splitter.setStretchFactor(1, 2)
-        self._splitter.setSizes([340, 240])
+        self._splitter.setSizes([410, 180])
         layout.addWidget(self._splitter, 1)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched is self.result_table.viewport() and event.type() == QEvent.Type.Resize:
+            self._empty_result.setGeometry(self.result_table.viewport().rect())
+        return super().eventFilter(watched, event)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         self.error.clear()
