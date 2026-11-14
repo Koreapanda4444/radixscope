@@ -82,9 +82,7 @@ from radixscope.core.precision import FloatPrecisionAnalysis, analyze_float_prec
 from radixscope.core.representations import (
     ByteOrder,
     ByteRepresentation,
-    decode_ascii,
     decode_bytes,
-    encode_ascii,
     encode_bytes,
     represent_bytes,
 )
@@ -154,7 +152,6 @@ __all__ = [
     "convert_batch",
     "convert_ieee754",
     "convert_text",
-    "decode_ascii",
     "decode_bytes",
     "decode_ieee754",
     "decode_ieee754_bytes",
@@ -162,7 +159,6 @@ __all__ = [
     "detect_input_syntax",
     "digit_char",
     "digit_value",
-    "encode_ascii",
     "encode_bytes",
     "encode_ieee754",
     "encode_ieee754_special",

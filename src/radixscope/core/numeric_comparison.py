@@ -64,6 +64,8 @@ def compare_numeric_values(
     validate_width(width)
     if not isinstance(signed, bool):
         raise TypeError("signed must be boolean")
+    if data_type not in ("integer", "binary16", "bfloat16", "binary32", "binary64"):
+        raise ValueError("unsupported numeric data type")
     fmt = None if data_type == "integer" else IEEEFormat[data_type.upper()]
     selected_width = width if fmt is None else fmt.bit_width
     for value in (left, right):
@@ -112,6 +114,8 @@ def compare_numeric_inputs(
     left: str, right: str, *, base: int = 10, width: int = 32, signed: bool = False,
     data_type: str = "integer", raw: bool = False, expressions: bool = False,
 ) -> NumericComparison:
+    if not isinstance(raw, bool) or not isinstance(expressions, bool):
+        raise TypeError("raw and expressions must be boolean")
     def parse(text: str) -> NumericOperand:
         special = text.strip().lower().lstrip("+-") in ("nan", "inf", "infinity")
         if raw or special:

@@ -34,6 +34,8 @@ def transfer_state(
                     "bit_width": len(bits),
                     "signed": report.get("signed") is True,
                     "data_type": data_type,
+                    "analysis": "Number representation",
+                    "input_mode": "Number",
                 }
             )
         elif target == "Calculation":
@@ -46,13 +48,9 @@ def transfer_state(
                     "signed": report.get("signed") is True,
                 }
             )
-        elif target == "IEEE 754" and len(bits) in (16, 32, 64):
-            format_name = "bfloat16" if report.get("format") == "bfloat16" else str(len(bits))
-            result.update({"mode": "decode", "bit_width": format_name, "compare": False})
-        elif target in ("Conversion", "Batch Conversion", "Trace"):
+        elif target in ("Conversion", "Batch Conversion"):
             result["source_base"] = 16
-            if target != "Trace":
-                result["mode"] = "Number"
+            result["mode"] = "Number"
         else:
             raise ValueError("Raw IEEE bits require 16, 32 or 64 bits; Conversion accepts values")
         result["byteorder"] = order
@@ -61,36 +59,21 @@ def transfer_state(
     if exact is None:
         raise ValueError("This result has no finite numeric value; send its raw bits")
     result["input"] = str(exact)
-    if target in ("Conversion", "Batch Conversion", "Trace"):
+    if target in ("Conversion", "Batch Conversion"):
         result["source_base"] = 10
-        if target != "Trace":
-            result["mode"] = "Number"
+        result["mode"] = "Number"
     elif target == "Calculation":
         result["calculation_mode"] = "Exact expression"
     elif target == "Number Inspector":
-        if target == "Calculation" and not exact.is_integer:
-            raise ValueError("Programmer requires an integer; use Number Inspector for fractions")
         width = _integer_width(exact.numerator)
         if width > 4096:
             raise ValueError("Desktop integer inspection supports at most 4096 bits")
         result.update(
             {"base": 10, "pattern": False, "bit_width": width, "signed": exact.numerator < 0}
         )
-        if target == "Number Inspector":
-            result["data_type"] = "integer" if exact.is_integer else "binary64"
-        else:
-            result["operation"] = "inspect"
-            result["calculation_mode"] = "Fixed-width integer"
-    elif target == "IEEE 754":
-        result.update(
-            {
-                "mode": "encode",
-                "negative_zero": False,
-                "payload": "0",
-                "quiet": True,
-                "compare": False,
-            }
-        )
+        result.update(data_type="integer" if exact.is_integer else "binary64",
+                      analysis="Number representation", input_mode="Number",
+                      negative_zero=False, payload="0", quiet=True)
     else:
         raise ValueError("Unknown destination workspace")
     return result

@@ -60,7 +60,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
 
     input_text = text("input")
     if workspace == "Calculation" and text("calculation_mode") != "Fixed-width integer":
-        adapted = dict(state, mode="Expression", source_base=10, show_trace=False)
+        adapted = dict(state, mode="Expression", source_base=10, show_trace=False, swap_to=0)
         report = calculate("Conversion", adapted)
         exact = parse_number(str(report["exact"]), 10)
         if exact.is_integer:
@@ -189,12 +189,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
                 value, integer("target_base"), max_steps=integer("limit")
             ))
         return report
-    if workspace == "Trace":
-        report = trace_report(trace_value(
-            parse_number(input_text, integer("source_base")),
-            integer("target_base"), max_steps=integer("limit"),
-        ))
-    elif workspace == "Calculation":
+    if workspace == "Calculation":
         operation = text("operation")
         report = run_command(argparse.Namespace(
             command="integer", value=input_text, base=integer("base"),

@@ -167,7 +167,10 @@ class MainWindow(QMainWindow):
         if summary is None and "processed" in report:
             summary = f"{report['processed']}/{report['total']} rows · {report['errors']} errors"
         if summary is None:
-            summary = report.get("classification", "comparison")
+            comparison = report.get("numeric_comparison")
+            summary = comparison.get("relation") if isinstance(comparison, dict) else (
+                report.get("classification", "comparison")
+            )
         self.store.record(title, workspace.snapshot(), str(summary), report)
         self.refresh_history()
         self.show_status(f"{title} complete", 5000)

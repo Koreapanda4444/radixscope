@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -241,6 +241,7 @@ class Workspace(QWidget):
             if (isinstance(field.value, (bool, list)) or field.value is None
                     or field.path.split(".")[-1] in (
                         "classification", "rounding_direction", "rounding_rule", "error",
+                        "relation", "tininess_rule",
                     )):
                 item.setData(UI_TEXT_ROLE, display[:4000])
             item.setFont(self.output.font())
@@ -464,8 +465,10 @@ class Workspace(QWidget):
         return state
 
     def restore_state(self, state: dict[str, object]) -> None:
+        self.invalidate_result()
         for name, value in state.items():
             widget = vars(self).get(name)
+            blocker = QSignalBlocker(widget) if isinstance(widget, QWidget) else None
             if isinstance(widget, QLineEdit) and isinstance(value, str):
                 widget.setText(value)
             elif (isinstance(widget, QPlainTextEdit) and not widget.isReadOnly()
@@ -481,3 +484,4 @@ class Workspace(QWidget):
                 and not isinstance(value, bool) and widget.minimum() <= value <= widget.maximum()
             ):
                 widget.setValue(value)
+            del blocker

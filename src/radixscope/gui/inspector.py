@@ -66,8 +66,8 @@ class InspectorWorkspace(Workspace):
         self._show_special.toggled.connect(self.update_controls)
         self._comparison_rows: list[dict[str, object]] = []
         self._comparison_columns: list[str] = []
-        self.raw_hex = QLineEdit()
-        self.raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
+        self._raw_hex = QLineEdit()
+        self._raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
         self.form.addRow("Input", self.input)
         self.form.addRow("Input format", self.input_mode)
         self.form.addRow("Analysis", self.analysis)
@@ -83,7 +83,7 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("NaN payload (decimal)", self.payload)
         self.form.addRow("NaN kind", self.quiet)
         self.form.addRow(self._show_bits)
-        self.form.addRow("Hex pattern", self.raw_hex)
+        self.form.addRow("Hex pattern", self._raw_hex)
         self._byte_preview = QLineEdit()
         self._byte_preview.setReadOnly(True)
         self._byte_preview.setPlaceholderText("Bytes in the selected byte order")
@@ -105,7 +105,8 @@ class InspectorWorkspace(Workspace):
         self.result_invalidated.connect(self.float_navigator.clear)
         self.result_ready.connect(self.show_bits)
         self.bit_editor.pattern_changed.connect(self.edit_pattern)
-        self.raw_hex.editingFinished.connect(self.edit_hex)
+        self._raw_hex.editingFinished.connect(self.edit_hex)
+        self._raw_hex.textEdited.connect(self.invalidate_result)
         self.result_invalidated.connect(self.bit_editor.clear)
         self.result_invalidated.connect(self._other_bits.clear)
         self.data_type.currentIndexChanged.connect(self.update_controls)
@@ -155,7 +156,7 @@ class InspectorWorkspace(Workspace):
         nan = self.input.text().strip().lower().lstrip("+-") == "nan"
         special = self._show_special.isChecked() or nan
         self.form.setRowVisible(self._show_bits, not comparison)
-        for widget in (self.raw_hex, self.bit_editor):
+        for widget in (self._raw_hex, self.bit_editor):
             self.form.setRowVisible(widget, not comparison and self._show_bits.isChecked())
         byte_row = self._byte_preview.parentWidget()
         if byte_row is not None:
@@ -264,7 +265,7 @@ class InspectorWorkspace(Workspace):
         if not isinstance(bits, str):
             self.bit_editor.clear()
             self.float_navigator.clear()
-            self.raw_hex.clear()
+            self._raw_hex.clear()
             return
         if isinstance(bits, str):
             width = len(bits)
@@ -279,15 +280,15 @@ class InspectorWorkspace(Workspace):
             elif self.signed.isChecked():
                 fields = {"sign": (width - 1, width - 1)}
             self.bit_editor.set_pattern(int(bits, 2), width, fields)
-            blocker = QSignalBlocker(self.raw_hex)
-            self.raw_hex.setText(format(int(bits, 2), f"0{(width + 3) // 4}X"))
+            blocker = QSignalBlocker(self._raw_hex)
+            self._raw_hex.setText(format(int(bits, 2), f"0{(width + 3) // 4}X"))
             del blocker
 
     def edit_hex(self) -> None:
-        if not self.raw_hex.isModified():
+        if not self._raw_hex.isModified():
             return
         try:
-            self.edit_pattern(parse_integer(self.raw_hex.text().replace(" ", ""), 16).numerator)
+            self.edit_pattern(parse_integer(self._raw_hex.text().replace(" ", ""), 16).numerator)
         except (ValueError, TypeError) as error:
             self.invalidate_result()
             self.set_error(str(error))

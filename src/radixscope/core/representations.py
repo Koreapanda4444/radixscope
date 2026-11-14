@@ -75,13 +75,3 @@ def represent_bytes(
     order = _validate_byte_order(byteorder)
     return ByteRepresentation(encode_bytes(value, order), order)
 
-
-def encode_ascii(text: str) -> bytes:
-    if not isinstance(text, str):
-        raise TypeError("text must be a string")
-    return text.encode("ascii")
-
-
-def decode_ascii(data: bytes) -> str:
-    _validate_bytes(data)
-    return data.decode("ascii")

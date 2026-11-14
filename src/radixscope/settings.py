@@ -5,7 +5,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from radixscope.exports import json_safe
-from radixscope.workspaces import RETIRED_WORKSPACES, migrate_workspace, restored_workspace
+from radixscope.workspaces import (
+    migrate_workspace,
+    normalize_preferences,
+    work_kind,
+    workspace_titles,
+)
 
 MAX_SETTINGS_BYTES = 32 * 1024 * 1024
 MAX_HISTORY_REPORT_BYTES = 256 * 1024
@@ -20,6 +25,7 @@ class SettingsStore:
         self.load()
 
     def load(self) -> None:
+        self.warning = ""
         if not self.path.exists():
             return
         try:
@@ -37,30 +43,24 @@ class SettingsStore:
             if not isinstance(preferences, dict) or not isinstance(history, list):
                 raise ValueError("invalid settings structure")
             self.preferences = preferences
-            for key in ("workspaces", "workspace_views"):
-                states = self.preferences.get(key)
-                if isinstance(states, dict):
-                    for title in RETIRED_WORKSPACES:
-                        states.pop(title, None)
-            states = self.preferences.get("workspaces")
-            if isinstance(states, dict):
-                migrated: dict[str, object] = {}
-                active_source = self.preferences.get("active_workspace")
-                for title, state in states.items():
-                    if isinstance(title, str) and isinstance(state, dict):
-                        target, value = migrate_workspace(title, state)
-                        if target not in migrated or title in (target, active_source):
-                            migrated[target] = value
-                self.preferences["workspaces"] = migrated
-            active = self.preferences.get("active_workspace")
-            if isinstance(active, str) and active in RETIRED_WORKSPACES:
-                self.preferences["active_workspace"] = restored_workspace(self.preferences)
-            valid_history = [entry for entry in history if self._valid_entry(entry)
-                             and entry["workspace"] not in RETIRED_WORKSPACES]
-            for entry in valid_history:
+            normalize_preferences(self.preferences)
+            valid_history = []
+            for entry in history:
+                if not self._valid_entry(entry):
+                    continue
                 title, state = entry["workspace"], entry["state"]
                 assert isinstance(title, str) and isinstance(state, dict)
-                entry["workspace"], entry["state"] = migrate_workspace(title, state)
+                target, normalized = migrate_workspace(title, state)
+                if target not in workspace_titles():
+                    continue
+                entry.update(workspace=target, state=normalized, kind=work_kind(target, normalized))
+                report = entry.get("report")
+                if title == "Trace" and isinstance(report, dict) and "integer_steps" in report:
+                    entry["report"] = {
+                        "exact": report.get("exact"), "trace": report,
+                        "outputs": {str(report.get("base", 2)): report.get("result")},
+                    }
+                valid_history.append(entry)
             self.history = valid_history[:self.history_limit]
         except (OSError, ValueError, UnicodeError) as error:
             self.warning = f"Could not load preferences: {error}"
@@ -96,10 +96,7 @@ class SettingsStore:
             entry for entry in self.history
             if entry["workspace"] != workspace or entry["state"] != state
         ]
-        kind = "Float Comparison" if workspace == "IEEE 754" and state.get("compare") is True else (
-            "Expression" if workspace == "Conversion" and state.get("mode") == "Expression"
-            else workspace
-        )
+        kind = work_kind(workspace, state)
         entry: dict[str, object] = {
             "workspace": workspace, "state": dict(state), "summary": summary[:200],
             "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
