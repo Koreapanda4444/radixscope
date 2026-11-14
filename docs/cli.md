@@ -94,7 +94,7 @@ Position lists are capped at 4096, with `positions_complete` distinguishing part
 ## Floating-point arithmetic experiments
 
 ```sh
-radixscope float-op add 0.1 0.2 --format binary16 --json
+radixscope float-op add 0.1 0.2 --format binary16 --rounding toward-positive --json
 radixscope float-op subtract "1 + 1/1000" 1 --format bfloat16
 radixscope float-op divide 1 0 --format binary32
 radixscope float-op add 7C01 3C00 --patterns --format binary16
@@ -102,7 +102,8 @@ radixscope float-op add 7C01 3C00 --patterns --format binary16
 
 `float-op` accepts add, subtract, multiply and divide. Numeric operands are exact
 expressions; `--patterns` decodes both operands in the selected format and raw base
-(default 16). All four formats use nearest, ties to even.
+(default 16). Use `--rounding` with nearest-even (default), toward-zero,
+toward-positive or toward-negative. The `ieee encode` command accepts the same modes.
 
 `rounded_operands` first encodes both inputs and then rounds their operation result.
 `exact_then_round` calculates from the original values and rounds once. Reports retain
