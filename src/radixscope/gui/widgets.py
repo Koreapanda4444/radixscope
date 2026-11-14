@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from radixscope.calculations import CalculationJob
 from radixscope.exports import report_csv, report_json, write_export
+from radixscope.gui.bits import BitEditor
 from radixscope.gui.i18n import (
     UI_CONTEXT_ROLE,
     UI_TEXT_ROLE,
@@ -400,11 +401,17 @@ class Workspace(QWidget):
             widget = getattr(self, name, None)
             if isinstance(widget, (QCheckBox, QToolButton)):
                 toggles[name] = widget.isChecked()
-        return {"splitter": self._splitter.sizes(), "toggles": toggles}
+        editor = getattr(self, "bit_editor", None)
+        return {"splitter": self._splitter.sizes(), "toggles": toggles,
+                "bit_group_size": editor.group_width if isinstance(editor, BitEditor) else 4}
 
     def restore_view_state(self, state: object) -> None:
         if not isinstance(state, dict):
             return
+        editor = getattr(self, "bit_editor", None)
+        group = state.get("bit_group_size")
+        if isinstance(editor, BitEditor) and type(group) is int and group in (4, 8):
+            editor.set_group_width(group)
         sizes = state.get("splitter")
         if (isinstance(sizes, list) and len(sizes) == 2
                 and all(type(size) is int and 0 <= size <= 10000 for size in sizes)

@@ -512,5 +512,11 @@
   "selected_maximum": "선택 범위 최댓값",
   "fits_selected": "선택 범위에 포함",
   "standard_widths": "표준 비트 폭 표현 가능 여부",
-  "representation_error": "표현 범위 오류"
+  "representation_error": "표현 범위 오류",
+  "4 bits": "4비트",
+  "8 bits": "8비트",
+  "Bit grouping": "비트 묶음",
+  "Grouped result bits": "묶음 비트 표현",
+  "Hex digit": "16진수 자리",
+  "Numeric byte": "숫자 바이트"
 }
