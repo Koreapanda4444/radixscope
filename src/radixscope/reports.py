@@ -372,6 +372,12 @@ def float_arithmetic_report(
         "operation": experiment.operation.value,
         "rounding_rule": "nearest, ties to even",
         "tininess_rule": "after rounding with an unbounded exponent range",
+        "left_source_exact": str(operand_exact(experiment.left_source)) if (
+            operand_exact(experiment.left_source) is not None
+        ) else None,
+        "right_source_exact": str(operand_exact(experiment.right_source)) if (
+            operand_exact(experiment.right_source) is not None
+        ) else None,
         "left_operand": compact(experiment.left), "right_operand": compact(experiment.right),
         "left_input_flags": asdict(experiment.left_conversion),
         "right_input_flags": asdict(experiment.right_conversion),
