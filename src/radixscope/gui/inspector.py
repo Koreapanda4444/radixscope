@@ -27,9 +27,7 @@ from radixscope.reports import inspection_report
 
 class InspectorWorkspace(Workspace):
     def __init__(self) -> None:
-        super().__init__(
-            "Number Inspector", "One value, synchronized numeric, signed, bit and byte views"
-        )
+        super().__init__("Number Inspector")
         self.form.setVerticalSpacing(6)
         self.input = QLineEdit("255")
         self.base = base_input()
