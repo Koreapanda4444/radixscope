@@ -47,6 +47,7 @@ def main() -> None:
             if group.Key == b"StringFileInfo"
             for table in group.StringTable
         ]
+        pe.close()
         if b"RadixScope" not in names or old.with_suffix(".exe.previous-build").exists():
             raise RuntimeError(
                 "Move the old dist folder before building; it will not be overwritten"

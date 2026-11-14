@@ -305,6 +305,7 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
         assert not image.isNull() and image.pixelColor(0, 0).alpha() == 0
     versions = [item for group_ in pe.FileInfo for item in group_ if item.Key == b"StringFileInfo"]
     assert versions[0].StringTable[0].entries[b"ProductVersion"] == b"1.0.0"
+    pe.close()  # Release the Windows mapping before relocated-build cleanup.
     env = dict(os.environ)
     env.pop("QT_QPA_PLATFORM", None)
     env.pop("PYTHONPATH", None)
