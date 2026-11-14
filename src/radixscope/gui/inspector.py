@@ -97,8 +97,9 @@ class InspectorWorkspace(Workspace):
         self._copy_bytes.clicked.connect(
             lambda: QApplication.clipboard().setText(self._byte_preview.text())
         )
-        self.form.addRow("Byte representation", control_row(self._byte_preview, self._copy_bytes))
-        self.result_invalidated.connect(lambda: self._byte_preview.clear())
+        self._byte_row = control_row(self._byte_preview, self._copy_bytes)
+        self.form.addRow("Byte representation", self._byte_row)
+        self.result_invalidated.connect(self.clear_byte_preview)
         self.result_invalidated.connect(lambda: self._copy_bytes.setEnabled(False))
         self.bit_editor = BitEditor()
         self.bit_editor.setToolTip("Raw result bits; numeric conversion uses the input above")
@@ -172,9 +173,9 @@ class InspectorWorkspace(Workspace):
         self.form.setRowVisible(self._show_bits, not comparison)
         for widget in (self._raw_hex, self.bit_editor):
             self.form.setRowVisible(widget, not comparison and self._show_bits.isChecked())
-        byte_row = self._byte_preview.parentWidget()
-        if byte_row is not None:
-            self.form.setRowVisible(byte_row, not comparison and not numeric)
+        self.form.setRowVisible(
+            self._byte_row, not comparison and not numeric and bool(self._byte_preview.text())
+        )
         self.form.setRowVisible(
             self.float_navigator, not integer and not comparison and not numeric
             and self._show_bits.isChecked()
@@ -272,9 +273,19 @@ class InspectorWorkspace(Workspace):
             self._comparison_rows[row],
         )
 
+    def clear_byte_preview(self) -> None:
+        self._byte_preview.clear()
+        self.form.setRowVisible(self._byte_row, False)
+
     def show_bits(self, title: str, report: dict[str, object]) -> None:
-        self._byte_preview.setText(str(report.get("bytes", "")))
+        value = report.get("bytes")
+        self._byte_preview.setText(str(value) if value is not None else "")
         self._copy_bytes.setEnabled(bool(self._byte_preview.text()))
+        self.form.setRowVisible(
+            self._byte_row,
+            bool(self._byte_preview.text())
+            and self.analysis.currentText() not in ("Format comparison", "Numeric comparison"),
+        )
         bits = report.get("bits")
         if not isinstance(bits, str):
             self.bit_editor.clear()
