@@ -19,6 +19,7 @@ from radixscope.core import (
     trace_value,
     validate_base,
 )
+from radixscope.core.formatting import format_preview
 from radixscope.reports import (
     StructuredReport,
     batch_report,
@@ -87,9 +88,8 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         if flag("exact_output"):
             outputs: dict[int, str] = {}
             for base in bases:
-                trace = trace_value(value, base, max_steps=1000)
-                outputs[base] = trace.result
-                if not trace.complete:
+                outputs[base], complete = format_preview(value, base)
+                if not complete:
                     incomplete.append(base)
         else:
             outputs = convert_bases(

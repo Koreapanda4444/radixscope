@@ -1,8 +1,20 @@
-from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit, QPushButton, QSpinBox
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from radixscope.core import RoundingMode
+from radixscope.core import ExactValue, RoundingMode
 from radixscope.core.input_syntax import detect_input_syntax
-from radixscope.gui.i18n import LocalizedComboBox
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
 from radixscope.gui.widgets import Workspace, control_row
 
 
@@ -59,6 +71,21 @@ class ConversionWorkspace(Workspace):
         self.run_button.setEnabled(True)
         self.run_button.clicked.connect(self.calculate)
         self.input.returnPressed.connect(self.calculate)
+        self._trace_panel = QWidget()
+        self._trace_summary = QLabel()
+        self._trace_summary.setWordWrap(True)
+        self._trace_table = QTableWidget(0, 5)
+        self._trace_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._trace_table.setWordWrap(False)
+        self._trace_table.verticalHeader().setVisible(False)
+        self._trace_table.horizontalHeader().setStretchLastSection(True)
+        trace_layout = QVBoxLayout(self._trace_panel)
+        trace_layout.addWidget(self._trace_summary)
+        trace_layout.addWidget(self._trace_table)
+        self._trace_index = self.result_views.addTab(self._trace_panel, "Conversion steps")
+        self.result_ready.connect(self.show_trace_result)
+        self.result_invalidated.connect(self.clear_trace)
+        self.clear_trace()
         self.update_controls()
         self.update_input_hint()
         self.bind_inputs()
@@ -77,3 +104,58 @@ class ConversionWorkspace(Workspace):
         syntax = detect_input_syntax(self.input.text())
         self._syntax_hint.setText(syntax.description)
         self._detect_button.setEnabled(syntax.kind != "invalid")
+
+
+    def clear_trace(self) -> None:
+        self._trace_table.setRowCount(0)
+        self._trace_summary.clear()
+        self.result_views.setTabEnabled(self._trace_index, False)
+
+    def show_trace_result(self, title: str, report: dict[str, object]) -> None:
+        trace = report.get("trace")
+        if not isinstance(trace, dict):
+            self.clear_trace()
+            return
+        self.result_views.setTabEnabled(self._trace_index, True)
+        self._trace_table.setHorizontalHeaderLabels([
+            tr(key) for key in ("Stage", "Step", "Operation", "Digit", "Next remainder")
+        ])
+        complete = trace.get("complete") is True
+        recurring = trace.get("recurring_start")
+        status = "Complete trace" if complete else "Partial trace · step limit reached"
+        self._trace_summary.setText(tr(status) + " · " + str(trace.get("result", "")))
+        integers, fractions = trace.get("integer_steps"), trace.get("fractional_steps")
+        if not isinstance(integers, list) or not isinstance(fractions, list):
+            return
+        self._trace_table.setRowCount(len(integers) + len(fractions))
+        for row, step in enumerate([*integers, *fractions]):
+            if not isinstance(step, dict):
+                continue
+            integer = row < len(integers)
+            position = row if integer else row - len(integers)
+            def number(key: str, data: dict[str, object] = step) -> str:
+                value = data[key]
+                return str(ExactValue(value)) if type(value) is int else str(value)
+            operation = (number("dividend") + " ÷ " + number("divisor") + " = "
+                         + number("quotient")) if integer else (
+                number("remainder") + " * " + number("multiplier") + " = " + number("product")
+            )
+            values = ["Integer division" if integer else "Fraction multiplication",
+                      str(position), operation, str(step["digit"]),
+                      number("remainder" if integer else "next_remainder")]
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                if column == 0:
+                    item.setData(UI_TEXT_ROLE, value)
+                if not integer and type(recurring) is int and position >= recurring:
+                    item.setBackground(QColor(54, 118, 200, 40))
+                    item.setToolTip(tr("Recurring digits"))
+                self._trace_table.setItem(row, column, item)
+        self._trace_table.resizeColumnsToContents()
+        if self.show_trace.isChecked():
+            self.result_views.setCurrentIndex(self._trace_index)
+
+    def restore_state(self, state: dict[str, object]) -> None:
+        super().restore_state(state)
+        self.update_controls()
+        self.update_input_hint()

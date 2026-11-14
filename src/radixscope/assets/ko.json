@@ -482,5 +482,15 @@
   "Fixed-width integer": "고정 비트 정수",
   "Show conversion steps": "변환 과정 보기",
   "Step limit": "단계 제한",
-  "Ready · Ctrl+1 through Ctrl+4 switch workspaces": "준비 · Ctrl+1~4로 작업 화면 전환"
+  "Ready · Ctrl+1 through Ctrl+4 switch workspaces": "준비 · Ctrl+1~4로 작업 화면 전환",
+  "Conversion steps": "변환 과정",
+  "Stage": "단계 종류",
+  "Step": "단계",
+  "Digit": "숫자",
+  "Next remainder": "다음 나머지",
+  "Complete trace": "전체 변환 과정",
+  "Partial trace · step limit reached": "부분 변환 과정 · 단계 제한 도달",
+  "Integer division": "정수부 나눗셈",
+  "Fraction multiplication": "소수부 곱셈",
+  "Recurring digits": "순환 구간"
 }

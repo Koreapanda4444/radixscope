@@ -35,19 +35,22 @@ def _fractional_expansion(
     remainder: int,
     denominator: int,
     base: int,
-) -> tuple[list[str], list[str]]:
+    max_digits: int | None = None,
+) -> tuple[list[str], list[str], bool]:
     digits: list[str] = []
     positions: dict[int, int] = {}
     while remainder:
         if remainder in positions:
             start = positions[remainder]
-            return digits[:start], digits[start:]
+            return digits[:start], digits[start:], True
+        if max_digits is not None and len(digits) >= max_digits:
+            return digits, [], False
         check_expansion(len(digits), denominator)
         positions[remainder] = len(digits)
         remainder *= base
         digit, remainder = divmod(remainder, denominator)
         digits.append(digit_char(digit))
-    return digits, []
+    return digits, [], True
 
 
 def format_exact(value: ExactValue, base: object) -> str:
@@ -59,7 +62,7 @@ def format_exact(value: ExactValue, base: object) -> str:
     absolute_numerator = abs(value.numerator)
     integer_part, remainder = divmod(absolute_numerator, value.denominator)
     integer_text = format_integer(ExactValue(integer_part), checked_base)
-    finite_digits, recurring_digits = _fractional_expansion(
+    finite_digits, recurring_digits, _ = _fractional_expansion(
         remainder,
         value.denominator,
         checked_base,
@@ -140,3 +143,22 @@ def format_value(
     if precision is None:
         return format_exact(value, base)
     return format_rounded(value, base, precision, rounding)
+
+
+def format_preview(value: ExactValue, base: object, max_digits: int = 1000) -> tuple[str, bool]:
+    """Bound the fractional display without constructing an unrelated integer trace."""
+    checked_base = validate_base(base)
+    if not isinstance(value, ExactValue):
+        raise TypeError("value must be an ExactValue")
+    if type(max_digits) is not int or not 1 <= max_digits <= MAX_EXPANSION_DIGITS:
+        raise ValueError("display digit limit must be between 1 and 100000")
+    if value.is_integer:
+        return format_integer(value, checked_base), True
+    integer, remainder = divmod(abs(value.numerator), value.denominator)
+    digits, recurring, complete = _fractional_expansion(
+        remainder, value.denominator, checked_base, max_digits
+    )
+    text = "".join(digits)
+    text += "(" + "".join(recurring) + ")" if recurring else "" if complete else "…"
+    prefix = "-" if value.numerator < 0 else ""
+    return prefix + format_integer(ExactValue(integer), checked_base) + "." + text, complete
