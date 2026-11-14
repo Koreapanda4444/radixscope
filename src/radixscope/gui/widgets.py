@@ -2,7 +2,14 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QSignalBlocker, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence, QResizeEvent, QShowEvent
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QFontDatabase,
+    QKeySequence,
+    QResizeEvent,
+    QShowEvent,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -220,6 +227,11 @@ class Workspace(QWidget):
         layout.addWidget(self._splitter, 1)
         self._input_panel = input_panel
         self._splitter_customized = False
+        self._manual_ratio = 0.6
+        self._last_preferred = 0
+        self._last_available = 0
+        self._splitter.handle(1).installEventFilter(self)
+        self._splitter.handle(1).setToolTip("Double-click to restore automatic layout")
         self._fit_timer = QTimer(self)
         self._fit_timer.setSingleShot(True)
         self._fit_timer.timeout.connect(self._fit_input_to_content)
@@ -230,36 +242,59 @@ class Workspace(QWidget):
 
     def _mark_splitter_customized(self, position: int, index: int) -> None:
         self._splitter_customized = True
+        sizes = self._splitter.sizes()
+        self._manual_ratio = sizes[0] / max(1, sum(sizes))
 
     def _schedule_input_fit(self) -> None:
-        if not self._splitter_customized:
-            self._fit_timer.start(0)
+        self._fit_timer.start(0)
+
+    def reset_splitter(self) -> None:
+        self._splitter_customized = False
+        self._schedule_input_fit()
 
     def _fit_input_to_content(self) -> None:
-        if self._splitter_customized or not self.isVisible():
+        if not self.isVisible():
             return
         available = self._splitter.height() - self._splitter.handleWidth()
         if available <= 0:
             return
-        # Layout requests from the form schedule this pass. Invalidating here
-        # would create another request and repeatedly reschedule the same fit.
         width = max(100, self.form_scroll.viewport().width())
+        # QFormLayout excludes hidden rows and measures labels at the current
+        # width, using Qt's logical pixels and the active language/font metrics.
         form_height = self.form.heightForWidth(width) if self.form.hasHeightForWidth() else -1
         if form_height < 0:
             form_height = self.form.sizeHint().height()
-        form_height = max(form_height, self.form_container.sizeHint().height())
         panel_layout = self._input_panel.layout()
-        spacing = panel_layout.spacing() if panel_layout is not None else 6
-        overhead = (self.run_button.sizeHint().height() + 14 + 3 * spacing
-                    + (self._utilities.sizeHint().height() if self._utilities.isVisible() else 0)
-                    + (self.error.sizeHint().height() if self.error.text() else 0))
-        # Reserve space for form margins and text metrics that vary with the
-        # Windows DPI and selected language; keep results usable underneath.
-        preferred = form_height + overhead + 28
-        result_minimum = 150
-        target = min(preferred, max(90, available - result_minimum))
-        current = self._splitter.sizes()
-        if abs(current[0] - target) >= 4:
+        if panel_layout is None:
+            return
+        margins = panel_layout.contentsMargins()
+        heights = []
+        for index in range(panel_layout.count()):
+            item = panel_layout.itemAt(index)
+            if item is None or item.widget() is self.form_scroll or item.isEmpty():
+                continue
+            height = item.heightForWidth(width) if item.hasHeightForWidth() else -1
+            heights.append(height if height >= 0 else item.sizeHint().height())
+        overhead = margins.top() + margins.bottom() + sum(heights)
+        overhead += max(0, panel_layout.spacing()) * len(heights)
+        preferred = form_height + overhead + 12
+        result_minimum = min(150, max(80, available // 3))
+        minimum = self._input_panel.minimumSizeHint().height()
+        maximum = max(minimum, available - result_minimum)
+        current = self._splitter.sizes()[0]
+        target = preferred
+        if self._splitter_customized:
+            target = current
+            if available != self._last_available:
+                target = round(available * self._manual_ratio)
+            elif preferred > self._last_preferred and current >= self._last_preferred - 8:
+                # Follow newly revealed controls only when the form previously
+                # fitted. A deliberately compressed form continues to scroll.
+                target += preferred - self._last_preferred
+        target = max(minimum, min(target, maximum))
+        self._last_preferred = preferred
+        self._last_available = available
+        if abs(current - target) >= 3:
             blocker = QSignalBlocker(self._splitter)
             self._splitter.setSizes([target, max(result_minimum, available - target)])
             del blocker
@@ -273,13 +308,15 @@ class Workspace(QWidget):
         self._schedule_input_fit()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if (watched is self._splitter.handle(1)
+                and event.type() == QEvent.Type.MouseButtonDblClick):
+            self.reset_splitter()
+            return True
         if watched is self.result_table.viewport() and event.type() == QEvent.Type.Resize:
             self._empty_result.setGeometry(self.result_table.viewport().rect())
-        elif watched in (self.form_container, self._utilities) and (
+        elif (watched in (self.form_container, self._utilities) and (
             event.type() == QEvent.Type.LayoutRequest
-        ):
-            self._schedule_input_fit()
-        elif watched is self.form_scroll.viewport() and event.type() == QEvent.Type.Resize:
+        )) or (watched is self.form_scroll.viewport() and event.type() == QEvent.Type.Resize):
             self._schedule_input_fit()
         return super().eventFilter(watched, event)
 
@@ -513,6 +550,7 @@ class Workspace(QWidget):
             blocker = QSignalBlocker(self._splitter)
             self._splitter.setSizes(sizes)
             del blocker
+            self._manual_ratio = sizes[0] / sum(sizes)
         elif self._splitter_customized:
             self._splitter_customized = False
         toggles = state.get("toggles")

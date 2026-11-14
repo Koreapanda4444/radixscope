@@ -573,5 +573,6 @@
   "Result with rounded operands": "피연산자를 먼저 반올림한 결과",
   "Round exact result once": "정확히 계산한 뒤 반올림한 결과",
   "Exact mathematical result": "정확한 수학적 결과",
-  "Run a calculation to see results": "계산을 실행하면 결과가 표시됩니다"
+  "Run a calculation to see results": "계산을 실행하면 결과가 표시됩니다",
+  "Double-click to restore automatic layout": "더블클릭하여 자동 배치 복원"
 }
