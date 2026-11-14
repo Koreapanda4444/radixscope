@@ -162,7 +162,7 @@ class Workspace(QWidget):
         self.status.setMinimumWidth(0)
         self.status.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self.run_button.setMinimumWidth(106)
-        self.cancel_button.setMinimumWidth(76)
+        self.cancel_button.setMinimumWidth(106)
         self.copy_button = QPushButton("Copy all")
         self.copy_button.setEnabled(False)
         self.copy_button.clicked.connect(self.copy_result)
@@ -490,6 +490,7 @@ class Workspace(QWidget):
 
     def set_busy(self, busy: bool) -> None:
         self.run_button.setEnabled(not busy)
+        self.run_button.setVisible(not busy)
         self.cancel_button.setEnabled(busy)
         self.cancel_button.setVisible(busy)
         self.copy_button.setEnabled(not busy and bool(self.report_fields))
