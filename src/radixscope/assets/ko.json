@@ -572,5 +572,7 @@
   "floating-point experiment exceeds the computation budget": "부동소수점 연산 실험이 계산 한도를 넘습니다",
   "Result with rounded operands": "피연산자를 먼저 반올림한 결과",
   "Round exact result once": "정확히 계산한 뒤 반올림한 결과",
-  "Exact mathematical result": "정확한 수학적 결과"
+  "Exact mathematical result": "정확한 수학적 결과",
+  "Help": "도움말",
+  "Open-source notices": "오픈소스 고지"
 }

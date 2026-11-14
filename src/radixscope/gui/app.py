@@ -37,6 +37,7 @@ from radixscope.gui.i18n import (
 from radixscope.gui.icon import application_icon
 from radixscope.gui.inspector import InspectorWorkspace
 from radixscope.gui.navigation import transfer_state
+from radixscope.gui.notices import show_notices
 from radixscope.gui.preferences import PreferencesDialog
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import render_report
@@ -124,6 +125,9 @@ class MainWindow(QMainWindow):
         settings_action.triggered.connect(self.edit_preferences)
         menu = self.menuBar().addMenu("Settings")
         menu.addAction(settings_action)
+        help_menu = self.menuBar().addMenu("Help")
+        notices_action = help_menu.addAction("Open-source notices")
+        notices_action.triggered.connect(lambda: show_notices(self))
         menu.addAction(self.recent_dock.toggleViewAction())
         self.recent_dock.toggleViewAction().setShortcut(QKeySequence("Ctrl+H"))
         self.show_status("Ready · Ctrl+1 through Ctrl+4 switch workspaces")
