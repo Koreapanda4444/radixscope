@@ -28,7 +28,7 @@ jobs:
         shell: cmd
         run: build_windows.bat
       - name: Verify exact arithmetic, Qt workspaces and the packaged executable
-        run: python scripts/check_numeric.py --desktop --exe dist/RadixScope/RadixScope.exe
+        run: python scripts/check_numeric.py --desktop --exe RadixScope.exe
       - name: Retain rendered icon resources for inspection
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

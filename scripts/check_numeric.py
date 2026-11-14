@@ -291,7 +291,7 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
         payload = icons[identifier]
         assert (width or 256) == size and (height or 256) == size and bits == 32
         assert len(payload) == length
-        expected = executable.parents[2] / "build" / "windows" / f"radixscope-{size}.png"
+        expected = executable.parent / "build" / "windows" / f"radixscope-{size}.png"
         assert payload == expected.read_bytes()
         image = QImage.fromData(payload)
         assert not image.isNull() and image.pixelColor(0, 0).alpha() == 0

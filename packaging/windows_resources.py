@@ -53,7 +53,7 @@ def version_resource() -> str:
 
 
 def copy_licenses() -> None:
-    bundle = ROOT / "dist" / "RadixScope"
+    bundle = ROOT / "_internal"
     for name in ("PySide6", "PySide6-Essentials", "PySide6-Addons", "shiboken6", "pyinstaller"):
         distribution = importlib.metadata.distribution(name)
         for entry in distribution.files or ():

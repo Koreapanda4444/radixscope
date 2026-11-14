@@ -15,3 +15,6 @@ dist/
 .vscode/
 
 *.spec
+
+/RadixScope.exe
+/_internal/
