@@ -33,6 +33,7 @@ from radixscope.reports import (
     ieee_report,
     inspection_report,
     integer_report,
+    integer_width_report,
     precision_report,
     render_report,
     trace_report,
@@ -102,6 +103,8 @@ def build_parser() -> argparse.ArgumentParser:
     integer.add_argument("--base", type=int, default=10)
     integer.add_argument("--width", type=int, default=32)
     integer.add_argument("--signed", action="store_true")
+    integer.add_argument("--requirements", action="store_true",
+                         help="analyze required widths even when the selected width cannot fit")
     integer.add_argument(
         "--pattern", action="store_true", help="interpret input as unsigned raw bits"
     )
@@ -238,11 +241,25 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             data_type=args.type, raw=args.pattern, byteorder=args.byteorder,
         ))
     if args.command == "integer":
+        if getattr(args, "requirements", False):
+            if args.op or args.operand is not None or args.pattern:
+                raise ValueError(
+                    "--requirements analyzes a numeric value without operations or patterns"
+                )
+            source = parse_integer(args.value, args.base)
+            return {"exact": str(source), "width_requirements": integer_width_report(
+                source.numerator, args.width, args.signed
+            )}
         report = _integer_command(args)
         if args.op in ("add", "subtract", "multiply"):
+            mathematical = report["exact_result"]
+            assert isinstance(mathematical, int)
             report["operation_result"] = {
                 "mathematical": report["exact_result"], "wrapped": report["value"],
                 "overflowed": report["overflowed"],
+                "width_requirements": integer_width_report(
+                    mathematical, args.width, args.signed
+                ),
             }
         selection = getattr(args, "extract", None)
         if selection is not None:

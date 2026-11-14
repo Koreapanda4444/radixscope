@@ -198,6 +198,11 @@ class InspectorWorkspace(Workspace):
         self._byte_preview.setText(str(report.get("bytes", "")))
         self._copy_bytes.setEnabled(bool(self._byte_preview.text()))
         bits = report.get("bits")
+        if not isinstance(bits, str):
+            self.bit_editor.clear()
+            self.float_navigator.clear()
+            self.raw_hex.clear()
+            return
         if isinstance(bits, str):
             width = len(bits)
             fields = {}

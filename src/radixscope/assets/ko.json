@@ -502,5 +502,15 @@
   "Analysis": "분석 방식",
   "Number representation": "숫자 표현",
   "Detailed fields": "상세 항목",
-  "Edit bits and explore neighbors": "비트 편집 및 인접 값 탐색"
+  "Edit bits and explore neighbors": "비트 편집 및 인접 값 탐색",
+  "width_requirements": "필요 비트 폭",
+  "minimum_signed_width": "Signed 최소 비트 폭",
+  "minimum_unsigned_width": "Unsigned 최소 비트 폭",
+  "selected_width": "선택 비트 폭",
+  "selected_signed": "선택 부호 해석",
+  "selected_minimum": "선택 범위 최솟값",
+  "selected_maximum": "선택 범위 최댓값",
+  "fits_selected": "선택 범위에 포함",
+  "standard_widths": "표준 비트 폭 표현 가능 여부",
+  "representation_error": "표현 범위 오류"
 }

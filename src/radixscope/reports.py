@@ -6,6 +6,7 @@ from radixscope.core import (
     ExactValue,
     FixedWidthInteger,
     IEEE754Value,
+    analyze_integer_width,
     interpret_bit_pattern,
     parse_number,
     represent_bytes,
@@ -90,6 +91,7 @@ def integer_report(value: FixedWidthInteger, byteorder: str = "big") -> dict[str
         "byteorder": byteorder,
         "bytes": data.hexadecimal,
         "ascii": data.ascii_preview,
+        "width_requirements": integer_width_report(value.value, value.width, value.signed),
     }
 
 
@@ -271,3 +273,18 @@ def render_report(report: dict[str, object]) -> str:
         else:
             lines.append(f"{key}: {ReportField(key, value).text}")
     return "\n".join(lines)
+
+
+def integer_width_report(value: int, width: int = 32, signed: bool = False) -> dict[str, object]:
+    analysis = analyze_integer_width(value, width, signed)
+    return {
+        "minimum_signed_width": analysis.minimum_signed_width,
+        "minimum_unsigned_width": analysis.minimum_unsigned_width,
+        "selected_width": width, "selected_signed": signed,
+        "selected_minimum": analysis.minimum, "selected_maximum": analysis.maximum,
+        "fits_selected": analysis.fits_selected,
+        "standard_widths": {
+            str(bits): {"signed": analysis.fits(bits, True), "unsigned": analysis.fits(bits)}
+            for bits in (8, 16, 32, 64)
+        },
+    }

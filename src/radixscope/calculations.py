@@ -10,6 +10,7 @@ from pathlib import Path
 from radixscope.cli import run_command
 from radixscope.core import (
     IEEEFormat,
+    IntegerRangeError,
     RoundingMode,
     convert_bases,
     convert_batch,
@@ -25,6 +26,7 @@ from radixscope.reports import (
     StructuredReport,
     batch_report,
     inspection_report,
+    integer_width_report,
     render_report,
     trace_report,
 )
@@ -54,7 +56,13 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
     input_text = text("input")
     if workspace == "Calculation" and text("calculation_mode") != "Fixed-width integer":
         adapted = dict(state, mode="Expression", source_base=10, show_trace=False)
-        return calculate("Conversion", adapted)
+        report = calculate("Conversion", adapted)
+        exact = parse_number(str(report["exact"]), 10)
+        if exact.is_integer:
+            report["width_requirements"] = integer_width_report(
+                exact.numerator, integer("bit_width"), flag("signed")
+            )
+        return report
     if workspace == "Batch Conversion":
         return batch_report(convert_batch(
             input_text, [int(base.strip()) for base in text("targets").split(",")],
@@ -95,11 +103,22 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
                 numeric.update(report)
                 report = numeric
         else:
-            report = inspection_report(inspect_number(
-                source, base=integer("base") if raw else 10, width=integer("bit_width"),
-                signed=flag("signed"), data_type=text("data_type"), raw=raw,
-                byteorder=text("byteorder"),
-            ))
+            try:
+                report = inspection_report(inspect_number(
+                    source, base=integer("base") if raw else 10, width=integer("bit_width"),
+                    signed=flag("signed"), data_type=text("data_type"), raw=raw,
+                    byteorder=text("byteorder"),
+                ))
+            except IntegerRangeError as error:
+                if raw or text("data_type") != "integer":
+                    raise
+                exact = parse_number(source, 10)
+                report = {
+                    "exact": str(exact), "representation_error": str(error),
+                    "width_requirements": integer_width_report(
+                        exact.numerator, integer("bit_width"), flag("signed")
+                    ),
+                }
         report["input"] = input_text
         return report
     if workspace == "Conversion":

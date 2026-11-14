@@ -265,3 +265,32 @@ def format_twos_complement(value: object, width: object) -> str:
 
 def parse_twos_complement(bits: str) -> FixedWidthInteger:
     return FixedWidthInteger.from_bits(bits, signed=True)
+
+
+@dataclass(frozen=True, slots=True)
+class IntegerWidthAnalysis:
+    value: int
+    minimum_signed_width: int
+    minimum_unsigned_width: int | None
+    selected_width: int
+    selected_signed: bool
+    minimum: int
+    maximum: int
+    fits_selected: bool
+
+    def fits(self, width: int, signed: bool = False) -> bool:
+        low, high = integer_bounds(width, signed)
+        return low <= self.value <= high
+
+
+def analyze_integer_width(
+    value: int, width: int = 32, signed: bool = False,
+) -> IntegerWidthAnalysis:
+    """Analyze mathematical integers without wrapping or accepting an invalid pattern."""
+    if type(value) is not int:
+        raise TypeError("value must be an integer")
+    minimum, maximum = integer_bounds(width, signed)
+    signed_width = max(1, value.bit_length() + 1 if value >= 0 else (~value).bit_length() + 1)
+    unsigned_width = max(1, value.bit_length()) if value >= 0 else None
+    return IntegerWidthAnalysis(value, signed_width, unsigned_width, width, signed,
+                                minimum, maximum, minimum <= value <= maximum)
