@@ -64,17 +64,18 @@ class ConversionWorkspace(Workspace):
         self.form.addRow("Input format", control_row(self.mode, "Base", self.source_base,
                                                      self._detect_button))
         self.form.addRow(self._syntax_hint)
-        self.form.addRow("Preset", self.preset)
+        # Presets and a quick swap are alternate ways to change the same bases.
+        self._swap_target.setToolTip("Target base for quick swap")
+        self.form.addRow("Preset", control_row(self.preset, self._swap_target,
+                                               self._swap_button))
         self.form.addRow("Target bases", self.targets)
-        self.form.addRow("Quick swap", control_row(self._swap_target, self._swap_button))
-        self.form.addRow("Output", self.exact_output)
         self.show_trace = QCheckBox("Show conversion steps")
+        self.form.addRow("Output", control_row(self.exact_output, self.show_trace))
         self.target_base = base_input(2)
         self.limit = QSpinBox()
         self.limit.setRange(1, 10000)
         self.limit.setValue(1000)
         self._trace_options = control_row("Base", self.target_base, "Step limit", self.limit)
-        self.form.addRow(self.show_trace)
         self.form.addRow(self._trace_options)
         self.show_trace.toggled.connect(self.update_controls)
         self._rounding_row = control_row("Digits", self.precision, self.rounding)
