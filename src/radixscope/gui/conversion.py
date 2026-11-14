@@ -1,7 +1,8 @@
-from PySide6.QtCore import QSignalBlocker
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QSignalBlocker, Qt
+from PySide6.QtGui import QAction, QColor, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QLabel,
     QLineEdit,
@@ -70,7 +71,14 @@ class ConversionWorkspace(Workspace):
                                                self._swap_button))
         self.form.addRow("Target bases", self.targets)
         self.show_trace = QCheckBox("Show conversion steps")
-        self.form.addRow("Output", control_row(self.exact_output, self.show_trace))
+        self.compare_rounding = QCheckBox("Compare rounding modes")
+        self.compare_rounding.setToolTip("Compare all five rules using the original exact value")
+        self.comparison_base = base_input(10)
+        self.comparison_base.setToolTip("Target base for rounding comparison")
+        self._comparison_base_label = QLabel("Comparison base")
+        self.form.addRow("Output", self.exact_output)
+        self.form.addRow("Analysis", control_row(self.show_trace, self.compare_rounding))
+        self.compare_rounding.toggled.connect(self.update_controls)
         self.target_base = base_input(2)
         self.limit = QSpinBox()
         self.limit.setRange(1, 10000)
@@ -78,8 +86,11 @@ class ConversionWorkspace(Workspace):
         self._trace_options = control_row("Base", self.target_base, "Step limit", self.limit)
         self.form.addRow(self._trace_options)
         self.show_trace.toggled.connect(self.update_controls)
-        self._rounding_row = control_row("Digits", self.precision, self.rounding)
-        self.form.addRow("Rounded output", self._rounding_row)
+        self._rounding_row = control_row(
+            "Digits", self.precision, self.rounding,
+            self._comparison_base_label, self.comparison_base,
+        )
+        self.form.addRow("Rounding", self._rounding_row)
         self.exact_output.toggled.connect(self.update_controls)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.run_button.setText("Convert")
@@ -98,7 +109,35 @@ class ConversionWorkspace(Workspace):
         trace_layout.addWidget(self._trace_summary)
         trace_layout.addWidget(self._trace_table)
         self._trace_index = self.result_views.addTab(self._trace_panel, "Conversion steps")
+        self._rounding_table = QTableWidget(0, 2)
+        self._rounding_table.setHorizontalHeaderLabels(["Rounding mode", "Result"])
+        self._rounding_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._rounding_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._rounding_table.setAlternatingRowColors(True)
+        self._rounding_table.setWordWrap(False)
+        self._rounding_table.verticalHeader().setVisible(False)
+        self._rounding_table.horizontalHeader().setStretchLastSection(True)
+        self._rounding_table.setFont(self.output.font())
+        self._rounding_table.cellDoubleClicked.connect(self.copy_rounding)
+        copy_action = QAction(self._rounding_table)
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        copy_action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        copy_action.triggered.connect(self.copy_rounding)
+        self._rounding_table.addAction(copy_action)
+        self._rounding_summary = QLabel()
+        self._rounding_summary.setWordWrap(True)
+        self._copy_rounding = QPushButton("Copy comparison")
+        self._copy_rounding.clicked.connect(self.copy_rounding)
+        comparison_panel = QWidget()
+        comparison_layout = QVBoxLayout(comparison_panel)
+        comparison_layout.setContentsMargins(0, 6, 0, 0)
+        comparison_layout.addWidget(control_row(self._rounding_summary, self._copy_rounding))
+        comparison_layout.addWidget(self._rounding_table)
+        self._rounding_index = self.result_views.addTab(comparison_panel, "Rounding comparison")
+        self.result_invalidated.connect(self.clear_rounding)
+        self.clear_rounding()
         self.result_ready.connect(self.show_trace_result)
+        self.result_ready.connect(self.show_rounding_result)
         self.result_invalidated.connect(self.clear_trace)
         self.clear_trace()
         self.update_controls()
@@ -111,9 +150,14 @@ class ConversionWorkspace(Workspace):
     def update_controls(self) -> None:
         self.form.setRowVisible(self._trace_options, self.show_trace.isChecked())
         self.source_base.setEnabled(self.mode.currentText() == "Number")
-        self.precision.setEnabled(not self.exact_output.isChecked())
+        comparing = self.compare_rounding.isChecked()
+        rounded = not self.exact_output.isChecked()
+        self.precision.setEnabled(rounded or comparing)
+        self.rounding.setVisible(rounded)
+        self._comparison_base_label.setVisible(comparing)
+        self.comparison_base.setVisible(comparing)
         self.rounding.setEnabled(not self.exact_output.isChecked())
-        self.form.setRowVisible(self._rounding_row, not self.exact_output.isChecked())
+        self.form.setRowVisible(self._rounding_row, rounded or comparing)
 
     def update_input_hint(self) -> None:
         syntax = detect_input_syntax(self.input.text())
@@ -246,6 +290,52 @@ class ConversionWorkspace(Workspace):
         if self.show_trace.isChecked():
             self.result_views.setCurrentIndex(self._trace_index)
 
+    def clear_rounding(self) -> None:
+        self._rounding_table.setRowCount(0)
+        self._rounding_summary.clear()
+        self._copy_rounding.setEnabled(False)
+        self.result_views.setTabEnabled(self._rounding_index, False)
+
+    def show_rounding_result(self, title: str, report: dict[str, object]) -> None:
+        comparison = report.get("rounding_comparison")
+        if not isinstance(comparison, dict) or not isinstance(comparison.get("results"), dict):
+            self.clear_rounding()
+            return
+        self.result_views.setTabEnabled(self._rounding_index, True)
+        self._copy_rounding.setEnabled(True)
+        self._rounding_table.setRowCount(len(RoundingMode))
+        for row, mode in enumerate(RoundingMode):
+            label = QTableWidgetItem(mode.value)
+            label.setData(UI_TEXT_ROLE, mode.value)
+            self._rounding_table.setItem(row, 0, label)
+            self._rounding_table.setItem(row, 1, QTableWidgetItem(
+                str(comparison["results"][mode.value])
+            ))
+        self._rounding_table.resizeColumnToContents(0)
+        self._update_rounding_summary(comparison)
+        if self.compare_rounding.isChecked():
+            self.result_views.setCurrentIndex(self._rounding_index)
+
+    def _update_rounding_summary(self, comparison: dict[str, object]) -> None:
+        self._rounding_summary.setText(
+            tr("Base") + " " + str(comparison["base"]) + " · "
+            + tr("Fractional digits") + " " + str(comparison["precision"])
+        )
+
+    def copy_rounding(self) -> None:
+        report = self.current_report()
+        comparison = report.get("rounding_comparison") if report is not None else None
+        if not isinstance(comparison, dict) or not isinstance(comparison.get("results"), dict):
+            return
+        rows = sorted({index.row() for index in self._rounding_table.selectedIndexes()})
+        modes = list(RoundingMode)
+        if not rows:
+            rows = list(range(len(modes)))
+        QApplication.clipboard().setText("\n".join(
+            tr(modes[row].value) + "\t" + str(comparison["results"][modes[row].value])
+            for row in rows
+        ))
+
     def restore_state(self, state: dict[str, object]) -> None:
         blocker = QSignalBlocker(self.preset)
         super().restore_state(state)
@@ -260,6 +350,9 @@ class ConversionWorkspace(Workspace):
         super().translate_ui()
         self.update_input_hint()
         report = self.current_report()
+        comparison = report.get("rounding_comparison") if report is not None else None
+        if isinstance(comparison, dict):
+            self._update_rounding_summary(comparison)
         trace = report.get("trace") if report is not None else None
         if isinstance(trace, dict):
             status = "Complete trace" if trace.get("complete") is True else (

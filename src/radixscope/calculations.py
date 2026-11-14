@@ -13,6 +13,7 @@ from radixscope.core import (
     IntegerRangeError,
     RoundingMode,
     compare_numeric_inputs,
+    compare_rounding,
     convert_bases,
     convert_batch,
     evaluate_expression,
@@ -173,6 +174,15 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             "input": input_text, "exact": str(value),
             "outputs": {str(base): result for base, result in outputs.items()},
         }
+        if state.get("compare_rounding") is True:
+            comparison_base = integer("comparison_base")
+            comparison_precision = integer("precision")
+            report["rounding_comparison"] = {
+                "base": comparison_base, "precision": comparison_precision,
+                "results": {mode.value: result for mode, result in compare_rounding(
+                    value, comparison_base, comparison_precision
+                ).items()},
+            }
         if swapping:
             assert isinstance(swap_to, int)
             target = validate_base(swap_to)
