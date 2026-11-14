@@ -2,46 +2,116 @@
 
 한국어 | [English](README.md)
 
-RadixScope는 정확한 수 변환과 비트 단위 분석을 위한 데스크톱·명령줄 도구입니다.
-원래의 정확한 값을 유지하면서 정수·부동소수점·바이트 표현을 함께 살펴볼 수 있습니다.
+RadixScope는 정확한 수 변환과 수치 표현 분석을 위한 Python·PySide6 프로그램입니다.
+분수, 고정 비트 정수, 부동소수점 형식과 원시 바이트를 하나의 데스크톱 화면에서
+다루며, 같은 연산을 CLI와 Python API로도 사용할 수 있습니다.
+숫자의 수학적 값과 그 값을 표현하는 비트를 함께 살펴보는 데 적합합니다.
 
 ## 주요 기능
 
-- 2~36진법의 정확한 변환, 분수·순환소수와 수식 계산
-- 고정 비트 정수 연산, 오버플로 분석과 비트 편집
-- binary16·bfloat16·binary32·binary64 분석, 정밀도 오차와 인접 값 확인
-- 바이트 분석, 비트필드 레이아웃 저장과 이진 패턴 비교
-- 일괄 변환, 기록 검색과 텍스트·JSON·CSV 내보내기
-- GUI·CLI·Python API, 한국어·영어 UI와 라이트·다크·시스템 테마
+### 정확한 수와 수식 계산
 
-## 시작하기
+정수·분수·순환소수·과학적 표기법을 사용해 2~36진법을 변환합니다.
+여러 진법이 섞인 수식을 계산하고 Trace에서 변환 과정을 따라갈 수 있습니다.
+정확한 계산은 유리수 값을 유지하며, 정밀도와 반올림 설정으로 결과의 표시 방식을 선택합니다.
 
-저장소 폴더에서 Python 3.11 이상으로 실행합니다.
+### Number Inspector와 정수 연산
+
+하나의 값을 이진수·팔진수·십진수·십육진수, 부호 있는/없는 정수와 엔디언 바이트로
+살펴봅니다. 원시 비트나 Hex 패턴을 편집해 해석이 어떻게 바뀌는지도 확인할 수 있습니다.
+고정 비트 정수 연산은 정확한 결과·오버플로 여부·래핑 결과를 구분하며 비트 연산과 시프트를 지원합니다.
+
+### 부동소수점 분석
+
+binary16·bfloat16·binary32·binary64를 인코딩·디코딩하거나 같은 입력의 표현을
+형식별로 비교합니다. 부호·지수·유효숫자, 부호 있는 0과 NaN 페이로드를 살펴보고,
+절대·상대 오차, ULP 간격, 인접 값과 정규수·비정규수 경계를 탐색할 수 있습니다.
+
+### 바이트·비트필드·이진 패턴 비교
+
+Hex·Binary·Base64·UTF-8 입력에서 바이트 범위를 선택하고 원하는 바이트 순서로
+해석합니다. 이름과 부호 여부가 있는 비트필드를 정의하고 레이아웃을 저장할 수 있습니다.
+두 버퍼는 XOR, 변경된 비트·바이트와 필드별 차이로 비교합니다.
+
+### 일괄 처리·기록·내보내기
+
+여러 값이나 수식을 한꺼번에 변환하고 입력별 결과와 오류를 확인합니다.
+이전 계산을 검색하고 입력을 복원하거나 결과를 다른 작업 화면에서 재사용한 뒤
+텍스트·JSON·CSV로 내보낼 수 있습니다. 데스크톱은 한국어·영어와 라이트·다크·시스템 테마를 지원합니다.
+
+## 화면
+
+데스크톱 사이드바는 작업 화면을 세 그룹으로 나눕니다.
+
+| 그룹 | 작업 화면 | 역할 |
+| --- | --- | --- |
+| Inspect | Number Inspector, Byte Inspector, IEEE 754, Programmer | 수치·비트·바이트와 고정 비트 연산 분석 |
+| Calculate | Conversion, Batch Conversion, Trace | 수 변환, 여러 입력 처리와 계산 과정 확인 |
+| Compare | Binary Comparison | 원시 패턴 사이의 차이 비교 |
+
+각 작업 화면에는 입력 영역, 구조화된 결과 표와 텍스트 리포트가 배치됩니다.
+결과를 복사하거나 다른 작업 화면으로 전달하고 내보낼 수 있습니다.
+**Ctrl+H**로 검색 가능한 최근 기록 패널을 엽니다.
+
+## 사용 방법
+
+### GUI에서 값 살펴보기
+
+- **Number Inspector**에서 `FF`를 입력하고 진법 `16`, 정수 형식, 비트 폭 `8`을
+  선택한 뒤 **Signed**와 **Raw bits**를 켭니다. 같은 패턴을 부호 있는 정수 `-1`,
+  부호 없는 정수 `255`, 이진수 `11111111`과 바이트 표현으로 확인합니다.
+- **IEEE 754**에서 `1/10`을 `binary32`로 인코딩합니다. `3DCCCCCD` 패턴과 반올림
+  오차를 확인한 뒤 다른 형식과 비교하거나 인접 값으로 이동해 봅니다.
+- **Byte Inspector**에서 Hex로 `3F 80 00 00`을 입력하고 big-endian과
+  **Interpret as**의 `binary32`를 선택하면 `1.0`을 확인할 수 있습니다. 다른 범위를
+  선택하거나 비트필드 레이아웃을 적용해 개별 필드를 살펴볼 수 있습니다.
+
+### 명령줄에서 사용하기
+
+설치 후 터미널에서도 같은 연산을 실행할 수 있습니다.
+
+```sh
+python -m radixscope convert FF --from 16 --to 2 8 10 16
+python -m radixscope inspect FF --base 16 --width 8 --signed --pattern
+python -m radixscope ieee compare "1/10" --json
+```
+
+첫 명령은 십육진수 `FF`를 네 진법으로 변환합니다. 두 번째는 그 8비트를 부호 있는
+정수로 재해석하고, 세 번째는 정확한 분수의 부동소수점 표현을 형식별로 비교합니다.
+각 명령에 `--help`를 붙여 옵션을 확인할 수 있습니다. Python API도 같은 수치 모델과
+연산을 제공하며, 수치 처리 명세에서 예시를 볼 수 있습니다.
+
+## 실행 방법
+
+### 소스에서 실행
+
+Python 3.11 이상을 사용합니다. 저장소 폴더에서 실행하세요.
 
 ```sh
 python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-CLI만 필요하면 `python -m pip install .`로 설치합니다.
+별도 실행 의존성이 없는 Core·CLI만 필요하면 `python -m pip install .`로 설치합니다.
+설치 후 `radixscope`, `radixscope-gui` 명령도 사용할 수 있습니다.
+운영체제별 실행 환경과 설정 위치는 설치 안내에 정리되어 있습니다.
 
-```sh
-python -m radixscope convert FF --from 16 --to 2 8 10 16
-python -m radixscope ieee encode "1/10" --format binary32
+### Windows 실행 파일 만들기
+
+Windows에서 64비트 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
+
+```powershell
+.\build_windows.bat
 ```
 
-설치 후 `radixscope`, `radixscope-gui` 명령도 사용할 수 있습니다.
-Windows에서는 `build_windows.bat`로 `dist/RadixScope/RadixScope.exe`를 만듭니다.
-`_internal/`을 포함한 프로그램 폴더 전체를 함께 보관하세요.
-실행 환경·설정·업데이트는 설치 안내를 참고하세요.
+BAT는 현재 Python 환경에 빌드 의존성을 설치하고
+`dist/RadixScope/RadixScope.exe`를 만듭니다. 생성된 폴더에서 EXE를 실행하고
+`_internal/`, `licenses/`를 함께 유지하세요. 빌드한 프로그램에는 Python과 Qt가
+포함되며, 이 저장소의 소스코드에서 직접 생성하는 방식입니다.
 
 ## 문서
 
-- [설치와 실행](docs/ko/install.md)
-- [데스크톱 사용법](docs/ko/usage.md)
-- [명령줄 사용법](docs/ko/cli.md)
-- [수치 처리 규칙과 Python API](docs/ko/specification.md)
-
-정확한 십진 입력에는 문자열이나 `ExactValue`를 사용하세요. 원시 재해석은 비트를
-보존하며 수치 변환은 목적 형식의 규칙을 따릅니다. 작업 한도는 명시적으로 알리고
-저장한 유리수를 자동으로 바꾸지 않습니다.
+- [설치와 실행](docs/ko/install.md) — 실행 환경, 설정과 업데이트.
+- [데스크톱 사용법](docs/ko/usage.md) — 작업 화면의 조작, 결과 재사용, 기록과 내보내기.
+- [명령줄 사용법](docs/ko/cli.md) — 명령, 입력 형식과 출력 옵션.
+- [수치 처리 규칙과 Python API](docs/ko/specification.md) — 정확한 값, 비트 표현, 부동소수점 규칙과 API 예시.
