@@ -268,6 +268,9 @@ class Workspace(QWidget):
         form_height = self.form.heightForWidth(width) if self.form.hasHeightForWidth() else -1
         if form_height < 0:
             form_height = self.form.sizeHint().height()
+        # The scroll area's actual content can require more height than
+        # QFormLayout.heightForWidth() reports after rows are hidden/shown.
+        form_height = max(form_height, self.form_container.sizeHint().height())
         panel_layout = self._input_panel.layout()
         if panel_layout is None:
             return
@@ -281,7 +284,7 @@ class Workspace(QWidget):
             heights.append(height if height >= 0 else item.sizeHint().height())
         overhead = margins.top() + margins.bottom() + sum(heights)
         overhead += max(0, panel_layout.spacing()) * len(heights)
-        preferred = form_height + overhead + 12
+        preferred = form_height + overhead + 20
         result_hint = 150 if self._splitter_customized else self.result_height_hint()
         result_minimum = min(result_hint, max(80, available * 3 // 5))
         minimum = self._input_panel.minimumSizeHint().height()
@@ -393,6 +396,7 @@ class Workspace(QWidget):
 
     def filter_results(self) -> None:
         query = self._result_filter.text().casefold().strip()
+        last_visible_group = ""
         for row in range(self.result_table.rowCount()):
             values = [self.result_table.item(row, column) for column in (
                 range(self.result_table.columnCount())
@@ -402,11 +406,22 @@ class Workspace(QWidget):
                 for item in values if item is not None
             )
             detailed = False
-            if self.result_table.columnCount() == 3 and row < len(self.report_fields):
+            grouped = self.result_table.columnCount() == 3
+            if grouped and row < len(self.report_fields):
                 detailed = is_detail(self.report_fields[row].path)
-            self.result_table.setRowHidden(
-                row, filtered or (detailed and not self._show_details.isChecked() and not query)
-            )
+            hidden = filtered or (detailed and not self._show_details.isChecked() and not query)
+            self.result_table.setRowHidden(row, hidden)
+            if grouped:
+                group_item = self.result_table.item(row, 0)
+                if group_item is not None:
+                    # Every row keeps its canonical group in the tooltip.
+                    # Repeat its heading on the first *visible* row after filtering.
+                    group = group_item.toolTip()
+                    heading = group if not hidden and group != last_visible_group else ""
+                    group_item.setData(UI_TEXT_ROLE, heading)
+                    group_item.setText(tr(heading))
+                    if not hidden:
+                        last_visible_group = group
 
     def set_error(self, message: str) -> None:
         self.clear_output()
