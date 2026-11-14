@@ -18,7 +18,7 @@ from radixscope.gui.widgets import Workspace, control_row
 
 class BatchWorkspace(Workspace):
     def __init__(self) -> None:
-        super().__init__("Batch Conversion", "Convert one number or expression per nonempty line")
+        super().__init__("Batch Conversion")
         self.form.setVerticalSpacing(6)
         self._rows: list[dict[str, object]] = []
         self._columns: list[str] = []
