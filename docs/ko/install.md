@@ -30,8 +30,8 @@ Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있�
 ```
 
 BAT는 현재 Python 환경에 빌드 의존성을 설치하고
-`dist/RadixScope/RadixScope.exe`를 만듭니다. 해당 폴더에서 실행하고
-`_internal/`, `licenses/`를 함께 유지하세요. 빌드한 프로그램에는 Python과 Qt가 포함됩니다.
+`RadixScope.exe`를 만듭니다. 해당 폴더에서 실행하고
+`_internal/`을 함께 유지하세요. 빌드한 프로그램에는 Python과 Qt가 포함됩니다.
 설치 프로그램이나 ZIP은 생성하지 않습니다.
 
 ## 설정과 업데이트
@@ -66,7 +66,7 @@ Qt 검증에는 `--desktop`, binary16·bfloat16 전체 패턴 확인에는 `--ex
 Windows 빌드 후에는 다음 명령을 사용합니다.
 
 ```powershell
-python scripts/check_numeric.py --desktop --exe dist/RadixScope/RadixScope.exe
+python scripts/check_numeric.py --desktop --exe RadixScope.exe
 ```
 
 x64 리소스, 패키징된 계산, 실제 창 아이콘과 정상 종료를 확인합니다.
@@ -78,3 +78,13 @@ x64 리소스, 패키징된 계산, 실제 창 아이콘과 정상 종료를 확
 
 데스크톱 검증 워크플로도 같은 BAT를 사용합니다. 워크플로 아티팩트에는 아이콘 검증
 리소스를 보관하며, 프로그램 빌드 결과는 BAT가 생성하는 프로그램 폴더에 있습니다.
+
+EXE는 `build_windows.bat`가 있는 루트에, 런타임은 `_internal/`, 고지는
+`_internal/licenses/`에 생성합니다. PyInstaller는 수집 폴더를 정리하므로 소스를
+보호하기 위해 `build/windows/stage/`에서 중간 수집한 뒤 해시 목록으로 출력 파일만 배치합니다.
+사용자가 수정한 파일과 출처를 확인할 수 없는 파일은 덮어쓰지 않습니다.
+제품을 확인한 이전 `dist` EXE는 `.exe.previous-build`로 이름을 바꾸며, 확인할 수 없는
+산출물은 직접 이동한 뒤 빌드해야 합니다. 다른 사용자 파일은 보존합니다.
+도움말 → 오픈소스 고지에서 라이선스 원문, 구성요소와 동일 버전 소스 위치를 확인합니다.
+LGPL 라이브러리는 `_internal/`에서 교체할 수 있으며 재배포 시 고지와 해당 소스에 대한
+동등한 접근을 함께 유지해야 합니다.

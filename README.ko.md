@@ -65,8 +65,8 @@ Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있�
 .\build_windows.bat
 ```
 
-현재 Python 환경에 빌드 의존성을 설치하고 `dist/RadixScope/RadixScope.exe`를 만듭니다.
-`_internal/`, `licenses/`를 포함한 생성 폴더 전체를 함께 유지하세요.
+현재 Python 환경에 빌드 의존성을 설치하고 `RadixScope.exe`를 만듭니다.
+`_internal/`를 포함한 생성 폴더 전체를 함께 유지하세요.
 해당 폴더에는 실행에 필요한 Python과 Qt가 포함됩니다.
 
 ## 문서

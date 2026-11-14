@@ -128,6 +128,8 @@ copying its build-tool license. Other unknown component notices are retained.</p
     document += "<h2>License texts and attributions</h2><ul>"
     for label, filename in references:
         document += '<li><a href="' + filename + '">' + label + '</a></li>'
+    for filename in sorted(notices.values()):
+        document += '<li><a href="' + filename + '">' + html.escape(filename) + '</a></li>'
     for name, component in components.items():
         document += '<li>' + html.escape(name) + ' ' + html.escape(str(component)) + '</li>'
     document += "</ul><p>Official obligations: https://www.qt.io/development/open-source-lgpl-obligations</p>"

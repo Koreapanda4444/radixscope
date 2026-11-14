@@ -66,8 +66,8 @@ On Windows, use x64 Python 3.11 or newer available as `python` and run:
 ```
 
 The command installs build dependencies into the current Python environment and
-creates `dist/RadixScope/RadixScope.exe`. Keep the whole generated folder, including
-`_internal/` and `licenses/`. Python and Qt are included in that folder.
+creates `RadixScope.exe` in the project root. Keep `_internal/` beside the EXE.
+Python, Qt and required notices are inside that runtime folder.
 
 ## Documentation
 

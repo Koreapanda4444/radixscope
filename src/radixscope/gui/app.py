@@ -350,6 +350,7 @@ class MainWindow(QMainWindow):
         header = "#233145" if dark else "#dce5ef"
         muted = "#afbdcf" if dark else "#526176"
         blue = "#3275cb"
+        accent_text = "#8ebdff" if dark else "#245fa8"
         assets = Path(__file__).resolve().parents[1] / "assets"
         up_icon = (assets / "ui-up.svg").as_posix()
         down_icon = (assets / "ui-down.svg").as_posix()
@@ -417,7 +418,8 @@ class MainWindow(QMainWindow):
             f"border-bottom: 1px solid {border}; }}"
             "QTabBar#workspaceNavigation::tab { padding: 10px 16px; margin-right: 2px; }"
             f"QTabBar#workspaceNavigation::tab:hover {{ background: {base}; }}"
-            f"QTabBar#workspaceNavigation::tab:selected {{ background: {base}; color: {blue};"
+            f"QTabBar#workspaceNavigation::tab:selected {{ background: {base};"
+            f"color: {accent_text};"
             f"border-bottom: 3px solid {blue}; font-weight: 600; }}"
         )
         stylesheet += (

@@ -268,6 +268,12 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
     from radixscope.calculations import calculate
     from radixscope.gui.icon import ICON_SIZES
 
+    assert (executable.parent / "_internal").is_dir()
+    notices = executable.parent / "_internal/licenses"
+    inventory = json.loads((notices / "inventory.json").read_text(encoding="utf-8"))
+    assert inventory["components"] and len(inventory["source_urls"]) == 2
+    assert "LGPL" in (notices / "NOTICE.html").read_text(encoding="utf-8")
+    assert all((notices / name).is_file() for name in inventory["notice_files"])
     pe = pefile.PE(str(executable))
     assert pe.FILE_HEADER.Machine == 0x8664
     icons: dict[int, bytes] = {}
@@ -291,7 +297,9 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
         payload = icons[identifier]
         assert (width or 256) == size and (height or 256) == size and bits == 32
         assert len(payload) == length
-        expected = executable.parent / "build" / "windows" / f"radixscope-{size}.png"
+        expected = (
+            Path(__file__).resolve().parents[1] / "build" / "windows" / f"radixscope-{size}.png"
+        )
         assert payload == expected.read_bytes()
         image = QImage.fromData(payload)
         assert not image.isNull() and image.pixelColor(0, 0).alpha() == 0
@@ -382,11 +390,22 @@ def main() -> None:
     parser.add_argument("--exhaustive", action="store_true")
     parser.add_argument("--desktop", action="store_true")
     parser.add_argument("--exe", type=Path)
+    parser.add_argument("--relocate", action="store_true")
     args = parser.parse_args()
     check_core(args.exhaustive)
     states = check_desktop() if args.desktop or args.exe else []
     if args.exe:
-        check_executable(args.exe.resolve(), states)
+        executable = args.exe.resolve()
+        check_executable(executable, states)
+        if args.relocate:
+            import shutil
+
+            with tempfile.TemporaryDirectory(prefix="RadixScope relocated ") as directory:
+                target = Path(directory)
+                shutil.copy2(executable, target / executable.name)
+                shutil.copytree(executable.parent / "_internal", target / "_internal")
+                check_executable(target / executable.name, states)
+            print("Relocated executable and runtime folder passed")
 
 
 if __name__ == "__main__":
