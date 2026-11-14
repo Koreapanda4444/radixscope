@@ -240,8 +240,8 @@ class Workspace(QWidget):
         available = self._splitter.height() - self._splitter.handleWidth()
         if available <= 0:
             return
-        self.form.invalidate()
-        self.form.activate()
+        # Layout requests from the form schedule this pass. Invalidating here
+        # would create another request and repeatedly reschedule the same fit.
         width = max(100, self.form_scroll.viewport().width())
         form_height = self.form.heightForWidth(width) if self.form.hasHeightForWidth() else -1
         if form_height < 0:
