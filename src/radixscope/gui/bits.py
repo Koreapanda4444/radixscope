@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from radixscope.gui.i18n import LocalizedComboBox, localize, tr
+from radixscope.gui.i18n import LocalizedComboBox, localize
 
 
 class BitEditor(QWidget):
@@ -148,7 +148,7 @@ class BitEditor(QWidget):
                 group_label = QLabel()
                 self.group_labels[group_label] = (group_low, group_high)
                 group_label.setToolTip(
-                    tr("Hex digit" if self.group_width == 4 else "Numeric byte")
+                    ("Hex digit" if self.group_width == 4 else "Numeric byte")
                     + f" {group_high // self.group_width} · {group_high}…{group_low}"
                 )
                 self.grid.addWidget(group_label, row * 3, start_column, 1,

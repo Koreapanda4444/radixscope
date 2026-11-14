@@ -216,20 +216,31 @@ class Workspace(QWidget):
         self._english_report = render_report(report) if text is None else text
         self.output.setPlainText(self._english_report)
         priorities = {key: index for index, key in enumerate((
-            "exact", "source_exact", "value", "outputs", "hexadecimal", "bytes",
+            "exact", "source_exact", "paths_differ", "changed_bit_count",
+            "value", "outputs", "hexadecimal", "bytes",
             "unsigned", "twos_complement", "absolute_error", "relative_error", "error_ulps",
             "ulp", "classification", "format", "bits", "width", "signed",
         ))}
         self.report_fields = tuple(sorted(
             StructuredReport(report).fields,
-            key=lambda field: priorities.get(field.path.split(".")[0], 99),
+            key=lambda field: {
+                "exact_then_round.result.exact": 1,
+                "numeric_comparison.left.exact": 0, "numeric_comparison.right.exact": 1,
+                "numeric_comparison.relation": 2, "numeric_comparison.difference": 3,
+                "numeric_comparison.absolute_difference": 4,
+            }.get(field.path, priorities.get(field.path.split(".")[0], 99)),
         ))
         self.result_table.setColumnCount(2)
         self.result_table.setHorizontalHeaderLabels(["Representation", "Value"])
         self.result_table.setRowCount(len(self.report_fields))
         for row, field in enumerate(self.report_fields):
-            label = QTableWidgetItem(field.path.replace("_", " "))
-            label.setData(UI_TEXT_ROLE, field.path)
+            path = field.path
+            if "rounded_operands" in report:
+                path = {"exact": "Result with rounded operands",
+                        "exact_then_round.result.exact": "Round exact result once",
+                        "source_exact": "Exact mathematical result"}.get(path, path)
+            label = QTableWidgetItem(path.replace("_", " "))
+            label.setData(UI_TEXT_ROLE, path)
             label.setData(UI_CONTEXT_ROLE, "field")
             self.result_table.setItem(row, 0, label)
             display = field.text if not isinstance(field.value, list) else (
@@ -241,7 +252,7 @@ class Workspace(QWidget):
             if (isinstance(field.value, (bool, list)) or field.value is None
                     or field.path.split(".")[-1] in (
                         "classification", "rounding_direction", "rounding_rule", "error",
-                        "relation", "tininess_rule",
+                        "relation", "tininess_rule", "pattern_error", "representation_error",
                     )):
                 item.setData(UI_TEXT_ROLE, display[:4000])
             item.setFont(self.output.font())

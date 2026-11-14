@@ -2,9 +2,9 @@
 setlocal
 pushd "%~dp0"
 if errorlevel 1 exit /b 1
-python -c "import struct, sys; raise SystemExit(0 if sys.version_info >= (3, 11) and struct.calcsize('P') == 8 else 1)"
+python -c "import sys, sysconfig; raise SystemExit(0 if sys.version_info >= (3, 11) and sysconfig.get_platform() == 'win-amd64' else 1)"
 if errorlevel 1 (
-  echo Python 3.11 or newer, 64-bit, must be available as python.
+  echo Windows x64 Python 3.11 or newer must be available as python.
   popd
   exit /b 1
 )

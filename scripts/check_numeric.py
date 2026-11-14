@@ -124,9 +124,7 @@ def check_core(exhaustive: bool) -> None:
         ["batch", "1\nbad\n3", "--exact"],
     ]:
         assert isinstance(run_command(parser.parse_args(command)), dict)
-    print(
-        "Core numeric, IEEE, arithmetic flags and CLI checks passed"
-    )
+    print("Core numeric, IEEE, arithmetic flags and CLI checks passed")
 
 
 def check_desktop() -> list[tuple[str, dict[str, object]]]:
@@ -182,10 +180,83 @@ def check_desktop() -> list[tuple[str, dict[str, object]]]:
         assert restored.workspaces[2].current_report() is None
         restored.close()
         QApplication.processEvents()
-    print(
-        "Qt workspaces, modes, sizes, themes, languages, icons and restoration passed"
-    )
+    print("Qt workspaces, modes, sizes, themes, languages, icons and restoration passed")
     return states
+
+
+def check_windows_icon(handle: int) -> None:
+    """Inspect the native HICON pixels rather than accepting a default icon handle."""
+
+    class IconInfo(ctypes.Structure):
+        _fields_ = [
+            ("is_icon", ctypes.c_int),
+            ("x", ctypes.c_uint),
+            ("y", ctypes.c_uint),
+            ("mask", ctypes.c_void_p),
+            ("color", ctypes.c_void_p),
+        ]
+
+    class Bitmap(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_long),
+            ("width", ctypes.c_long),
+            ("height", ctypes.c_long),
+            ("stride", ctypes.c_long),
+            ("planes", ctypes.c_ushort),
+            ("bits", ctypes.c_ushort),
+            ("data", ctypes.c_void_p),
+        ]
+
+    user, gdi = ctypes.windll.user32, ctypes.windll.gdi32
+    user.GetIconInfo.argtypes = [ctypes.c_void_p, ctypes.POINTER(IconInfo)]
+    user.GetDC.argtypes, user.GetDC.restype = [ctypes.c_void_p], ctypes.c_void_p
+    user.ReleaseDC.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    gdi.GetObjectW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+    gdi.DeleteObject.argtypes = [ctypes.c_void_p]
+    gdi.GetDIBits.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+        ctypes.c_uint,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+    ]
+    info, bitmap = IconInfo(), Bitmap()
+    assert user.GetIconInfo(handle, ctypes.byref(info)) and info.color
+    dc = user.GetDC(None)
+    try:
+        assert gdi.GetObjectW(info.color, ctypes.sizeof(bitmap), ctypes.byref(bitmap))
+        assert bitmap.width >= 16 and bitmap.height >= 16
+        header = ctypes.create_string_buffer(
+            struct.pack(
+                "<IiiHHIIiiII",
+                40,
+                bitmap.width,
+                -bitmap.height,
+                1,
+                32,
+                0,
+                bitmap.width * bitmap.height * 4,
+                0,
+                0,
+                0,
+                0,
+            )
+        )
+        pixels = ctypes.create_string_buffer(bitmap.width * bitmap.height * 4)
+        assert gdi.GetDIBits(dc, info.color, 0, bitmap.height, pixels, header, 0) == bitmap.height
+        data = pixels.raw
+        white = sum(min(data[i : i + 3]) > 180 for i in range(0, len(data), 4))
+        blue = sum(
+            data[i] > data[i + 2] + 40 and data[i + 1] > data[i + 2] + 15
+            for i in range(0, len(data), 4)
+        )
+        assert white and blue, "native icon does not contain the white R and blue S"
+    finally:
+        user.ReleaseDC(None, dc)
+        gdi.DeleteObject(info.color)
+        gdi.DeleteObject(info.mask)
 
 
 def check_executable(executable: Path, states: list[tuple[str, dict[str, object]]]) -> None:
@@ -241,7 +312,23 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
             result = json.loads((path / "result.json").read_text(encoding="utf-8"))
             assert "report" in result, result
             assert result["report"] == calculate(title, state)
-    user32 = ctypes.windll.user32
+    shell, user32 = ctypes.windll.shell32, ctypes.windll.user32
+    shell.ExtractIconExW.argtypes = [
+        ctypes.c_wchar_p,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_uint,
+    ]
+    user32.DestroyIcon.argtypes = [ctypes.c_void_p]
+    large, small = ctypes.c_void_p(), ctypes.c_void_p()
+    assert shell.ExtractIconExW(str(executable), 0, ctypes.byref(large), ctypes.byref(small), 1)
+    try:
+        check_windows_icon(large.value)
+        check_windows_icon(small.value)
+    finally:
+        user32.DestroyIcon(large)
+        user32.DestroyIcon(small)
     user32.SendMessageW.argtypes = [
         ctypes.c_void_p,
         ctypes.c_uint,
@@ -273,10 +360,13 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
             time.sleep(0.1)
         assert window_handles, "packaged GUI did not show a native window"
         handle = window_handles[0]
-        assert user32.SendMessageW(handle, 0x007F, 1, 0), "missing large window icon"
-        assert user32.SendMessageW(handle, 0x007F, 0, 0) or user32.SendMessageW(
+        big = user32.SendMessageW(handle, 0x007F, 1, 0)
+        small = user32.SendMessageW(handle, 0x007F, 0, 0) or user32.SendMessageW(
             handle, 0x007F, 2, 0
-        ), "missing small window icon"
+        )
+        assert big and small, "missing native window icons"
+        check_windows_icon(big)
+        check_windows_icon(small)
         user32.SendMessageW(handle, 0x0010, 0, 0)
         process.wait(timeout=15)
         assert process.returncode == 0
@@ -284,9 +374,7 @@ def check_executable(executable: Path, states: list[tuple[str, dict[str, object]
         if process.poll() is None:
             process.kill()
             process.wait()
-    print(
-        "Windows x64 EXE: resources, version, frozen workers, GUI icons and clean exit passed"
-    )
+    print("Windows x64 EXE: resources, version, frozen workers, GUI icons and clean exit passed")
 
 
 def main() -> None:

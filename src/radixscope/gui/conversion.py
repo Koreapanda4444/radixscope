@@ -28,7 +28,7 @@ def base_input(value: int = 10) -> QSpinBox:
 
 class ConversionWorkspace(Workspace):
     def __init__(self) -> None:
-        super().__init__("Conversion", "Convert exact numbers or evaluate mixed-base expressions")
+        super().__init__("Conversion", "Convert exact numbers between bases 2 through 36")
         self.input = QLineEdit("255")
         self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Auto"])
@@ -253,3 +253,20 @@ class ConversionWorkspace(Workspace):
         self.update_swap_targets()
         self.update_controls()
         self.update_input_hint()
+
+
+    def translate_ui(self) -> None:
+        super().translate_ui()
+        self.update_input_hint()
+        report = self.current_report()
+        trace = report.get("trace") if report is not None else None
+        if isinstance(trace, dict):
+            status = "Complete trace" if trace.get("complete") is True else (
+                "Partial trace · step limit reached"
+            )
+            self._trace_summary.setText(tr(status) + " · " + str(trace.get("result", "")))
+            for row in range(self._trace_table.rowCount()):
+                for column in range(self._trace_table.columnCount()):
+                    item = self._trace_table.item(row, column)
+                    if item is not None and item.toolTip():
+                        item.setToolTip(tr("Recurring digits"))

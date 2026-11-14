@@ -59,7 +59,7 @@ and options; [numeric models and API](docs/specification.md) covers the Python A
 
 ## Windows application
 
-On Windows, use 64-bit Python 3.11 or newer available as `python` and run:
+On Windows, use x64 Python 3.11 or newer available as `python` and run:
 
 ```powershell
 .\build_windows.bat

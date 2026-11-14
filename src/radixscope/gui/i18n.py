@@ -61,21 +61,12 @@ _PATTERNS = [
      r"\1은 \2비트 범위(\4~\5)를 벗어납니다"),
     (r"bit pattern must be between (.+) and (.+) for width (\d+)",
      r"\3비트 패턴은 \1~\2 범위여야 합니다"),
-    (r"hex bytes require pairs of digits at position (\d+)", r"위치 \1의 Hex는 두 자리 단위입니다"),
-    (r"invalid hex byte at position (\d+)", r"위치 \1의 Hex 바이트 오류"),
-    (r"selection length does not match (.+)", r"선택 길이가 \1 형식과 맞지 않습니다"),
-    (r"duplicate field name: (.+)", r"중복된 필드 이름: \1"),
-    (r"field overlaps another field: (.+)", r"다른 필드와 겹칩니다: \1"),
-    (r"field exceeds the (\d+)-bit selection: (.+)", r"\1비트 선택 범위를 벗어납니다: \2"),
-    (r"layout requires a (\d+)-bit selection", r"레이아웃에 \1비트 선택 범위가 필요합니다"),
     (r"invalid literal for int\(\) with base 10: (.+)", r"10진수 정수가 아닙니다: \1"),
     (r"Bits (\d+) … (\d+) · MSB → LSB", r"비트 \1 … \2 · MSB → LSB"),
-    (r"Offset (\d+) \((.+)\)", r"오프셋 \1 (\2)"),
-    (r"(\d+) fields · (\d+) bits", r"필드 \1개 · \2비트"),
-    (r"(\d+) changed bits · (\d+) changed bytes", r"변경 비트 \1개 · 변경 바이트 \2개"),
+    (r"Hex digit (\d+) · (\d+)…(\d+)", r"16진수 자리 \1 · \2…\3"),
+    (r"Numeric byte (\d+) · (\d+)…(\d+)", r"숫자 바이트 \1 · \2…\3"),
     (r"(\d+) / (\d+) rows · (\d+) errors", r"\2행 중 \1행 처리 · 오류 \3개"),
     (r"(\d+)/(\d+) rows · (\d+) errors", r"\2행 중 \1행 처리 · 오류 \3개"),
-    (r"(\d+) bits · (\d+) bytes changed", r"변경 비트 \1개 · 변경 바이트 \2개"),
     (r"(\d+) items · Text report / Copy selected", r"항목 \1개 · 텍스트 보고서 또는 선택 복사"),
 ]
 
@@ -103,7 +94,6 @@ def tr(text: str) -> str:
         return _KO[plain]
     for suffix, translated in (
         (" · Limit reached; some inputs were not processed", " · 한도 도달: 일부 입력 미처리"),
-        (" · Large patterns: use byte/text views", " · 큰 패턴은 바이트·텍스트 뷰를 사용하세요"),
     ):
         if text.endswith(suffix):
             return tr(text[:-len(suffix)]) + translated
@@ -159,7 +149,10 @@ def tr_field(path: str) -> str:
         return path.split(".")[1] + "진수"
     if re.fullmatch(r"base_\d+", path):
         return path.split("_")[1] + "진수"
-    return " · ".join(tr(part.replace("_", " ")) for part in path.split("."))
+    def translated_part(part: str) -> str:
+        translated = tr(part)
+        return translated if translated != part else tr(part.replace("_", " "))
+    return " · ".join(translated_part(part) for part in path.split("."))
 
 
 class LocalizedComboBox(QComboBox):

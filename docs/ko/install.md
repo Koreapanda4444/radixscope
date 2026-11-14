@@ -23,7 +23,7 @@ python -m radixscope.gui
 
 ## Windows 실행 파일
 
-Windows에서 64비트 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
+Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
 
 ```powershell
 .\build_windows.bat

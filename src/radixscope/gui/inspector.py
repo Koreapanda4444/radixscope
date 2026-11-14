@@ -2,6 +2,7 @@ from PySide6.QtCore import QSignalBlocker, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QLabel,
     QLineEdit,
     QPushButton,
     QSpinBox,
@@ -69,13 +70,16 @@ class InspectorWorkspace(Workspace):
         self._raw_hex = QLineEdit()
         self._raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
         self.form.addRow("Input", self.input)
-        self.form.addRow("Input format", self.input_mode)
+        self._base_label = QLabel("Base")
+        self._width_label = QLabel("Width")
+        self.form.addRow("Input format", control_row(self.input_mode, self._base_label, self.base))
         self.form.addRow("Analysis", self.analysis)
         self.form.addRow("Other number", self.other_input)
         self.form.addRow("Floating-point operation", self.float_operation)
         self.form.addRow("Number to reuse", self._numeric_transfer)
-        self.form.addRow("Representation", control_row("Base", self.base, self.data_type,
-                                                       "Width", self.bit_width))
+        self.form.addRow("Representation", control_row(
+            self.data_type, self._width_label, self.bit_width
+        ))
         self.form.addRow("Interpretation", control_row(self.pattern, self.signed, "Bytes",
                                                        self.byteorder))
         self.form.addRow(self._show_special)
@@ -149,6 +153,15 @@ class InspectorWorkspace(Workspace):
         self.signed.setEnabled(integer and not comparison)
         self.pattern.setEnabled(not comparison)
         self.data_type.setEnabled(not comparison)
+        mode_row = self.input_mode.parentWidget()
+        if mode_row is not None:
+            self.form.setRowVisible(mode_row, not arithmetic or raw)
+        needs_base = raw or self.input_mode.currentText() == "Number"
+        self._base_label.setVisible(needs_base)
+        self.base.setVisible(needs_base)
+        self._width_label.setVisible(integer and not comparison)
+        self.bit_width.setVisible(integer and not comparison)
+        self.signed.setVisible(integer and not comparison)
         self.input_mode.setEnabled(not raw and not arithmetic)
         if arithmetic and not raw:
             self.input_mode.setCurrentText("Expression")

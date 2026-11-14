@@ -23,7 +23,7 @@ Installed commands are `radixscope` and `radixscope-gui`.
 
 ## Windows executable
 
-On Windows with 64-bit Python 3.11 or newer available as `python`, run:
+On Windows with x64 Python 3.11 or newer available as `python`, run:
 
 ```powershell
 .\build_windows.bat

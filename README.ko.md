@@ -59,7 +59,7 @@ python -m radixscope float-op add 0.1 0.2 --format binary16 --json
 
 ## Windows 프로그램
 
-Windows에서 64비트 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
+Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있어야 합니다.
 
 ```powershell
 .\build_windows.bat
