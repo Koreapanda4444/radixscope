@@ -30,6 +30,7 @@ class InspectorWorkspace(Workspace):
         super().__init__(
             "Number Inspector", "One value, synchronized numeric, signed, bit and byte views"
         )
+        self.form.setVerticalSpacing(6)
         self.input = QLineEdit("255")
         self.base = base_input()
         self.input_mode = LocalizedComboBox()
