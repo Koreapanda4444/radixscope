@@ -421,6 +421,8 @@ class MainWindow(QMainWindow):
         stylesheet += (
             f"QWidget#inputPanel {{ background: {base}; border: 1px solid {border}; }}"
             f"QWidget#inputForm {{ background: {base}; }}"
+            f"QWidget#actionBar {{ background: {base}; border-top: 1px solid {border}; }}"
+            f"QLabel#actionStatus {{ color: {muted}; background: transparent; }}"
             "QLineEdit, QSpinBox, QComboBox { min-height: 24px; padding: 4px 6px; }"
             f"QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border: 2px solid {blue};"
             "padding: 3px 5px; }"
