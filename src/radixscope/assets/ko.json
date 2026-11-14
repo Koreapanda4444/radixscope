@@ -626,5 +626,15 @@
   "Half-up": "최근접·절반 올림",
   "Half-even": "최근접·짝수",
   "Floor": "내림",
-  "Ceiling": "올림"
+  "Ceiling": "올림",
+  "nearest-even": "최근접 짝수",
+  "toward-zero": "0 방향",
+  "toward-positive": "+∞ 방향",
+  "toward-negative": "−∞ 방향",
+  "IEEE rounding": "IEEE 반올림",
+  "Compare 8/16/32/64-bit results": "8/16/32/64비트 결과 비교",
+  "Width comparison": "비트 폭 비교",
+  "Yes": "예",
+  "No": "아니요",
+  "Hex": "16진수"
 }
