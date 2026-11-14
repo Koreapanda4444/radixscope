@@ -88,6 +88,6 @@ The publisher tracks generated files by hash and refuses to overwrite modified o
 unmanaged files. It preserves unrelated files. An identified old `dist` executable
 is renamed to `.exe.previous-build` so its former launch path cannot be mistaken
 for the current application. Move an unrecognized old output yourself before building.
-Help → Open-source notices opens the bundled license texts, inventory and matching
+Open `_internal/licenses/NOTICE.html` to view the bundled license texts, inventory and matching
 upstream source locations. LGPL libraries remain replaceable under `_internal/`.
 Retain the notices and equivalent access to corresponding sources when redistributing.
