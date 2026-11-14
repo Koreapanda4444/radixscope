@@ -29,15 +29,9 @@ On Windows with x64 Python 3.11 or newer available as `python`, run:
 .\build_windows.bat
 ```
 
-The BAT reuses compatible build dependencies, installing missing ones when needed, and creates
-`RadixScope.exe` in the project root. Keep `_internal/` beside it;
-required notices are inside `_internal/licenses/`. The built application includes Python and Qt.
-No installer or ZIP is generated. With build dependencies already installed, packaging
-uses local notices and does not need network access. Windows builds use the reviewed
-PySide6/Qt 6.11.3 runtime. `packaging/notices/sources.json` records the original notice
-URLs, retrieval date, reviewed runtime versions and SHA-256 hashes. A version/hash
-mismatch stops before publishing output; update and review the local notices when
-changing the bundled runtime. Python's matching installed `LICENSE.txt` is also retained.
+The BAT reuses compatible build dependencies, installing missing ones when needed,
+and creates `RadixScope.exe` in the project root. Keep `_internal/` beside it.
+No installer or ZIP is generated. Existing build dependencies can be reused offline.
 
 ## Settings and updates
 
@@ -73,14 +67,7 @@ the EXE; a stable Windows application identity groups its running windows.
 Explorer may cache an older icon after a folder replacement. Inspect the freshly built
 EXE resources before treating a cached shell image as a rendering failure.
 
-The executable is written to the folder containing `build_windows.bat`, with runtime
-files in `_internal/` and notices in `_internal/licenses/`. Intermediate collection
-uses `build/windows/stage/` because PyInstaller cleans its collection directory;
-collecting directly into the repository root would risk deleting source files.
-The publisher tracks generated files by hash and refuses to overwrite modified or
-unmanaged files. It preserves unrelated files. An identified old `dist` executable
-is renamed to `.exe.previous-build` so its former launch path cannot be mistaken
-for the current application. Move an unrecognized old output yourself before building.
-Open `_internal/licenses/NOTICE.html` to view the bundled license texts, inventory and matching
-upstream source locations. LGPL libraries remain replaceable under `_internal/`.
-Retain the notices and equivalent access to corresponding sources when redistributing.
+The executable is written beside `build_windows.bat`, with its runtime in `_internal/`.
+PyInstaller first builds into `build/windows/stage/` so it cannot overwrite source files.
+The publisher copies only generated outputs, protects unrelated files, and preserves
+unrecognized existing files.
