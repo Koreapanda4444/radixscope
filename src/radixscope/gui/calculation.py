@@ -11,9 +11,7 @@ from radixscope.reports import integer_report
 
 class CalculationWorkspace(Workspace):
     def __init__(self) -> None:
-        super().__init__(
-            "Calculation", "Exact expressions and explicit fixed-width integer operations"
-        )
+        super().__init__("Calculation")
         self.form.setVerticalSpacing(6)
         self.input = QLineEdit("255")
         self.base = base_input()
@@ -81,9 +79,6 @@ class CalculationWorkspace(Workspace):
         self.form.insertRow(4, "Rounded output", self._exact_rounding)
         self.calculation_mode.currentIndexChanged.connect(self.update_controls)
         self.exact_output.toggled.connect(self.update_controls)
-        self._calculation_hint = QLabel()
-        self._calculation_hint.setWordWrap(True)
-        self.form.insertRow(1, self._calculation_hint)
         self.update_controls()
         self.bind_inputs()
 
@@ -106,12 +101,6 @@ class CalculationWorkspace(Workspace):
         self.form.setRowVisible(self.exact_output, not fixed)
         self.form.setRowVisible(
             self._exact_rounding, not fixed and not self.exact_output.isChecked()
-        )
-        self._calculation_hint.setText(
-            "Exact result and wrapped result are separate; only fixed-width operations wrap."
-            if fixed else (
-                "Expressions use exact rational arithmetic; bitwise operators require integers."
-            )
         )
         self.input.setPlaceholderText("Fixed-width integer" if fixed else "0xFF + 1/3")
 
