@@ -247,7 +247,8 @@ an `IEEE754Value`. Rational and integer inputs round directly into the destinati
 without first converting to a host float. Host floats contribute their actual binary value;
 use `ExactValue` and the numeric parser for exact decimal input.
 
-Rounding is round to nearest, ties to even. It covers significand carries, gradual underflow,
+Rounding defaults to nearest-even; encoding also supports toward-zero, toward-positive and
+toward-negative. It covers significand carries, gradual underflow,
 the subnormal-to-normal transition and overflow to signed infinity. Values smaller than
 half the minimum subnormal round to signed zero. At the halfway value, zero is the even
 choice. The halfway overflow threshold rounds to infinity.
