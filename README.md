@@ -1,63 +1,48 @@
 # RadixScope
 
-RadixScope is a Python and PySide6 desktop and command-line tool for exact numbers,
-fixed-width integers, floating-point precision, bytes and bitfields.
-
 English | [한국어](README.ko.md)
+
+RadixScope is a desktop and command-line tool for exact number conversion and
+bit-level analysis. It brings integer, floating-point and byte representations
+together without losing the original exact value.
 
 ## Features
 
-- Exact base 2–36 conversion, ratios, recurring fractions and scientific notation.
-- Exact expressions, conversion traces and fixed-width arithmetic with overflow analysis.
-- Number Inspector with synchronized values, raw bits and endian byte representations.
-- binary16, bfloat16, binary32 and binary64 encoding, decoding and precision comparison.
-- Rational error, ULP spacing, neighboring values, subnormal boundaries and NaN payloads.
-- Hex/Binary/Base64/UTF-8 byte input, saved bitfield layouts and binary differences.
-- Batch conversion, searchable history, result reuse and text/JSON/CSV export.
-- English/Korean interface, light/dark/system themes and cancellable calculations.
+- Exact base 2–36 conversion, fractions, recurring decimals and expression evaluation.
+- Fixed-width integer arithmetic, overflow analysis and editable bit representations.
+- binary16, bfloat16, binary32 and binary64 inspection, precision errors and neighboring values.
+- Byte inspection, saved bitfield layouts and binary comparison.
+- Batch conversion, searchable history and text/JSON/CSV export.
+- GUI, CLI and Python API, with English/Korean UI and light/dark/system themes.
 
-## Install and run
+## Getting Started
 
-From a checkout, use Python 3.11 or newer:
+Use Python 3.11 or newer from the repository folder:
 
 ```sh
 python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-For the dependency-free Core and CLI, install with `python -m pip install .` and run:
+For the CLI only, install with `python -m pip install .`:
 
 ```sh
 python -m radixscope convert FF --from 16 --to 2 8 10 16
+python -m radixscope ieee encode "1/10" --format binary32
 ```
 
 Installed commands are `radixscope` and `radixscope-gui`.
-Windows x64 packages are available as `RadixScope-windows-x64` from successful
-[Quality runs](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
-See the installation guide for setup and portable execution.
+On Windows, `build_windows.bat` creates `dist/RadixScope/RadixScope.exe`.
+Keep the whole program folder, including `_internal/`, together.
+See the installation guide for prerequisites, settings and updates.
 
 ## Documentation
 
-- [Installation, updates and data locations](docs/install.md)
+- [Installation and execution](docs/install.md)
 - [Desktop usage](docs/usage.md)
 - [Command-line usage](docs/cli.md)
-- [Numeric models, Python API and work limits](docs/specification.md)
-- [Development, verification and builds](docs/development.md)
+- [Number rules and Python API](docs/specification.md)
 
-Raw reinterpretation preserves bits; numeric conversion follows the destination format.
-Use text or `ExactValue` for exact decimal input. Output and work limits are explicit
-and do not silently change the stored rational value.
-
-## Development
-
-```sh
-python -m pip install -e ".[dev]"
-python -m ruff check src scripts packaging
-python -m mypy src scripts packaging
-python scripts/verify_numeric.py
-python -m radixscope.gui.verification
-```
-
-Existing verification uses temporary data. Quality checks Ubuntu and Windows on
-Python 3.11–3.13, Python distributions and the Windows desktop build, including
-installation and uninstall. See the development guide for build commands.
+Use text or `ExactValue` for exact decimal input. Raw reinterpretation preserves
+bits; numeric conversion follows the destination format. Work limits are reported
+without silently changing the stored rational value.

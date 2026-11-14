@@ -1,75 +1,61 @@
-# Installation and packaging
+# Installation and execution
 
 English | [한국어](ko/install.md)
 
-## Windows x64
+## Run from source
 
-Download `RadixScope-windows-x64` from a successful
-[Quality run](https://github.com/Koreapanda4444/radixscope/actions/workflows/quality.yml).
-Extract the Actions artifact first, then choose:
-
-| Package | Use |
-| --- | --- |
-| `RadixScope-*-windows-x64-setup.exe` | Install for the current user, with a Start menu shortcut and uninstaller |
-| `RadixScope-*-windows-x64.zip` | Extract and run `RadixScope/RadixScope.exe` without installation |
-
-Both contain the Python runtime, Qt, icon, English/Korean resources, documentation
-and third-party license notices. Keep all portable files together; moving only the
-EXE will break its runtime. Administrator rights are not required for the default
-per-user installation. The installer offers an optional desktop shortcut.
-Remove it through Windows Installed apps or its `unins000.exe`.
-
-Preferences live separately under Qt's per-user application data directory,
-`Koreapanda4444/RadixScope/state.json`. Uninstalling does not erase this user data.
-For portable updates, close the app and extract into a fresh folder. For installed
-updates, close the app and run setup against the same installation directory.
-
-## Python installation
-
-Python 3.11 or newer is required for source and wheel distributions.
+Use Python 3.11 or newer. In the repository folder:
 
 ```sh
-git clone https://github.com/Koreapanda4444/radixscope.git
-cd radixscope
 python -m venv .venv
 ```
 
 Activate with `.venv\Scripts\activate` in Windows Command Prompt, or
-`source .venv/bin/activate` on Linux. Then:
+`source .venv/bin/activate` on Linux/macOS. Then run:
 
 ```sh
-python -m pip install --upgrade pip
 python -m pip install ".[gui]"
 python -m radixscope.gui
 ```
 
-Install with `python -m pip install .` for Core/CLI only. A downloaded wheel is
-installed by passing its actual filename to pip; append `[gui]` inside the quoted
-filename when desktop dependencies are needed. Wheels and source archives are in
-the `packages-<os>-py<python>` Actions artifacts. They require Python, unlike the
-standalone Windows packages.
+For the dependency-free Core and CLI, use `python -m pip install .`.
+Installed commands are `radixscope` and `radixscope-gui`.
+
+## Windows executable
+
+On Windows with 64-bit Python 3.11 or newer available as `python`, run:
+
+```powershell
+.\build_windows.bat
+```
+
+The BAT installs build dependencies into the current Python environment and creates
+`dist/RadixScope/RadixScope.exe`. Run it from that folder; keep `_internal/` and
+`licenses/` with it. The built application includes Python and Qt.
+No installer or ZIP is generated.
+
+## Settings and updates
+
+Settings remain in Qt's per-user application data directory under
+`Koreapanda4444/RadixScope/state.json`, separately from the program folder.
+Close the app before replacing a built program folder. Preserve the settings file
+if moving to another computer.
+
+For a source checkout update, close the app and run:
 
 ```sh
 git pull --ff-only origin main
 python -m pip install --upgrade ".[gui]"
-radixscope-gui
 ```
-
-GUI dependencies exclude PySide6 6.12.0 because of
-[the upstream singleton reference-counting regression](https://qt-project.atlassian.net/browse/PYSIDE-3474).
-Use the project's dependency constraints when installing the GUI.
 
 ## Linux graphics libraries
 
-Even offscreen Qt requires system graphics libraries. On Ubuntu/Debian:
+Qt needs the system graphics libraries. On Ubuntu/Debian:
 
 ```sh
 sudo apt-get update
 sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
 ```
 
-A desktop session using XCB may also require `libxcb-cursor0` and the distribution's
-normal X11 libraries. `QT_QPA_PLATFORM=offscreen` runs integration verification
-without opening a visible desktop window.
-
-For builds and verification, see the [development guide](development.md).
+A desktop session using XCB may also need `libxcb-cursor0` and the distribution's
+usual X11 libraries. Install GUI dependencies using the project's version constraints.
