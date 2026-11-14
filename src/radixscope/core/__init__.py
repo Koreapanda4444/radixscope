@@ -53,6 +53,7 @@ from radixscope.core.formatting import (
 )
 from radixscope.core.ieee754 import (
     FloatClass,
+    FloatRounding,
     IEEE754Value,
     IEEEFormat,
     convert_ieee754,
@@ -116,6 +117,7 @@ __all__ = [
     "FloatArithmeticPath",
     "FloatClass",
     "FloatFlags",
+    "FloatRounding",
     "FloatFormatComparison",
     "FloatOperation",
     "FloatPrecisionAnalysis",
