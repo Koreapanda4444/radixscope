@@ -109,7 +109,7 @@ class Workspace(QWidget):
         self.result_table.setAlternatingRowColors(True)
         self.result_table.setMinimumHeight(80)
         self.result_table.setWordWrap(False)
-        self.result_table.verticalHeader().setDefaultSectionSize(27)
+        self.result_table.verticalHeader().setDefaultSectionSize(31)
         self.result_table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.result_table.cellDoubleClicked.connect(self.copy_selected)
         copy_action = QAction(self.result_table)
@@ -122,9 +122,14 @@ class Workspace(QWidget):
         self._result_filter.setPlaceholderText("Filter result fields")
         self._result_filter.textChanged.connect(self.filter_results)
         results_page = QWidget()
+        results_page.setObjectName("resultsPanel")
         results_layout = QVBoxLayout(results_page)
         results_layout.setContentsMargins(0, 6, 0, 0)
         results_layout.addWidget(self._result_filter)
+        self._empty_result = QLabel("Run a calculation to see results")
+        self._empty_result.setWordWrap(True)
+        self._empty_result.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        results_layout.addWidget(self._empty_result)
         results_layout.addWidget(self.result_table)
         self.result_views.addTab(results_page, "Results")
         self.result_views.addTab(self.output, "Text report")
@@ -213,6 +218,7 @@ class Workspace(QWidget):
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         self.error.clear()
+        self._empty_result.hide()
         self._report = report
         self._transfer_button.setEnabled(True)
         self._export_button.setEnabled(True)
@@ -309,6 +315,7 @@ class Workspace(QWidget):
 
     def clear_output(self) -> None:
         self._report = None
+        self._empty_result.show()
         self._english_report = ""
         self._transfer_button.setEnabled(False)
         self._export_button.setEnabled(False)

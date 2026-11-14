@@ -343,12 +343,12 @@ class MainWindow(QMainWindow):
         theme = self.store.preferences.get("theme", "System")
         palette = QPalette(self.system_palette)
         dark = theme == "Dark" or (theme == "System" and palette.window().color().lightness() < 128)
-        background = "#171d27" if dark else "#f3f6fa"
+        background = "#101722" if dark else "#e9eef4"
         foreground = "#e7edf6" if dark else "#182536"
-        base = "#101620" if dark else "#ffffff"
-        border = "#334258" if dark else "#c7d2e1"
-        header = "#243044" if dark else "#e7eef8"
-        muted = "#9eacc0" if dark else "#5d6c80"
+        base = "#151e2a" if dark else "#ffffff"
+        border = "#435268" if dark else "#a2b1c2"
+        header = "#233145" if dark else "#dce5ef"
+        muted = "#afbdcf" if dark else "#526176"
         blue = "#3275cb"
         assets = Path(__file__).resolve().parents[1] / "assets"
         up_icon = (assets / "ui-up.svg").as_posix()
@@ -367,11 +367,12 @@ class MainWindow(QMainWindow):
         palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
         self.setPalette(palette)
         stylesheet = (
-            f"QWidget {{ font-size: 13px; color: {foreground}; background-color: {background}; }}"
+            f"QWidget {{ font-size: 13px; color: {foreground}; }}"
+            f"QMainWindow, QDialog {{ background-color: {background}; }}"
             "QLabel#heading { font-size: 22px; font-weight: 600; margin: 4px 0; }"
             f"QLabel#subtitle {{ color: {muted}; margin-bottom: 4px; }}"
             "QLabel#error { color: #c94e5a; }"
-            f"QPushButton, QToolButton {{ border: 1px solid {border}; border-radius: 4px;"
+            f"QPushButton, QToolButton {{ border: 1px solid {border}; border-radius: 2px;"
             "padding: 5px 9px; min-height: 20px; }"
             f"QPushButton:hover, QToolButton:hover {{ border-color: {blue}; }}"
             f"QPushButton#primary {{ color: white; background-color: {blue};"
@@ -380,7 +381,7 @@ class MainWindow(QMainWindow):
             "QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QTableWidget,"
             "QTreeWidget, QListWidget {"
             f"background-color: {base}; color: {foreground}; border: 1px solid {border};"
-            "border-radius: 4px; padding: 3px; }"
+            "border-radius: 2px; padding: 3px; }"
             f"QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border-color: {blue}; }}"
             f"QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {{ color: {muted}; }}"
             f"QCheckBox::indicator {{ width: 14px; height: 14px; border: 1px solid {muted}; }}"
@@ -430,6 +431,14 @@ class MainWindow(QMainWindow):
             "QComboBox::drop-down { width: 24px; border: 0; }"
             "QCheckBox { spacing: 7px; padding: 3px 0; }"
             f"QCheckBox::indicator:disabled {{ background: {header}; border-color: {border}; }}"
+        )
+        stylesheet += (
+            f"QWidget#resultsPanel {{ background: {base}; border-top: 1px solid {border}; }}"
+            f"QTableWidget {{ border: 1px solid {border}; selection-background-color: {blue};"
+            "selection-color: white; }"
+            "QTableWidget::item { padding: 4px 7px; }"
+            f"QTableWidget::item:selected {{ background: {blue}; color: white; }}"
+            f"QPushButton:pressed, QToolButton:pressed {{ background: {header}; }}"
         )
         self.setStyleSheet(stylesheet)
 
