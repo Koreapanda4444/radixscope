@@ -77,7 +77,8 @@ class MainWindow(QMainWindow):
             workspace.result_ready.connect(self.show_completed)
             workspace.transfer_requested.connect(self.receive_transfer)
         self.navigation = QTabBar()
-        self.navigation.setExpanding(True)
+        self.navigation.setExpanding(False)
+        self.navigation.setObjectName("workspaceNavigation")
         self.navigation.setDrawBase(False)
         self.navigation.setElideMode(Qt.TextElideMode.ElideRight)
         self.navigation.setAccessibleName("Workspaces")
@@ -402,6 +403,19 @@ class MainWindow(QMainWindow):
             "QTabBar::tab { padding: 6px 10px; border: 0; }"
             f"QTabBar::tab:selected {{ border-bottom: 2px solid {blue}; }}"
             f"QSplitter::handle {{ background: {border}; height: 3px; }}"
+        )
+        stylesheet += (
+            f"QMenuBar {{ background: {header}; border-bottom: 1px solid {border}; padding: 3px 8px; }}"
+            "QMenuBar::item { padding: 7px 14px; background: transparent; }"
+            f"QMenuBar::item:selected {{ background: {blue}; color: white; }}"
+            f"QMenu {{ background: {base}; border: 1px solid {border}; padding: 4px; }}"
+            "QMenu::item { padding: 7px 24px 7px 12px; }"
+            f"QMenu::item:selected {{ background: {blue}; color: white; }}"
+            f"QTabBar#workspaceNavigation {{ background: {header}; border-bottom: 1px solid {border}; }}"
+            "QTabBar#workspaceNavigation::tab { padding: 10px 16px; margin-right: 2px; }"
+            f"QTabBar#workspaceNavigation::tab:hover {{ background: {base}; }}"
+            f"QTabBar#workspaceNavigation::tab:selected {{ background: {base}; color: {blue};"
+            f"border-bottom: 3px solid {blue}; font-weight: 600; }}"
         )
         self.setStyleSheet(stylesheet)
 
