@@ -29,10 +29,15 @@ On Windows with x64 Python 3.11 or newer available as `python`, run:
 .\build_windows.bat
 ```
 
-The BAT installs build dependencies into the current Python environment and creates
+The BAT reuses compatible build dependencies, installing missing ones when needed, and creates
 `RadixScope.exe` in the project root. Keep `_internal/` beside it;
 required notices are inside `_internal/licenses/`. The built application includes Python and Qt.
-No installer or ZIP is generated.
+No installer or ZIP is generated. With build dependencies already installed, packaging
+uses local notices and does not need network access. Windows builds use the reviewed
+PySide6/Qt 6.11.3 runtime. `packaging/notices/sources.json` records the original notice
+URLs, retrieval date, reviewed runtime versions and SHA-256 hashes. A version/hash
+mismatch stops before publishing output; update and review the local notices when
+changing the bundled runtime. Python's matching installed `LICENSE.txt` is also retained.
 
 ## Settings and updates
 

@@ -25,7 +25,8 @@ def field_group(path: str) -> str:
     root = path.split(".")[0]
     if root in ("input", "source_exact", "left_source_exact", "right_source_exact"):
         return "Input values"
-    if root in ("exact", "exact_result", "value", "paths_differ", "operation_result"):
+    if root in ("exact", "exact_result", "value", "paths_differ", "operation_result",
+                "numeric_comparison"):
         return "Calculation result"
     if root == "outputs":
         return "Base representations"
@@ -38,7 +39,8 @@ def field_group(path: str) -> str:
     if root in ("absolute_error", "relative_error", "error_ulps", "ulp", "exactly_represented",
                 "rounding_direction", "rounding_rule", "overflowed", "underflowed_to_zero"):
         return "Precision analysis"
-    if root in ("unsigned", "twos_complement", "width_requirements", "minimum", "maximum"):
+    if root in ("unsigned", "twos_complement", "width_requirements", "minimum", "maximum",
+                "left_representation", "right_representation", "xor_bits", "changed_bit_count"):
         return "Integer representation"
     if root in ("format", "classification", "sign", "exponent", "significand", "quiet_nan",
                 "nan_payload", "exponent_bits", "fraction_bits", "bits", "hexadecimal", "bytes"):
@@ -54,6 +56,8 @@ def field_heading(field: ReportField, report: dict[str, object]) -> tuple[str, s
     if root == "outputs":
         label = "Base " + leaf
     if group == "IEEE 754" and "classification" not in report:
+        group = "Integer representation"
+    if root == "overflowed" and "classification" not in report:
         group = "Integer representation"
     if root == "exact" and "rounded_operands" in report:
         label = "Result with rounded operands"
@@ -71,7 +75,9 @@ def field_heading(field: ReportField, report: dict[str, object]) -> tuple[str, s
         label = "Error against original math · " + label
     elif "operation_rounding_error" in parts:
         label = "Operation rounding error · " + label
-    elif root in ("neighbors", "boundaries", "width_requirements", "numeric_comparison",
+    elif root == "width_requirements":
+        label = (parts[-2] + "-bit · " + label) if "standard_widths" in parts else label
+    elif root in ("neighbors", "boundaries", "numeric_comparison",
                   "left_representation", "right_representation", "trace", "field_bits"):
         label = " · ".join(LABELS.get(part, part.replace("_", " ")) for part in parts)
     return group, label
@@ -84,7 +90,8 @@ def field_order(field: ReportField, report: dict[str, object]) -> int:
 def is_detail(path: str) -> bool:
     return path.split(".")[0] in (
         "neighbors", "boundaries", "field_bits", "trace", "underflow_halfway", "overflow_halfway",
-    ) or (path.startswith(("rounded_operands.", "exact_then_round.")) and path not in (
+    ) or path.startswith("width_requirements.standard_widths.") or (
+        path.startswith(("rounded_operands.", "exact_then_round.")) and path not in (
         "rounded_operands.result.exact", "rounded_operands.exact_operation",
         "exact_then_round.result.exact", "exact_then_round.exact_operation",
     ))

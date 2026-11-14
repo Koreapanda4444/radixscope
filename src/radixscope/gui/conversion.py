@@ -30,6 +30,10 @@ def base_input(value: int = 10) -> QSpinBox:
 class ConversionWorkspace(Workspace):
     def __init__(self) -> None:
         super().__init__("Conversion", "Convert exact numbers between bases 2 through 36")
+        self.form.setVerticalSpacing(4)
+        self.form_container.setStyleSheet(
+            "QLineEdit, QSpinBox, QComboBox { min-height: 20px; }"
+        )
         self.input = QLineEdit("255")
         self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Auto"])
@@ -52,7 +56,7 @@ class ConversionWorkspace(Workspace):
         self.targets.textChanged.connect(self.mark_custom)
         self.preset.currentIndexChanged.connect(self.apply_preset)
         self.exact_output = QCheckBox(
-            "Exact expansion · 1000 digit display limit"
+            "Exact expansion (1000 digits)"
         )
         self.exact_output.setChecked(True)
         self.precision = QSpinBox()
@@ -70,14 +74,15 @@ class ConversionWorkspace(Workspace):
         self.form.addRow("Preset", control_row(self.preset, self._swap_target,
                                                self._swap_button))
         self.form.addRow("Target bases", self.targets)
-        self.show_trace = QCheckBox("Show conversion steps")
-        self.compare_rounding = QCheckBox("Compare rounding modes")
+        self.show_trace = QCheckBox("Conversion steps")
+        self.compare_rounding = QCheckBox("Compare rounding")
         self.compare_rounding.setToolTip("Compare all five rules using the original exact value")
         self.comparison_base = base_input(10)
         self.comparison_base.setToolTip("Target base for rounding comparison")
-        self._comparison_base_label = QLabel("Comparison base")
-        self.form.addRow("Output", self.exact_output)
-        self.form.addRow("Analysis", control_row(self.show_trace, self.compare_rounding))
+        self._comparison_base_label = QLabel("Base")
+        self.form.addRow("Output", control_row(
+            self.exact_output, self.show_trace, self.compare_rounding
+        ))
         self.compare_rounding.toggled.connect(self.update_controls)
         self.target_base = base_input(2)
         self.limit = QSpinBox()
@@ -88,7 +93,6 @@ class ConversionWorkspace(Workspace):
         self.show_trace.toggled.connect(self.update_controls)
         self._rounding_row = control_row(
             "Digits", self.precision, self.rounding,
-            self._comparison_base_label, self.comparison_base,
         )
         self.form.addRow("Rounding", self._rounding_row)
         self.exact_output.toggled.connect(self.update_controls)
@@ -116,6 +120,7 @@ class ConversionWorkspace(Workspace):
         self._rounding_table.setAlternatingRowColors(True)
         self._rounding_table.setWordWrap(False)
         self._rounding_table.verticalHeader().setVisible(False)
+        self._rounding_table.verticalHeader().setDefaultSectionSize(26)
         self._rounding_table.horizontalHeader().setStretchLastSection(True)
         self._rounding_table.setFont(self.output.font())
         self._rounding_table.cellDoubleClicked.connect(self.copy_rounding)
@@ -124,18 +129,27 @@ class ConversionWorkspace(Workspace):
         copy_action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         copy_action.triggered.connect(self.copy_rounding)
         self._rounding_table.addAction(copy_action)
-        self._rounding_summary = QLabel()
-        self._rounding_summary.setWordWrap(True)
         self._copy_rounding = QPushButton("Copy comparison")
         self._copy_rounding.clicked.connect(self.copy_rounding)
         comparison_panel = QWidget()
         comparison_layout = QVBoxLayout(comparison_panel)
         comparison_layout.setContentsMargins(0, 6, 0, 0)
-        comparison_layout.addWidget(control_row(self._rounding_summary, self._copy_rounding))
+        self._comparison_digits = QSpinBox()
+        self._comparison_digits.setRange(self.precision.minimum(), self.precision.maximum())
+        self._comparison_digits.setValue(self.precision.value())
+        self._comparison_digits.setToolTip("Fractional digits in the comparison base")
+        self._comparison_digits.valueChanged.connect(self.precision.setValue)
+        self.precision.valueChanged.connect(self._comparison_digits.setValue)
+        self._copy_rounding.setMaximumWidth(180)
+        comparison_layout.addWidget(control_row(
+            self._comparison_base_label, self.comparison_base,
+            "Digits", self._comparison_digits, self._copy_rounding,
+        ))
         comparison_layout.addWidget(self._rounding_table)
         self._rounding_index = self.result_views.addTab(comparison_panel, "Rounding comparison")
         self.result_invalidated.connect(self.clear_rounding)
         self.clear_rounding()
+        self.result_views.currentChanged.connect(self._schedule_input_fit)
         self.result_ready.connect(self.show_trace_result)
         self.result_ready.connect(self.show_rounding_result)
         self.result_invalidated.connect(self.clear_trace)
@@ -154,10 +168,11 @@ class ConversionWorkspace(Workspace):
         rounded = not self.exact_output.isChecked()
         self.precision.setEnabled(rounded or comparing)
         self.rounding.setVisible(rounded)
-        self._comparison_base_label.setVisible(comparing)
-        self.comparison_base.setVisible(comparing)
+        self.result_views.setTabEnabled(self._rounding_index, comparing)
+        if comparing and self.current_report() is None:
+            self.result_views.setCurrentIndex(self._rounding_index)
         self.rounding.setEnabled(not self.exact_output.isChecked())
-        self.form.setRowVisible(self._rounding_row, rounded or comparing)
+        self.form.setRowVisible(self._rounding_row, rounded)
 
     def update_input_hint(self) -> None:
         syntax = detect_input_syntax(self.input.text())
@@ -290,11 +305,23 @@ class ConversionWorkspace(Workspace):
         if self.show_trace.isChecked():
             self.result_views.setCurrentIndex(self._trace_index)
 
+    def result_height_hint(self) -> int:
+        if self.result_views.currentIndex() == self._rounding_index:
+            table = self._rounding_table
+            row_height = max(table.verticalHeader().defaultSectionSize(),
+                             table.verticalHeader().minimumSectionSize())
+            rows_height = sum(table.rowHeight(row) if row < table.rowCount() else row_height
+                              for row in range(5))
+            return (table.horizontalHeader().height() + rows_height
+                    + self.result_views.tabBar().sizeHint().height()
+                    + self._copy_rounding.sizeHint().height() + 26)
+        return super().result_height_hint()
+
     def clear_rounding(self) -> None:
         self._rounding_table.setRowCount(0)
-        self._rounding_summary.clear()
+        self._rounding_table.setAccessibleDescription("")
         self._copy_rounding.setEnabled(False)
-        self.result_views.setTabEnabled(self._rounding_index, False)
+        self.result_views.setTabEnabled(self._rounding_index, self.compare_rounding.isChecked())
 
     def show_rounding_result(self, title: str, report: dict[str, object]) -> None:
         comparison = report.get("rounding_comparison")
@@ -305,19 +332,19 @@ class ConversionWorkspace(Workspace):
         self._copy_rounding.setEnabled(True)
         self._rounding_table.setRowCount(len(RoundingMode))
         for row, mode in enumerate(RoundingMode):
-            label = QTableWidgetItem(mode.value)
-            label.setData(UI_TEXT_ROLE, mode.value)
+            label = QTableWidgetItem(mode.value.capitalize())
+            label.setData(UI_TEXT_ROLE, mode.value.capitalize())
             self._rounding_table.setItem(row, 0, label)
             self._rounding_table.setItem(row, 1, QTableWidgetItem(
                 str(comparison["results"][mode.value])
             ))
         self._rounding_table.resizeColumnToContents(0)
-        self._update_rounding_summary(comparison)
+        self._update_rounding_description(comparison)
         if self.compare_rounding.isChecked():
             self.result_views.setCurrentIndex(self._rounding_index)
 
-    def _update_rounding_summary(self, comparison: dict[str, object]) -> None:
-        self._rounding_summary.setText(
+    def _update_rounding_description(self, comparison: dict[str, object]) -> None:
+        self._rounding_table.setAccessibleDescription(
             tr("Base") + " " + str(comparison["base"]) + " · "
             + tr("Fractional digits") + " " + str(comparison["precision"])
         )
@@ -332,7 +359,7 @@ class ConversionWorkspace(Workspace):
         if not rows:
             rows = list(range(len(modes)))
         QApplication.clipboard().setText("\n".join(
-            tr(modes[row].value) + "\t" + str(comparison["results"][modes[row].value])
+            tr(modes[row].value.capitalize()) + "\t" + str(comparison["results"][modes[row].value])
             for row in rows
         ))
 
@@ -344,15 +371,16 @@ class ConversionWorkspace(Workspace):
         self.update_swap_targets()
         self.update_controls()
         self.update_input_hint()
-
+        self._comparison_digits.setValue(self.precision.value())
 
     def translate_ui(self) -> None:
         super().translate_ui()
+        self._rounding_table.resizeColumnToContents(0)
         self.update_input_hint()
         report = self.current_report()
         comparison = report.get("rounding_comparison") if report is not None else None
         if isinstance(comparison, dict):
-            self._update_rounding_summary(comparison)
+            self._update_rounding_description(comparison)
         trace = report.get("trace") if report is not None else None
         if isinstance(trace, dict):
             status = "Complete trace" if trace.get("complete") is True else (

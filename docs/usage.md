@@ -15,11 +15,12 @@ The top tabs and shortcuts select four workspaces:
 
 ## Results and execution
 
-Results shows a structured table; Text report retains the complete report. Select rows
+Results groups related fields into Group, Item and Value columns; Text report retains
+the complete report. Select rows
 and use Copy selected, Ctrl+C or double-click to copy underlying values. Copy all copies
 the text report. Long table previews are shortened without truncating copied/exported data.
 Detailed fields reveals additional float boundaries and internal fields; the filter
-can also find hidden detail fields.
+can also find hidden detail fields and their original data paths.
 
 Reuse / export reveals value/raw-pattern transfer and text/JSON/CSV export.
 Numeric transfer uses the exact finite value. Raw transfer preserves the pattern and
@@ -31,7 +32,10 @@ old results. Responses are accepted only for the matching input snapshot. Invali
 disables result copying and reuse. Closing the app terminates its workers. Responses
 are limited to 8 MiB.
 
-Resize the input/results divider as needed. The minimum window is 640 × 480; smaller
+The input area fits visible controls automatically. Resize the input/results divider as
+needed; manual sizes are preserved and adjusted on window resize. An intentionally
+compressed form scrolls. Double-click the divider to restore the adaptive default.
+The minimum window is 640 × 480; smaller
 layouts scroll their input controls while keeping Run and results accessible. Divider,
 detail-panel and bit-group preferences are saved separately from numeric input.
 
@@ -42,6 +46,15 @@ and Use automatic input button make that choice explicit. Fractions and recurrin
 groups preserve their exact rational value. Exact output displays up to 1000 fractional
 digits and marks incomplete expansions. Rounded output selects fractional digits and
 one of five rounding modes.
+
+Enable **Compare rounding** to compare Truncate, Half-up, Half-even, Floor and
+Ceiling in the **Rounding comparison** result tab. Select **Base** and fractional
+**Digits** above the comparison table; these are target-base digits, shared with the
+normal rounded-output precision. The comparison always uses the
+original exact input, including when the normal output is rounded. For `2.5`, base 10
+and 0 digits, the five results are `2`, `3`, `2`, `2`, `3`. Copy comparison copies all
+five rows, or select rows to copy just those. The comparison is optional and does not
+change ordinary conversion, CLI or batch behavior.
 
 Choose a preset for common bases or a decimal/binary/Hex pair. Manual base edits select
 Custom. Quick swap chooses one target and exchanges it with the source. The input is

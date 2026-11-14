@@ -13,7 +13,7 @@ The Core is also available through a command line and Python API.
 
 | Workspace | What you can do |
 | --- | --- |
-| Conversion | Convert bases 2–36; enter fractions, recurring digits or scientific notation; choose rounding; inspect conversion steps; use presets and swap bases. |
+| Conversion | Convert bases 2–36; enter fractions, recurring digits or scientific notation; compare all five rounding modes; inspect conversion steps; use presets and swap bases. |
 | Calculation | Evaluate mixed-base expressions or fixed-width integer operations; distinguish exact results, overflow and wrapping; extract bit ranges and inspect required widths. |
 | Number Inspector | Explore numeric, signed/unsigned, bit and endian byte representations; edit bits/Hex; analyze four floating formats; compare numbers and experiment with rounded arithmetic. |
 | Batch Conversion | Convert values or expressions by line, retain individual errors and export results. |
@@ -65,7 +65,7 @@ On Windows, use x64 Python 3.11 or newer available as `python` and run:
 .\build_windows.bat
 ```
 
-The command installs build dependencies into the current Python environment and
+The command reuses installed build dependencies, installing missing ones when needed, and
 creates `RadixScope.exe` in the project root. Keep `_internal/` beside the EXE.
 Python, Qt and required notices are inside that runtime folder.
 

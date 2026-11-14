@@ -253,6 +253,9 @@ class Workspace(QWidget):
         self._splitter_customized = False
         self._schedule_input_fit()
 
+    def result_height_hint(self) -> int:
+        return 150
+
     def _fit_input_to_content(self) -> None:
         if not self.isVisible():
             return
@@ -279,7 +282,8 @@ class Workspace(QWidget):
         overhead = margins.top() + margins.bottom() + sum(heights)
         overhead += max(0, panel_layout.spacing()) * len(heights)
         preferred = form_height + overhead + 12
-        result_minimum = min(150, max(80, available // 3))
+        result_hint = 150 if self._splitter_customized else self.result_height_hint()
+        result_minimum = min(result_hint, max(80, available * 3 // 5))
         minimum = self._input_panel.minimumSizeHint().height()
         maximum = max(minimum, available - result_minimum)
         current = self._splitter.sizes()[0]

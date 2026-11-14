@@ -625,5 +625,14 @@
   "Rounding comparison": "반올림 비교",
   "Copy comparison": "비교 결과 복사",
   "Fractional digits": "소수부 자릿수",
-  "rounding comparison": "반올림 비교"
+  "rounding comparison": "반올림 비교",
+  "Result": "결과",
+  "Exact expansion (1000 digits)": "정확한 전개 (1000자리)",
+  "Compare rounding": "반올림 비교",
+  "Fractional digits in the comparison base": "비교 진법의 소수부 자릿수",
+  "Truncate": "버림",
+  "Half-up": "최근접·절반 올림",
+  "Half-even": "최근접·짝수",
+  "Floor": "내림",
+  "Ceiling": "올림"
 }

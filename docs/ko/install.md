@@ -29,10 +29,14 @@ Windows에서 x64 Python 3.11 이상을 `python` 명령으로 사용할 수 있�
 .\build_windows.bat
 ```
 
-BAT는 현재 Python 환경에 빌드 의존성을 설치하고
-`RadixScope.exe`를 만듭니다. 해당 폴더에서 실행하고
-`_internal/`을 함께 유지하세요. 빌드한 프로그램에는 Python과 Qt가 포함됩니다.
-설치 프로그램이나 ZIP은 생성하지 않습니다.
+BAT는 호환되는 빌드 의존성을 재사용하며, 필요한 경우에만 설치한 뒤 프로젝트 루트에
+`RadixScope.exe`를 만듭니다. `_internal/`을 EXE 옆에 유지하세요. 빌드한 프로그램에는 Python과 Qt가 포함됩니다.
+설치 프로그램이나 ZIP은 생성하지 않습니다. 필요한 의존성이 이미 설치돼 있으면
+로컬 고지 자료를 사용하므로 패키징에 네트워크가 필요하지 않습니다.
+Windows 빌드에는 검토된 PySide6·Qt 6.11.3을 사용합니다.
+`packaging/notices/sources.json`에 원문 URL·수집일·검토한 런타임 버전·SHA-256을 기록합니다.
+버전이나 해시가 다르면 산출물을 교체하기 전에 중단하므로, 런타임을 바꿀 때 고지와 출처도
+함께 검토해야 합니다. Python 설치에 포함된 해당 버전의 `LICENSE.txt`도 보존합니다.
 
 ## 설정과 업데이트
 
