@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QSignalBlocker, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence
+from PySide6.QtGui import QAction, QCloseEvent, QFontDatabase, QKeySequence, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -218,10 +218,63 @@ class Workspace(QWidget):
         self._splitter.setStretchFactor(1, 2)
         self._splitter.setSizes([410, 180])
         layout.addWidget(self._splitter, 1)
+        self._input_panel = input_panel
+        self._splitter_customized = False
+        self._fit_timer = QTimer(self)
+        self._fit_timer.setSingleShot(True)
+        self._fit_timer.timeout.connect(self._fit_input_to_content)
+        self._splitter.splitterMoved.connect(self._mark_splitter_customized)
+        self.form_container.installEventFilter(self)
+        self._utilities.installEventFilter(self)
+
+    def _mark_splitter_customized(self, position: int, index: int) -> None:
+        self._splitter_customized = True
+
+    def _schedule_input_fit(self) -> None:
+        if not self._splitter_customized:
+            self._fit_timer.start(0)
+
+    def _fit_input_to_content(self) -> None:
+        if self._splitter_customized or not self.isVisible():
+            return
+        available = self._splitter.height() - self._splitter.handleWidth()
+        if available <= 0:
+            return
+        self.form.invalidate()
+        self.form.activate()
+        width = max(100, self.form_scroll.viewport().width())
+        form_height = self.form.heightForWidth(width) if self.form.hasHeightForWidth() else -1
+        if form_height < 0:
+            form_height = self.form.sizeHint().height()
+        panel_layout = self._input_panel.layout()
+        spacing = panel_layout.spacing() if panel_layout is not None else 6
+        overhead = (self.run_button.sizeHint().height() + 14 + 3 * spacing
+                    + (self._utilities.sizeHint().height() if self._utilities.isVisible() else 0)
+                    + (self.error.sizeHint().height() if self.error.text() else 0))
+        preferred = form_height + overhead + 12
+        result_minimum = 160
+        target = min(preferred, max(90, available - result_minimum))
+        current = self._splitter.sizes()
+        if abs(current[0] - target) >= 4:
+            blocker = QSignalBlocker(self._splitter)
+            self._splitter.setSizes([target, max(result_minimum, available - target)])
+            del blocker
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._schedule_input_fit()
+
+    def showEvent(self, event: QShowEvent) -> None:
+        super().showEvent(event)
+        self._schedule_input_fit()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if watched is self.result_table.viewport() and event.type() == QEvent.Type.Resize:
             self._empty_result.setGeometry(self.result_table.viewport().rect())
+        elif watched in (self.form_container, self._utilities) and (
+            event.type() == QEvent.Type.LayoutRequest
+        ):
+            self._schedule_input_fit()
         return super().eventFilter(watched, event)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
@@ -433,7 +486,9 @@ class Workspace(QWidget):
             if isinstance(widget, (QCheckBox, QToolButton)):
                 toggles[name] = widget.isChecked()
         editor = getattr(self, "bit_editor", None)
-        return {"splitter": self._splitter.sizes(), "toggles": toggles,
+        return {"splitter": self._splitter.sizes(),
+                "splitter_customized": self._splitter_customized,
+                "toggles": toggles,
                 "bit_group_size": editor.group_width if isinstance(editor, BitEditor) else 4}
 
     def restore_view_state(self, state: object) -> None:
@@ -443,11 +498,17 @@ class Workspace(QWidget):
         group = state.get("bit_group_size")
         if isinstance(editor, BitEditor) and type(group) is int and group in (4, 8):
             editor.set_group_width(group)
+        # Old states stored the undersized default splitter too. Auto-fit those.
+        self._splitter_customized = state.get("splitter_customized") is True
         sizes = state.get("splitter")
-        if (isinstance(sizes, list) and len(sizes) == 2
+        if (self._splitter_customized and isinstance(sizes, list) and len(sizes) == 2
                 and all(type(size) is int and 0 <= size <= 10000 for size in sizes)
                 and sum(sizes) > 0):
+            blocker = QSignalBlocker(self._splitter)
             self._splitter.setSizes(sizes)
+            del blocker
+        elif self._splitter_customized:
+            self._splitter_customized = False
         toggles = state.get("toggles")
         if isinstance(toggles, dict):
             for name, checked in toggles.items():
@@ -456,6 +517,7 @@ class Workspace(QWidget):
                 widget = getattr(self, name, None)
                 if isinstance(widget, (QCheckBox, QToolButton)) and isinstance(checked, bool):
                     widget.setChecked(checked)
+        self._schedule_input_fit()
 
     def export_report(self, format_: str | None = None) -> None:
         report = self.current_report()
