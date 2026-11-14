@@ -1,4 +1,4 @@
-"""Single-operation, round-to-nearest-even experiments using exact rational arithmetic."""
+"""IEEE 754 arithmetic experiments with exact rationals and selectable rounding."""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -6,6 +6,7 @@ from enum import StrEnum
 from radixscope.core.expression import evaluate_expression
 from radixscope.core.ieee754 import (
     FloatClass,
+    FloatRounding,
     IEEE754Value,
     IEEEFormat,
     _validate_format,
@@ -56,6 +57,7 @@ class FloatArithmeticExperiment:
     right_conversion: FloatFlags
     rounded_operands: FloatArithmeticPath
     exact_then_round: FloatArithmeticPath
+    rounding: FloatRounding = FloatRounding.NEAREST_EVEN
 
 
 def _exact(value: FloatOperand) -> ExactValue | None:
@@ -75,17 +77,31 @@ def _check_budget(value: ExactValue) -> None:
         raise ComputationLimitError("floating-point experiment exceeds the computation budget")
 
 
-def _round_finite(value: ExactValue, fmt: IEEEFormat, sign: int = 0) -> FloatArithmeticPath:
+def _round_finite(
+    value: ExactValue, fmt: IEEEFormat, sign: int = 0,
+    rounding: FloatRounding = FloatRounding.NEAREST_EVEN,
+) -> FloatArithmeticPath:
     _check_budget(value)
-    encoded = encode_ieee754(value, fmt, negative_zero=value.numerator == 0 and bool(sign))
-    overflow = encoded.classification is FloatClass.INFINITY
+    encoded = encode_ieee754(
+        value, fmt, negative_zero=value.numerator == 0 and bool(sign), rounding=rounding
+    )
+    # Directed rounding can saturate at the maximum finite pattern and still overflow.
+    maximum = ExactValue((1 << (fmt.fraction_width + 1)) - 1) * power_of_two(
+        fmt.bias - fmt.fraction_width
+    )
+    exceeds_maximum = abs(value).fraction > maximum.fraction
+    overflow = encoded.classification is FloatClass.INFINITY or (
+        rounding is not FloatRounding.NEAREST_EVEN and exceeds_maximum
+    )
     inexact = overflow or encoded.exact != value
-    # Tininess AFTER rounding uses an unbounded exponent range at the destination
-    # precision, not merely the final subnormal classification (SoftFloat FAQ).
     minimum_normal = power_of_two(1 - fmt.bias)
-    minimum_subnormal = power_of_two(1 - fmt.bias - fmt.fraction_width)
-    threshold = minimum_normal - minimum_subnormal / ExactValue(4)
-    tiny = value.numerator != 0 and abs(value).fraction < threshold.fraction
+    if rounding is FloatRounding.NEAREST_EVEN:
+        # Preserve the established after-rounding tininess boundary.
+        minimum_subnormal = power_of_two(1 - fmt.bias - fmt.fraction_width)
+        threshold = minimum_normal - minimum_subnormal / ExactValue(4)
+        tiny = value.numerator != 0 and abs(value).fraction < threshold.fraction
+    else:
+        tiny = encoded.classification in (FloatClass.ZERO, FloatClass.SUBNORMAL)
     return FloatArithmeticPath(value, encoded, FloatFlags(
         overflow=overflow, underflow=tiny and inexact, inexact=inexact
     ))
@@ -93,6 +109,7 @@ def _round_finite(value: ExactValue, fmt: IEEEFormat, sign: int = 0) -> FloatAri
 
 def _evaluate(
     left: FloatOperand, right: FloatOperand, operation: FloatOperation, fmt: IEEEFormat,
+    rounding: FloatRounding = FloatRounding.NEAREST_EVEN,
 ) -> FloatArithmeticPath:
     def special(kind: FloatClass, sign: int = 0, *, invalid: bool = False,
                 divide_by_zero: bool = False) -> FloatArithmeticPath:
@@ -118,8 +135,10 @@ def _evaluate(
             return special(FloatClass.INFINITY, sign_a if inf_a else effective_sign_b)
         assert a is not None and b is not None
         result = a + b if operation is FloatOperation.ADD else a - b
-        zero_sign = int(sign_a == effective_sign_b == 1)
-        return _round_finite(result, fmt, zero_sign)
+        zero_sign = int(sign_a == effective_sign_b == 1 or (
+            result.numerator == 0 and rounding is FloatRounding.TOWARD_NEGATIVE
+        ))
+        return _round_finite(result, fmt, zero_sign, rounding)
     sign = sign_a ^ sign_b
     if operation is FloatOperation.MULTIPLY:
         if (inf_a and b == ExactValue(0)) or (inf_b and a == ExactValue(0)):
@@ -127,7 +146,7 @@ def _evaluate(
         if inf_a or inf_b:
             return special(FloatClass.INFINITY, sign)
         assert a is not None and b is not None
-        return _round_finite(a * b, fmt, sign)
+        return _round_finite(a * b, fmt, sign, rounding)
     if (inf_a and inf_b) or (a == ExactValue(0) and b == ExactValue(0)):
         return special(FloatClass.NAN, invalid=True)
     if inf_a:
@@ -139,26 +158,30 @@ def _evaluate(
     assert a is not None and b is not None
     if b.numerator == 0:
         return special(FloatClass.INFINITY, sign, divide_by_zero=True)
-    return _round_finite(a / b, fmt, sign)
+    return _round_finite(a / b, fmt, sign, rounding)
 
 
 def experiment_float_arithmetic(
     left: FloatOperand, right: FloatOperand, operation: FloatOperation | str = FloatOperation.ADD,
     format_: object = IEEEFormat.BINARY32,
+    rounding: FloatRounding | str = FloatRounding.NEAREST_EVEN,
 ) -> FloatArithmeticExperiment:
     fmt, op = _validate_format(format_), FloatOperation(operation)
+    mode = FloatRounding(rounding)
     def convert(value: FloatOperand) -> FloatArithmeticPath:
         if isinstance(value, ExactValue):
-            return _round_finite(value, fmt)
+            return _round_finite(value, fmt, rounding=mode)
         if not isinstance(value, IEEE754Value):
             raise TypeError("operands must be exact numbers or IEEE values")
         if value.exact is not None:
-            return _round_finite(value.exact, fmt, value.sign_bit)
-        return FloatArithmeticPath(None, convert_ieee754(value, fmt), FloatFlags())
+            return _round_finite(value.exact, fmt, value.sign_bit, mode)
+        return FloatArithmeticPath(None, convert_ieee754(value, fmt, rounding=mode), FloatFlags())
     a, b = convert(left), convert(right)
-    return FloatArithmeticExperiment(op, left, right, a.value, b.value, a.flags, b.flags,
-                                     _evaluate(a.value, b.value, op, fmt),
-                                     _evaluate(left, right, op, fmt))
+    return FloatArithmeticExperiment(
+        op, left, right, a.value, b.value, a.flags, b.flags,
+        _evaluate(a.value, b.value, op, fmt, mode),
+        _evaluate(left, right, op, fmt, mode), mode,
+    )
 
 
 def parse_float_operand(
