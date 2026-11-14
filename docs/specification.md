@@ -357,7 +357,8 @@ assert experiment.rounded_operands.value.pattern != experiment.exact_then_round.
 
 The rounded-operands path quantizes each operand first, computes exactly with those
 representations, then rounds to the destination. The reference path performs the original
-exact operation and rounds once. Both use nearest, ties to even. Input-conversion flags
+exact operation and rounds once. Both default to nearest-even and also support
+rounding toward zero, positive infinity or negative infinity. Input-conversion flags
 are separate from operation flags. Rational errors against original mathematics and
 against the quantized-operand operation distinguish cumulative loss from operation rounding.
 
