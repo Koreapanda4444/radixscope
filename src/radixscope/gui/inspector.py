@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
 
 from radixscope.core import (
     ExactValue,
-    IEEEFormat,
     FloatRounding,
+    IEEEFormat,
     decode_ieee754,
     format_integer,
     inspect_number,
@@ -137,8 +137,14 @@ class InspectorWorkspace(Workspace):
                 combo.valueChanged.connect(lambda: self.refresh_timer.start())
             else:
                 combo.currentIndexChanged.connect(lambda: self.refresh_timer.start())
+        self.float_rounding.currentIndexChanged.connect(self.refresh_arithmetic)
+        self.float_operation.currentIndexChanged.connect(self.refresh_arithmetic)
         for checkbox in (self.signed, self.pattern):
             checkbox.toggled.connect(lambda: self.refresh_timer.start())
+
+    def refresh_arithmetic(self) -> None:
+        if self.analysis.currentText() == "Floating-point arithmetic":
+            self.refresh_timer.start()
 
     def update_controls(self) -> None:
         arithmetic = self.analysis.currentText() == "Floating-point arithmetic"
@@ -174,20 +180,23 @@ class InspectorWorkspace(Workspace):
         nan = self.input.text().strip().lower().lstrip("+-") == "nan"
         special = self._show_special.isChecked() or nan
         self.form.setRowVisible(self._show_bits, not comparison)
-        for widget in (self._raw_hex, self.bit_editor):
-            self.form.setRowVisible(widget, not comparison and self._show_bits.isChecked())
+        self.form.setRowVisible(
+            self._raw_hex, not comparison and not numeric and not arithmetic
+            and self._show_bits.isChecked()
+        )
+        self.form.setRowVisible(self.bit_editor, not comparison and self._show_bits.isChecked())
         self.form.setRowVisible(
             self._byte_row, not comparison and not numeric and bool(self._byte_preview.text())
         )
         self.form.setRowVisible(
-            self.float_navigator, not integer and not comparison and not numeric
+            self.float_navigator, not integer and not comparison and not numeric and not arithmetic
             and self._show_bits.isChecked()
         )
         self.form.setRowVisible(self._show_special, not integer and not raw
                                 and not comparison and not numeric and not arithmetic)
         self.form.setRowVisible(
-            self.negative_zero, not integer and not raw and special and not numeric
-            and not arithmetic
+            self.negative_zero, not integer and not raw and special
+            and not numeric and not comparison and not arithmetic
         )
         self.form.setRowVisible(
             self.payload, not integer and not raw and special and not comparison
@@ -313,7 +322,7 @@ class InspectorWorkspace(Workspace):
             del blocker
 
     def edit_hex(self) -> None:
-        if not self._raw_hex.isModified():
+        if self.analysis.currentText() != "Number representation" or not self._raw_hex.isModified():
             return
         try:
             self.edit_pattern(parse_integer(self._raw_hex.text().replace(" ", ""), 16).numerator)

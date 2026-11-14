@@ -18,6 +18,7 @@ LABELS = {
     "mathematical": "Mathematical result", "wrapped": "Wrapped result",
     "rounding_rule": "Rounding rule", "rounding_direction": "Rounding direction",
     "underflowed_to_zero": "Underflow to zero",
+    "selected_width_error": "Selected-width error",
 }
 
 

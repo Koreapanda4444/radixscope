@@ -636,5 +636,8 @@
   "Width comparison": "비트 폭 비교",
   "Yes": "예",
   "No": "아니요",
-  "Hex": "16진수"
+  "Hex": "16진수",
+  "Comparison complete · selected width failed": "비교 완료 · 선택한 비트 폭 계산 실패",
+  "Selected-width error": "선택한 비트 폭 오류",
+  "unsupported integer operation": "지원하지 않는 정수 연산"
 }

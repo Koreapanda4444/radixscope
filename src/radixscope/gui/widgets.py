@@ -446,6 +446,7 @@ class Workspace(QWidget):
             input_widget.setCursorPosition(min(int(position.group(1)), len(input_widget.text())))
             input_widget.setFocus()
         self.translate_ui()
+        self._schedule_input_fit()
 
     def clear_output(self) -> None:
         self._report = None

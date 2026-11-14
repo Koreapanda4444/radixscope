@@ -33,6 +33,7 @@ for _source, _translated in _KO.items():
     _REVERSE.setdefault(_translated, _source)
 
 _PATTERNS = [
+    (r"unsupported integer operation: (.+)", r"지원하지 않는 정수 연산: \1"),
     (r"base must be between (\d+) and (\d+)", r"진법은 \1~\2여야 합니다"),
     (r"digit (.+) is invalid in base (\d+)", r"\2진법에서 잘못된 숫자: \1"),
     (r"unsupported digit: (.+)", r"지원하지 않는 숫자: \1"),

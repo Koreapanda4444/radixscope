@@ -1,14 +1,24 @@
 from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QCheckBox, QLabel, QLineEdit, QPushButton,
-    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QApplication,
+    QCheckBox,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from radixscope.core import ExactValue, FixedWidthInteger, RoundingMode, format_integer
 from radixscope.gui.bits import BitEditor
 from radixscope.gui.conversion import base_input
-from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox
+from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
 from radixscope.gui.widgets import Workspace, control_row
 from radixscope.reports import integer_report
 
@@ -93,6 +103,8 @@ class CalculationWorkspace(Workspace):
         self._width_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._width_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._width_table.setAlternatingRowColors(True)
+        self._width_table.setWordWrap(False)
+        self._width_table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self._width_table.verticalHeader().setVisible(False)
         self._width_table.horizontalHeader().setStretchLastSection(True)
         self._width_table.cellDoubleClicked.connect(self.copy_width_comparison)
@@ -101,13 +113,13 @@ class CalculationWorkspace(Workspace):
         copy_action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         copy_action.triggered.connect(self.copy_width_comparison)
         self._width_table.addAction(copy_action)
-        copy_button = QPushButton("Copy comparison")
-        copy_button.setMaximumWidth(180)
-        copy_button.clicked.connect(self.copy_width_comparison)
+        self._copy_widths = QPushButton("Copy comparison")
+        self._copy_widths.setMaximumWidth(180)
+        self._copy_widths.clicked.connect(self.copy_width_comparison)
         panel = QWidget()
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 6, 0, 0)
-        panel_layout.addWidget(copy_button)
+        panel_layout.addWidget(self._copy_widths)
         panel_layout.addWidget(self._width_table)
         self._width_tab = self.result_views.addTab(panel, "Width comparison")
         self.result_views.currentChanged.connect(self._schedule_input_fit)
@@ -139,6 +151,8 @@ class CalculationWorkspace(Workspace):
             self._exact_rounding, not fixed and not self.exact_output.isChecked()
         )
         self.input.setPlaceholderText("Fixed-width integer" if fixed else "0xFF + 1/3")
+        if not fixed or not self.compare_widths.isChecked():
+            self.clear_width_comparison()
 
     def result_height_hint(self) -> int:
         if self.result_views.currentIndex() == self._width_tab:
@@ -151,6 +165,7 @@ class CalculationWorkspace(Workspace):
 
     def clear_width_comparison(self) -> None:
         self._width_table.setRowCount(0)
+        self._copy_widths.setEnabled(False)
         self.result_views.setTabEnabled(self._width_tab, False)
 
     def show_width_comparison(self, title: str, report: dict[str, object]) -> None:
@@ -171,31 +186,76 @@ class CalculationWorkspace(Workspace):
                 str(row.get("error") or ""),
             ]
             for column, value in enumerate(texts):
-                item = QTableWidgetItem(value)
+                item = QTableWidgetItem(value[:400])
+                item.setData(Qt.ItemDataRole.UserRole, value)
+                item.setToolTip(value[:2000])
+                if column in (1, 2, 4):
+                    item.setFont(self.output.font())
+                if row.get("error") and column in (0, 5):
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
                 if column == 3 and value in ("Yes", "No"):
                     item.setData(UI_TEXT_ROLE, value)
                 self._width_table.setItem(index, column, item)
-        self._width_table.resizeColumnsToContents()
+        self._copy_widths.setEnabled(bool(rows))
         self.result_views.setTabEnabled(self._width_tab, True)
         self.result_views.setCurrentIndex(self._width_tab)
         self.translate_ui()
+
+    def translate_ui(self) -> None:
+        super().translate_ui()
+        for row in range(self._width_table.rowCount()):
+            item = self._width_table.item(row, 5)
+            source = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+            if item is not None and isinstance(source, str):
+                item.setText(tr(source)[:400])
+                item.setToolTip(tr(source)[:2000])
+        header = self._width_table.horizontalHeader()
+        for column in (0, 3):
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+        for column in (1, 2, 4):
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+            self._width_table.setColumnWidth(
+                column, min(280, max(100, self._width_table.sizeHintForColumn(column) + 12))
+            )
+
+    def set_result(self, report: dict[str, object], text: str | None = None) -> None:
+        super().set_result(report, text)
+        selected_error = report.get("selected_width_error")
+        if isinstance(selected_error, str):
+            self.error.setText(selected_error)
+            self.error.show()
+            self.status.setText("Comparison complete · selected width failed")
+            self._transfer_button.setEnabled(False)
+            self.translate_ui()
+        self._schedule_input_fit()
 
     def copy_width_comparison(self) -> None:
         rows = sorted({index.row() for index in self._width_table.selectedIndexes()})
         if not rows:
             rows = list(range(self._width_table.rowCount()))
-        QApplication.clipboard().setText("\n".join(
-            "\t".join(
-                self._width_table.item(row, col).text()
-                if self._width_table.item(row, col) is not None else ""
-                for col in range(self._width_table.columnCount())
-            ) for row in rows
-        ))
+        lines = []
+        for row in rows:
+            values = []
+            for column in range(self._width_table.columnCount()):
+                item = self._width_table.item(row, column)
+                source = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+                if item is None:
+                    values.append("")
+                elif column == 3:
+                    values.append(item.text())
+                else:
+                    values.append(tr(source) if isinstance(source, str) else item.text())
+            lines.append("\t".join(values))
+        QApplication.clipboard().setText("\n".join(lines))
 
     def calculate(self) -> None:
         self.start_calculation()
 
     def show_bits(self, title: str, report: dict[str, object]) -> None:
+        self.bit_editor.clear()
+        self.form.setRowVisible(self.bit_editor, False)
         bits = report.get("bits")
         if isinstance(bits, str):
             width = len(bits)
