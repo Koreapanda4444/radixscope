@@ -110,6 +110,7 @@ class CalculationWorkspace(Workspace):
         panel_layout.addWidget(copy_button)
         panel_layout.addWidget(self._width_table)
         self._width_tab = self.result_views.addTab(panel, "Width comparison")
+        self.result_views.currentChanged.connect(self._schedule_input_fit)
         self.result_ready.connect(self.show_width_comparison)
         self.result_invalidated.connect(self.clear_width_comparison)
         self.clear_width_comparison()
@@ -138,6 +139,15 @@ class CalculationWorkspace(Workspace):
             self._exact_rounding, not fixed and not self.exact_output.isChecked()
         )
         self.input.setPlaceholderText("Fixed-width integer" if fixed else "0xFF + 1/3")
+
+    def result_height_hint(self) -> int:
+        if self.result_views.currentIndex() == self._width_tab:
+            return (
+                4 * self._width_table.verticalHeader().defaultSectionSize()
+                + self._width_table.horizontalHeader().sizeHint().height()
+                + self.result_views.tabBar().sizeHint().height() + 72
+            )
+        return super().result_height_hint()
 
     def clear_width_comparison(self) -> None:
         self._width_table.setRowCount(0)
