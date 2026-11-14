@@ -94,7 +94,7 @@ NaN은 `unordered`이며 무한대 피연산자에는 유한한 차이를 부여
 ## 부동소수점 연산 실험
 
 ```sh
-radixscope float-op add 0.1 0.2 --format binary16 --json
+radixscope float-op add 0.1 0.2 --format binary16 --rounding toward-positive --json
 radixscope float-op subtract "1 + 1/1000" 1 --format bfloat16
 radixscope float-op divide 1 0 --format binary32
 radixscope float-op add 7C01 3C00 --patterns --format binary16
@@ -102,7 +102,8 @@ radixscope float-op add 7C01 3C00 --patterns --format binary16
 
 `float-op`는 add·subtract·multiply·divide를 지원합니다. 숫자는 정확한 수식으로 입력하고,
 `--patterns`는 두 값을 선택 형식의 원시 패턴으로 디코딩합니다. 원시 진법 기본값은 16입니다.
-네 형식 모두 가장 가까운 값, 동률이면 짝수로 반올림합니다.
+`--rounding`으로 `nearest-even`(기본), `toward-zero`, `toward-positive`, `toward-negative`를 선택할 수 있습니다.
+`ieee encode` 명령도 같은 반올림 방향을 지원합니다.
 
 `rounded_operands`는 두 입력을 먼저 인코딩한 뒤 연산 결과를 반올림하고,
 `exact_then_round`는 원래 값을 정확히 계산한 뒤 한 번 반올림합니다.
