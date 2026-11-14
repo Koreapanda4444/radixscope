@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from radixscope.exports import json_safe
-from radixscope.workspaces import RETIRED_WORKSPACES, restored_workspace
+from radixscope.workspaces import RETIRED_WORKSPACES, migrate_workspace, restored_workspace
 
 MAX_SETTINGS_BYTES = 32 * 1024 * 1024
 MAX_HISTORY_REPORT_BYTES = 256 * 1024
@@ -42,11 +42,25 @@ class SettingsStore:
                 if isinstance(states, dict):
                     for title in RETIRED_WORKSPACES:
                         states.pop(title, None)
+            states = self.preferences.get("workspaces")
+            if isinstance(states, dict):
+                migrated: dict[str, object] = {}
+                active_source = self.preferences.get("active_workspace")
+                for title, state in states.items():
+                    if isinstance(title, str) and isinstance(state, dict):
+                        target, value = migrate_workspace(title, state)
+                        if target not in migrated or title in (target, active_source):
+                            migrated[target] = value
+                self.preferences["workspaces"] = migrated
             active = self.preferences.get("active_workspace")
             if isinstance(active, str) and active in RETIRED_WORKSPACES:
                 self.preferences["active_workspace"] = restored_workspace(self.preferences)
             valid_history = [entry for entry in history if self._valid_entry(entry)
                              and entry["workspace"] not in RETIRED_WORKSPACES]
+            for entry in valid_history:
+                title, state = entry["workspace"], entry["state"]
+                assert isinstance(title, str) and isinstance(state, dict)
+                entry["workspace"], entry["state"] = migrate_workspace(title, state)
             self.history = valid_history[:self.history_limit]
         except (OSError, ValueError, UnicodeError) as error:
             self.warning = f"Could not load preferences: {error}"

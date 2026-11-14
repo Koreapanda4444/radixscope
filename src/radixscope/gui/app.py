@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
 from radixscope import __version__
 from radixscope.exports import report_json, table_csv, write_export
 from radixscope.gui.batch import BatchWorkspace
-from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
+from radixscope.gui.calculation import CalculationWorkspace
+from radixscope.gui.conversion import ConversionWorkspace
 from radixscope.gui.i18n import (
     LocalizedComboBox,
     default_language,
@@ -37,7 +38,6 @@ from radixscope.gui.i18n import (
 from radixscope.gui.inspector import InspectorWorkspace
 from radixscope.gui.navigation import transfer_state
 from radixscope.gui.preferences import PreferencesDialog
-from radixscope.gui.programmer import IEEEWorkspace, ProgrammerWorkspace
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import render_report
 from radixscope.settings import SettingsStore
@@ -61,8 +61,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(640, 480)
         self.tabs = QStackedWidget()
         workspace_factories: dict[str, Callable[[], Workspace]] = {
-            "Conversion": ConversionWorkspace, "Trace": TraceWorkspace,
-            "Programmer": ProgrammerWorkspace, "IEEE 754": IEEEWorkspace,
+            "Conversion": ConversionWorkspace, "Calculation": CalculationWorkspace,
             "Number Inspector": InspectorWorkspace,
             "Batch Conversion": BatchWorkspace,
         }
@@ -143,7 +142,7 @@ class MainWindow(QMainWindow):
         menu.addAction(settings_action)
         menu.addAction(self.recent_dock.toggleViewAction())
         self.recent_dock.toggleViewAction().setShortcut(QKeySequence("Ctrl+H"))
-        self.show_status("Ready · Ctrl+1 through Ctrl+8 switch workspaces")
+        self.show_status("Ready · Ctrl+1 through Ctrl+4 switch workspaces")
         self.restore_preferences()
         self.sync_navigation(self.tabs.currentIndex())
         self.refresh_history()

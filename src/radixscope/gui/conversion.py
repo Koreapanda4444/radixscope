@@ -42,6 +42,15 @@ class ConversionWorkspace(Workspace):
         self.form.addRow(self._syntax_hint)
         self.form.addRow("Target bases", self.targets)
         self.form.addRow("Output", self.exact_output)
+        self.show_trace = QCheckBox("Show conversion steps")
+        self.target_base = base_input(2)
+        self.limit = QSpinBox()
+        self.limit.setRange(1, 10000)
+        self.limit.setValue(1000)
+        self._trace_options = control_row("Base", self.target_base, "Step limit", self.limit)
+        self.form.addRow(self.show_trace)
+        self.form.addRow(self._trace_options)
+        self.show_trace.toggled.connect(self.update_controls)
         self._rounding_row = control_row("Digits", self.precision, self.rounding)
         self.form.addRow("Rounded output", self._rounding_row)
         self.exact_output.toggled.connect(self.update_controls)
@@ -55,6 +64,7 @@ class ConversionWorkspace(Workspace):
         self.bind_inputs()
 
     def update_controls(self) -> None:
+        self.form.setRowVisible(self._trace_options, self.show_trace.isChecked())
         self.source_base.setEnabled(self.mode.currentText() == "Number")
         self.precision.setEnabled(not self.exact_output.isChecked())
         self.rounding.setEnabled(not self.exact_output.isChecked())
@@ -67,26 +77,3 @@ class ConversionWorkspace(Workspace):
         syntax = detect_input_syntax(self.input.text())
         self._syntax_hint.setText(syntax.description)
         self._detect_button.setEnabled(syntax.kind != "invalid")
-
-
-class TraceWorkspace(Workspace):
-    def __init__(self) -> None:
-        super().__init__("Trace", "Divide the integer part, then multiply fractional remainders")
-        self.input = QLineEdit("1/3")
-        self.source_base = base_input()
-        self.target_base = base_input(2)
-        self.limit = QSpinBox()
-        self.limit.setRange(1, 10000)
-        self.limit.setValue(1000)
-        self.form.addRow("Input", self.input)
-        self.form.addRow("Source base", self.source_base)
-        self.form.addRow("Target base", self.target_base)
-        self.form.addRow("Maximum fractional steps", self.limit)
-        self.run_button.setText("Trace conversion")
-        self.run_button.setEnabled(True)
-        self.run_button.clicked.connect(self.calculate)
-        self.input.returnPressed.connect(self.calculate)
-        self.bind_inputs()
-
-    def calculate(self) -> None:
-        self.start_calculation()

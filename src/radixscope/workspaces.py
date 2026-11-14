@@ -13,21 +13,18 @@ class WorkspaceDefinition:
 
 
 WORKSPACES = (
-    WorkspaceDefinition("Conversion", "Conversion", "Calculate", 4),
-    WorkspaceDefinition("Trace", "Trace", "Calculate", 6),
-    WorkspaceDefinition("Programmer", "Integer operations", "Inspect", 3),
-    WorkspaceDefinition("IEEE 754", "IEEE 754", "Inspect", 2),
-    WorkspaceDefinition("Number Inspector", "Number Inspector", "Inspect", 0),
-    WorkspaceDefinition("Batch Conversion", "Batch Conversion", "Calculate", 5),
+    WorkspaceDefinition("Conversion", "Conversion", "Workspaces", 0),
+    WorkspaceDefinition("Calculation", "Calculation", "Workspaces", 1),
+    WorkspaceDefinition("Number Inspector", "Number Inspector", "Workspaces", 2),
+    WorkspaceDefinition("Batch Conversion", "Batch Conversion", "Workspaces", 3),
 )
 LEGACY_WORKSPACE_ORDER = (
     "Conversion", "Trace", "Programmer", "IEEE 754", "Number Inspector",
     "Byte Inspector", "Binary Comparison", "Batch Conversion",
 )
-TRANSFER_ORDER = (
-    "Number Inspector", "Programmer", "IEEE 754", "Conversion",
-    "Batch Conversion", "Trace",
-)
+TRANSFER_ORDER = ("Conversion", "Calculation", "Number Inspector", "Batch Conversion")
+WORKSPACE_ALIASES = {"Trace": "Conversion", "Programmer": "Calculation",
+                     "IEEE 754": "Number Inspector"}
 RETIRED_WORKSPACES = frozenset({"Binary Comparison", "Byte Inspector"})
 
 
@@ -54,11 +51,33 @@ def restored_workspace(
     if not titles:
         raise ValueError("at least one workspace is required")
     active = preferences.get("active_workspace")
-    if isinstance(active, str) and active in titles:
-        return active
+    if isinstance(active, str):
+        active = WORKSPACE_ALIASES.get(active, active)
+        if active in titles:
+            return active
     index = preferences.get("active_tab", 0)
     if type(index) is int and 0 <= index < len(LEGACY_WORKSPACE_ORDER):
-        legacy = LEGACY_WORKSPACE_ORDER[index]
+        legacy = WORKSPACE_ALIASES.get(LEGACY_WORKSPACE_ORDER[index], LEGACY_WORKSPACE_ORDER[index])
         if legacy in titles:
             return legacy
     return titles[0]
+
+
+def migrate_workspace(title: str, state: Mapping[str, object]) -> tuple[str, dict[str, object]]:
+    """Map historical task identities without changing the meaning of their inputs."""
+    result = dict(state)
+    if title == "Trace":
+        result.update({"mode": "Number", "show_trace": True})
+    elif title == "Programmer":
+        result["calculation_mode"] = "Fixed-width integer"
+    elif title == "IEEE 754":
+        width = str(result.get("bit_width", "32"))
+        result["data_type"] = "bfloat16" if width == "bfloat16" else "binary" + width
+        result["bit_width"] = 16 if width == "bfloat16" else int(width) if width.isdigit() else 32
+        result["pattern"] = result.get("mode") == "decode"
+        result["input_mode"] = "Number" if result["pattern"] else "Expression"
+        result["base"] = result.get("base", 16) if result["pattern"] else 10
+    elif title == "Conversion" and state.get("mode") == "Expression":
+        title = "Calculation"
+        result["calculation_mode"] = "Exact expression"
+    return WORKSPACE_ALIASES.get(title, title), result

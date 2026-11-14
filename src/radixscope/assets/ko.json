@@ -474,5 +474,13 @@
   "extracted": "추출 결과",
   "Byte representation": "바이트 표현",
   "Copy bytes": "바이트 복사",
-  "Bytes in the selected byte order": "선택한 엔디언 순서의 바이트"
+  "Bytes in the selected byte order": "선택한 엔디언 순서의 바이트",
+  "Calculation": "수치 계산",
+  "Workspaces": "작업 화면",
+  "Calculation mode": "계산 방식",
+  "Exact expression": "정확한 수식 계산",
+  "Fixed-width integer": "고정 비트 정수",
+  "Show conversion steps": "변환 과정 보기",
+  "Step limit": "단계 제한",
+  "Ready · Ctrl+1 through Ctrl+4 switch workspaces": "준비 · Ctrl+1~4로 작업 화면 전환"
 }

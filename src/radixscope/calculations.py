@@ -50,6 +50,11 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return value
 
     input_text = text("input")
+    if workspace == "Calculation":
+        if text("calculation_mode") == "Fixed-width integer":
+            return calculate("Programmer", state)
+        adapted = dict(state, mode="Expression", source_base=10)
+        return calculate("Conversion", adapted)
     if workspace == "Batch Conversion":
         return batch_report(convert_batch(
             input_text, [int(base.strip()) for base in text("targets").split(",")],
@@ -58,8 +63,12 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
         ))
     if workspace == "Number Inspector":
+        expression = state.get("input_mode") == "Expression" and not flag("pattern")
+        source = str(evaluate_expression(input_text)) if expression and (
+            input_text.strip().lower().lstrip("+-") not in ("nan", "inf", "infinity")
+        ) else input_text
         report = inspection_report(inspect_number(
-            input_text, base=integer("base"), width=integer("bit_width"),
+            source, base=10 if expression else integer("base"), width=integer("bit_width"),
             signed=flag("signed"), data_type=text("data_type"), raw=flag("pattern"),
             byteorder=text("byteorder"),
         ))
@@ -92,6 +101,10 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         }
         if incomplete:
             report["display_limit_reached_in_bases"] = incomplete
+        if state.get("show_trace") is True:
+            report["trace"] = trace_report(trace_value(
+                value, integer("target_base"), max_steps=integer("limit")
+            ))
         return report
     if workspace == "Trace":
         report = trace_report(trace_value(

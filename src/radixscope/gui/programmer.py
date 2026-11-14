@@ -25,9 +25,9 @@ from radixscope.reports import ieee_report, integer_report
 
 
 class ProgrammerWorkspace(Workspace):
-    def __init__(self) -> None:
+    def __init__(self, title: str = "Programmer") -> None:
         super().__init__(
-            "Programmer", "Inspect bits or operate on fixed-width signed and unsigned values"
+            title, "Inspect bits or operate on fixed-width signed and unsigned values"
         )
         self.input = QLineEdit("255")
         self.base = base_input()

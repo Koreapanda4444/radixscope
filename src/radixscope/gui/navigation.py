@@ -19,7 +19,7 @@ def transfer_state(
     if raw:
         if not isinstance(bits, str) or not bits or any(bit not in "01" for bit in bits):
             raise ValueError("This result has no raw bit pattern; send its numeric value")
-        if len(bits) > 4096 and target in ("Number Inspector", "Programmer"):
+        if len(bits) > 4096 and target in ("Number Inspector", "Calculation"):
             raise ValueError("Desktop bit editing supports at most 4096 bits")
         result.update({"input": format(int(bits, 2), "X"), "base": 16})
         if target == "Number Inspector":
@@ -36,12 +36,13 @@ def transfer_state(
                     "data_type": data_type,
                 }
             )
-        elif target == "Programmer":
+        elif target == "Calculation":
             result.update(
                 {
                     "pattern": True,
                     "bit_width": len(bits),
                     "operation": "inspect",
+                    "calculation_mode": "Fixed-width integer",
                     "signed": report.get("signed") is True,
                 }
             )
@@ -64,8 +65,10 @@ def transfer_state(
         result["source_base"] = 10
         if target != "Trace":
             result["mode"] = "Number"
-    elif target in ("Number Inspector", "Programmer"):
-        if target == "Programmer" and not exact.is_integer:
+    elif target == "Calculation":
+        result["calculation_mode"] = "Exact expression"
+    elif target == "Number Inspector":
+        if target == "Calculation" and not exact.is_integer:
             raise ValueError("Programmer requires an integer; use Number Inspector for fractions")
         width = _integer_width(exact.numerator)
         if width > 4096:
@@ -77,6 +80,7 @@ def transfer_state(
             result["data_type"] = "integer" if exact.is_integer else "binary64"
         else:
             result["operation"] = "inspect"
+            result["calculation_mode"] = "Fixed-width integer"
     elif target == "IEEE 754":
         result.update(
             {

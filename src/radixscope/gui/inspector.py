@@ -24,6 +24,8 @@ class InspectorWorkspace(Workspace):
         )
         self.input = QLineEdit("255")
         self.base = base_input()
+        self.input_mode = LocalizedComboBox()
+        self.input_mode.addItems(["Number", "Expression"])
         self.data_type = LocalizedComboBox()
         self.data_type.addItems(["integer", "binary32", "binary64", "binary16", "bfloat16"])
         self.bit_width = QSpinBox()
@@ -40,6 +42,7 @@ class InspectorWorkspace(Workspace):
         self.raw_hex = QLineEdit()
         self.raw_hex.setPlaceholderText("Edit the raw hexadecimal pattern, then press Enter")
         self.form.addRow("Input", self.input)
+        self.form.addRow("Input format", self.input_mode)
         self.form.addRow("Representation", control_row("Base", self.base, self.data_type,
                                                        "Width", self.bit_width))
         self.form.addRow("Interpretation", control_row(self.pattern, self.signed, "Bytes",
@@ -127,9 +130,12 @@ class InspectorWorkspace(Workspace):
     def edit_pattern(self, pattern: int) -> None:
         self.refresh_timer.stop()
         self.invalidate_result()
-        blockers = [QSignalBlocker(widget) for widget in (self.input, self.pattern)]
+        blockers = [QSignalBlocker(widget) for widget in (
+            self.input, self.pattern, self.input_mode
+        )]
         self.input.setText(format_integer(ExactValue(pattern), self.base.value()))
         self.pattern.setChecked(True)
+        self.input_mode.setCurrentText("Number")
         del blockers
         try:
             report = inspection_report(inspect_number(
