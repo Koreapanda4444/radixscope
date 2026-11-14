@@ -45,6 +45,13 @@ class FloatClass(StrEnum):
     NAN = "nan"
 
 
+class FloatRounding(StrEnum):
+    NEAREST_EVEN = "nearest-even"
+    TOWARD_ZERO = "toward-zero"
+    TOWARD_POSITIVE = "toward-positive"
+    TOWARD_NEGATIVE = "toward-negative"
+
+
 def _validate_format(width: object) -> IEEEFormat:
     if isinstance(width, str):
         labels = {format_.label: format_ for format_ in IEEEFormat}
@@ -202,20 +209,50 @@ def encode_ieee754_special(
     return IEEE754Value(pattern, checked_format)
 
 
-def _round_scaled_ratio(numerator: int, denominator: int, exponent: int) -> int:
+def _round_scaled_ratio(
+    numerator: int, denominator: int, exponent: int,
+    rounding: FloatRounding = FloatRounding.NEAREST_EVEN, sign_bit: int = 0,
+) -> int:
     if exponent >= 0:
         denominator <<= exponent
     else:
         numerator <<= -exponent
     quotient, remainder = divmod(numerator, denominator)
-    twice_remainder = remainder * 2
-    increment = twice_remainder > denominator or (
-        twice_remainder == denominator and quotient % 2 == 1
-    )
+    if not remainder:
+        return quotient
+    if rounding is FloatRounding.NEAREST_EVEN:
+        twice_remainder = remainder * 2
+        increment = twice_remainder > denominator or (
+            twice_remainder == denominator and quotient % 2 == 1
+        )
+    elif rounding is FloatRounding.TOWARD_ZERO:
+        increment = False
+    elif rounding is FloatRounding.TOWARD_POSITIVE:
+        increment = sign_bit == 0
+    else:
+        increment = sign_bit == 1
     return quotient + int(increment)
 
 
-def _encode_finite(value: ExactValue, format_: IEEEFormat, sign_bit: int) -> IEEE754Value:
+def _overflow_value(fmt: IEEEFormat, sign_bit: int, rounding: FloatRounding) -> IEEE754Value:
+    infinity = (
+        rounding is FloatRounding.NEAREST_EVEN
+        or (rounding is FloatRounding.TOWARD_POSITIVE and sign_bit == 0)
+        or (rounding is FloatRounding.TOWARD_NEGATIVE and sign_bit == 1)
+    )
+    if infinity:
+        return encode_ieee754_special(FloatClass.INFINITY, fmt, sign_bit=sign_bit)
+    maximum_exponent = (1 << fmt.exponent_width) - 2
+    maximum_fraction = (1 << fmt.fraction_width) - 1
+    return IEEE754Value(
+        (sign_bit << (fmt.bit_width - 1))
+        | (maximum_exponent << fmt.fraction_width) | maximum_fraction, fmt
+    )
+
+
+def _encode_finite(
+    value: ExactValue, format_: IEEEFormat, sign_bit: int, rounding: FloatRounding,
+) -> IEEE754Value:
     numerator = abs(value.numerator)
     denominator = value.denominator
     sign_pattern = sign_bit << (format_.bit_width - 1)
@@ -230,18 +267,21 @@ def _encode_finite(value: ExactValue, format_: IEEEFormat, sign_bit: int) -> IEE
         exponent -= 1
     minimum_exponent = 1 - format_.bias
     if exponent > format_.bias:
-        return encode_ieee754_special(FloatClass.INFINITY, format_, sign_bit=sign_bit)
+        return _overflow_value(format_, sign_bit, rounding)
     if exponent < minimum_exponent:
         fraction = _round_scaled_ratio(
-            numerator, denominator, minimum_exponent - format_.fraction_width
+            numerator, denominator, minimum_exponent - format_.fraction_width,
+            rounding, sign_bit,
         )
         return IEEE754Value(sign_pattern | fraction, format_)
-    significand = _round_scaled_ratio(numerator, denominator, exponent - format_.fraction_width)
+    significand = _round_scaled_ratio(
+        numerator, denominator, exponent - format_.fraction_width, rounding, sign_bit
+    )
     if significand == 1 << (format_.fraction_width + 1):
         significand >>= 1
         exponent += 1
     if exponent > format_.bias:
-        return encode_ieee754_special(FloatClass.INFINITY, format_, sign_bit=sign_bit)
+        return _overflow_value(format_, sign_bit, rounding)
     exponent_pattern = (exponent + format_.bias) << format_.fraction_width
     fraction = significand - (1 << format_.fraction_width)
     return IEEE754Value(sign_pattern | exponent_pattern | fraction, format_)
@@ -252,8 +292,10 @@ def encode_ieee754(
     width: object = IEEEFormat.BINARY64,
     *,
     negative_zero: bool = False,
+    rounding: FloatRounding | str = FloatRounding.NEAREST_EVEN,
 ) -> IEEE754Value:
     checked_format = _validate_format(width)
+    checked_rounding = FloatRounding(rounding)
     if not isinstance(negative_zero, bool):
         raise TypeError("negative_zero must be a boolean")
     if isinstance(value, bool) or not isinstance(value, (ExactValue, int, float)):
@@ -273,10 +315,13 @@ def encode_ieee754(
         if exact.numerator:
             raise ValueError("negative_zero requires a zero value")
         sign_bit = 1
-    return _encode_finite(exact, checked_format, sign_bit)
+    return _encode_finite(exact, checked_format, sign_bit, checked_rounding)
 
 
-def convert_ieee754(value: IEEE754Value, width: object) -> IEEE754Value:
+def convert_ieee754(
+    value: IEEE754Value, width: object,
+    *, rounding: FloatRounding | str = FloatRounding.NEAREST_EVEN,
+) -> IEEE754Value:
     """Convert the represented value; rounding a previously rounded input may round twice."""
     if not isinstance(value, IEEE754Value):
         raise TypeError("value must be an IEEE754Value")
@@ -284,7 +329,8 @@ def convert_ieee754(value: IEEE754Value, width: object) -> IEEE754Value:
     exact = value.exact
     if exact is not None:
         return encode_ieee754(
-            exact, target, negative_zero=exact.numerator == 0 and bool(value.sign_bit)
+            exact, target, negative_zero=exact.numerator == 0 and bool(value.sign_bit),
+            rounding=rounding,
         )
     return encode_ieee754_special(
         value.classification, target, sign_bit=value.sign_bit,
