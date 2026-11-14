@@ -239,6 +239,11 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         ))
     if args.command == "integer":
         report = _integer_command(args)
+        if args.op in ("add", "subtract", "multiply"):
+            report["operation_result"] = {
+                "mathematical": report["exact_result"], "wrapped": report["value"],
+                "overflowed": report["overflowed"],
+            }
         selection = getattr(args, "extract", None)
         if selection is not None:
             offset, width = selection

@@ -51,10 +51,8 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return value
 
     input_text = text("input")
-    if workspace == "Calculation":
-        if text("calculation_mode") == "Fixed-width integer":
-            return calculate("Programmer", state)
-        adapted = dict(state, mode="Expression", source_base=10)
+    if workspace == "Calculation" and text("calculation_mode") != "Fixed-width integer":
+        adapted = dict(state, mode="Expression", source_base=10, show_trace=False)
         return calculate("Conversion", adapted)
     if workspace == "Batch Conversion":
         return batch_report(convert_batch(
@@ -111,7 +109,7 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             parse_number(input_text, integer("source_base")),
             integer("target_base"), max_steps=integer("limit"),
         ))
-    elif workspace == "Programmer":
+    elif workspace == "Calculation":
         operation = text("operation")
         report = run_command(argparse.Namespace(
             command="integer", value=input_text, base=integer("base"),

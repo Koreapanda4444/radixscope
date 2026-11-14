@@ -492,5 +492,11 @@
   "Partial trace · step limit reached": "부분 변환 과정 · 단계 제한 도달",
   "Integer division": "정수부 나눗셈",
   "Fraction multiplication": "소수부 곱셈",
-  "Recurring digits": "순환 구간"
+  "Recurring digits": "순환 구간",
+  "Exact expressions and explicit fixed-width integer operations": "정확한 수식 계산과 고정 비트 정수 연산",
+  "Exact result and wrapped result are separate; only fixed-width operations wrap.": "정확한 결과와 래핑 결과를 구분합니다. 고정 비트 연산에만 래핑이 적용됩니다.",
+  "Expressions use exact rational arithmetic; bitwise operators require integers.": "수식은 유리수로 정확히 계산하며 비트 연산에는 정수가 필요합니다.",
+  "operation_result": "연산 결과",
+  "mathematical": "정확한 수학적 결과",
+  "wrapped": "래핑 결과"
 }
