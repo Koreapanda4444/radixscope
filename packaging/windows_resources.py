@@ -1,6 +1,3 @@
-import hashlib
-import html
-import json
 import importlib.metadata
 import struct
 import sys
@@ -54,93 +51,6 @@ def version_resource() -> str:
     )
 
 
-def copy_licenses() -> None:
-    bundle = ROOT / "_internal"
-    destination = bundle / "licenses"
-    destination.mkdir(parents=True, exist_ok=True)
-    inventory = sorted(p.relative_to(bundle).as_posix() for p in bundle.rglob("*")
-                       if p.is_file() and "licenses" not in p.relative_to(bundle).parts)
-    notices: dict[str, str] = {}
-    components: dict[str, object] = {}
-
-    def retain(name: str, data: bytes) -> str:
-        digest = hashlib.sha256(data).hexdigest()
-        if digest not in notices:
-            filename = digest[:12] + "-" + Path(name).name
-            (destination / filename).write_bytes(data)
-            notices[digest] = filename
-        return notices[digest]
-
-    for name in ("PySide6-Essentials", "PySide6-Addons", "shiboken6"):
-        dist = importlib.metadata.distribution(name)
-        paths = []
-        for entry in dist.files or ():
-            if any(term in str(entry).lower() for term in ("license", "copying", "notice")):
-                source = Path(dist.locate_file(entry))
-                if source.is_file():
-                    paths.append(retain(source.name, source.read_bytes()))
-        components[name] = {"version": dist.version, "notices": sorted(set(paths))}
-    python_license = Path(sys.base_prefix) / "LICENSE.txt"
-    if not python_license.is_file():
-        python_license = Path(sys.base_prefix) / "LICENSE"
-    if python_license.is_file():
-        components["Python"] = {"version": sys.version.split()[0],
-                                "notices": [retain("Python-LICENSE.txt", python_license.read_bytes())]}
-    from PySide6.QtCore import qVersion
-    qt_version = qVersion()
-    pyside_version = importlib.metadata.version("PySide6")
-    manifest = json.loads((ROOT / "packaging/notices/sources.json").read_text(encoding="utf-8"))
-    actual = {"Qt": qt_version, **{name: importlib.metadata.version(name)
-                                   for name in manifest["reviewed_versions"] if name != "Qt"}}
-    if actual != manifest["reviewed_versions"]:
-        raise RuntimeError(
-            "Runtime versions differ from packaging/notices/sources.json. "
-            "Review matching upstream notices and source locations before building: " + str(actual)
-        )
-    references = []
-    for filename, source in manifest["files"].items():
-        data = (ROOT / "packaging/notices" / filename).read_bytes()
-        if hashlib.sha256(data).hexdigest() != source["sha256"]:
-            raise RuntimeError("Local notice checksum mismatch: " + filename)
-        references.append((filename, retain(filename, data)))
-    if sys.platform == "win32" and "Python" not in components:
-        raise RuntimeError("The matching Python installation LICENSE.txt is required")
-    qt_source = ("https://download.qt.io/official_releases/qt/"
-                 + ".".join(qt_version.split(".")[:2]) + "/" + qt_version + "/single/")
-    pyside_source = ("https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-"
-                     + pyside_version + "-src/")
-    document = """<h1>RadixScope: third-party notices</h1>
-<p>Python, Qt, PySide6 and shiboken are included in this program. Their licenses apply
-separately; this notice does not assign a license to RadixScope.</p>
-<p>Qt/PySide6/shiboken use the LGPLv3 open-source option. LGPL libraries are dynamically
-loaded from _internal. You may replace them with compatible modified builds and debug
-those modifications, including reverse engineering for that purpose. Keep the same
-Python ABI, Qt ABI, plugin paths and DLL filenames. No integrity restriction is applied.</p>
-<p>The unmodified corresponding library sources and upstream build instructions are
-available for the exact versions below. When redistributing a build, retain these
-notices and provide equivalent access to the corresponding sources, including any
-modifications and build files. Verify source availability for the lifetime of your
-binary distribution; mirror the matching sources beside downloads when necessary.</p>
-<p>PySide6 is an installation metapackage; only its runtime components are listed.
-PyInstaller is a build tool; its bootloader exception permits distribution without
-copying its build-tool license. Other unknown component notices are retained.</p>"""
-    document += "<p>Qt " + html.escape(qt_version) + ': <a href="' + qt_source + '">Source and build files</a></p>'
-    document += "<p>PySide6/shiboken " + html.escape(pyside_version) + ': <a href="' + pyside_source + '">Source and build files</a></p>'
-    document += "<h2>License texts and attributions</h2><ul>"
-    for label, filename in references:
-        document += '<li><a href="' + filename + '">' + label + '</a></li>'
-    referenced = {filename for _, filename in references}
-    for filename in sorted(set(notices.values()) - referenced):
-        document += '<li><a href="' + filename + '">' + html.escape(filename) + '</a></li>'
-    for name, component in components.items():
-        document += '<li>' + html.escape(name) + ' ' + html.escape(str(component)) + '</li>'
-    document += "</ul><p>Official obligations: https://www.qt.io/development/open-source-lgpl-obligations</p>"
-    (destination / "NOTICE.html").write_text(document, encoding="utf-8")
-    (destination / "inventory.json").write_text(json.dumps(
-        {"components": components, "runtime_files": inventory, "source_urls": [qt_source, pyside_source],
-         "notice_files": sorted(notices.values()), "notice_sources": manifest}, indent=2), encoding="utf-8")
-
-
 def check_dependencies() -> None:
     import tomllib
     from packaging.requirements import Requirement
@@ -155,25 +65,8 @@ def main() -> None:
     if sys.argv[1:] == ["--check-dependencies"]:
         check_dependencies()
         return
-    if sys.argv[1:] == ["--check-notices"]:
-        import tempfile
-        import shutil
-        global ROOT
-        original = ROOT
-        with tempfile.TemporaryDirectory() as temporary:
-            staging = Path(temporary)
-            shutil.copytree(original / "packaging/notices", staging / "packaging/notices")
-            ROOT = staging
-            try:
-                copy_licenses()
-            finally:
-                ROOT = original
-        return
-    if sys.argv[1:] == ["--licenses"]:
-        copy_licenses()
-        return
     if sys.argv[1:]:
-        raise SystemExit("Usage: windows_resources.py [--licenses]")
+        raise SystemExit("Usage: windows_resources.py [--check-dependencies]")
     work = ROOT / "build" / "windows"
     work.mkdir(parents=True, exist_ok=True)
     make_icon(ROOT / "src/radixscope/assets/radixscope.svg", work / "radixscope.ico")
