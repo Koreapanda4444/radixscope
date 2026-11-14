@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QTableWidget,
+    QTabBar,
     QTabWidget,
     QTreeWidget,
     QTreeWidgetItem,
@@ -224,6 +225,13 @@ def localize(root: QObject) -> None:
                 if not isinstance(source, str):
                     source = _canonical(obj.tabText(index))
                     obj.tabBar().setTabData(index, source)
+                obj.setTabText(index, tr(source))
+        if isinstance(obj, QTabBar):
+            for index in range(obj.count()):
+                source = obj.tabData(index)
+                if not isinstance(source, str):
+                    source = _canonical(obj.tabText(index))
+                    obj.setTabData(index, source)
                 obj.setTabText(index, tr(source))
         if isinstance(obj, QTreeWidget):
             for index in range(obj.topLevelItemCount()):

@@ -500,5 +500,7 @@
   "mathematical": "정확한 수학적 결과",
   "wrapped": "래핑 결과",
   "Analysis": "분석 방식",
-  "Number representation": "숫자 표현"
+  "Number representation": "숫자 표현",
+  "Detailed fields": "상세 항목",
+  "Edit bits and explore neighbors": "비트 편집 및 인접 값 탐색"
 }

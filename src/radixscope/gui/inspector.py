@@ -52,6 +52,8 @@ class InspectorWorkspace(Workspace):
         self.payload = QLineEdit("0")
         self.quiet = QCheckBox("Quiet NaN")
         self.quiet.setChecked(True)
+        self._show_bits = QCheckBox("Edit bits and explore neighbors")
+        self._show_bits.toggled.connect(self.update_controls)
         self._show_special = QCheckBox("Special value options")
         self._show_special.toggled.connect(self.update_controls)
         self._comparison_rows: list[dict[str, object]] = []
@@ -69,6 +71,7 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("Signed zero", self.negative_zero)
         self.form.addRow("NaN payload (decimal)", self.payload)
         self.form.addRow("NaN kind", self.quiet)
+        self.form.addRow(self._show_bits)
         self.form.addRow("Hex pattern", self.raw_hex)
         self._byte_preview = QLineEdit()
         self._byte_preview.setReadOnly(True)
@@ -127,10 +130,15 @@ class InspectorWorkspace(Workspace):
         self.base.setEnabled(raw or self.input_mode.currentText() == "Number")
         nan = self.input.text().strip().lower().lstrip("+-") == "nan"
         special = self._show_special.isChecked() or nan
-        for widget in (self.raw_hex, self.bit_editor, self._byte_preview.parentWidget()):
-            if widget is not None:
-                self.form.setRowVisible(widget, not comparison)
-        self.form.setRowVisible(self.float_navigator, not integer and not comparison)
+        self.form.setRowVisible(self._show_bits, not comparison)
+        for widget in (self.raw_hex, self.bit_editor):
+            self.form.setRowVisible(widget, not comparison and self._show_bits.isChecked())
+        byte_row = self._byte_preview.parentWidget()
+        if byte_row is not None:
+            self.form.setRowVisible(byte_row, not comparison)
+        self.form.setRowVisible(
+            self.float_navigator, not integer and not comparison and self._show_bits.isChecked()
+        )
         self.form.setRowVisible(self._show_special, not integer and not raw and not comparison)
         self.form.setRowVisible(self.negative_zero, not integer and not raw and special)
         self.form.setRowVisible(

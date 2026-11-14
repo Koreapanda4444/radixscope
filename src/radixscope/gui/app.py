@@ -10,15 +10,13 @@ from PySide6.QtWidgets import (
     QDialog,
     QDockWidget,
     QFileDialog,
-    QHBoxLayout,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QPushButton,
     QStackedWidget,
-    QTreeWidget,
-    QTreeWidgetItem,
+    QTabBar,
     QVBoxLayout,
     QWidget,
 )
@@ -41,7 +39,7 @@ from radixscope.gui.preferences import PreferencesDialog
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import render_report
 from radixscope.settings import SettingsStore
-from radixscope.workspaces import WORKSPACES, navigation_groups, restored_workspace
+from radixscope.workspaces import WORKSPACES, restored_workspace
 
 
 def default_state_path() -> Path:
@@ -74,37 +72,20 @@ class MainWindow(QMainWindow):
             self.addAction(action)
             workspace.result_ready.connect(self.show_completed)
             workspace.transfer_requested.connect(self.receive_transfer)
-        self.navigation = QTreeWidget()
-        self.navigation.setHeaderHidden(True)
-        self.navigation.setRootIsDecorated(False)
-        self.navigation.setIndentation(12)
-        self.navigation.setFixedWidth(180)
-        self.navigation.setUniformRowHeights(True)
-        self.navigation.setItemsExpandable(False)
-        self._navigation_items: dict[int, QTreeWidgetItem] = {}
-        definitions = {item.title: item for item in WORKSPACES}
-        for name, titles in navigation_groups().items():
-            group = QTreeWidgetItem([name])
-            group.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            font = group.font(0)
-            font.setBold(True)
-            group.setFont(0, font)
-            self.navigation.addTopLevelItem(group)
-            for title in titles:
-                index = next(i for i, workspace in enumerate(self.workspaces)
-                             if workspace.title == title)
-                label = definitions[title].label
-                item = QTreeWidgetItem([label])
-                item.setData(0, Qt.ItemDataRole.UserRole, index)
-                item.setToolTip(0, f"{title} · Ctrl+{index + 1}")
-                group.addChild(item)
-                self._navigation_items[index] = item
-            group.setExpanded(True)
-        self.navigation.currentItemChanged.connect(self.navigate_to_item)
+        self.navigation = QTabBar()
+        self.navigation.setExpanding(True)
+        self.navigation.setDrawBase(False)
+        self.navigation.setElideMode(Qt.TextElideMode.ElideRight)
+        self.navigation.setAccessibleName("Workspaces")
+        for index, definition in enumerate(WORKSPACES):
+            self.navigation.addTab(definition.label)
+            self.navigation.setTabToolTip(index, f"{definition.title} · Ctrl+{index + 1}")
+        self.navigation.currentChanged.connect(self.tabs.setCurrentIndex)
         self.tabs.currentChanged.connect(self.sync_navigation)
         central = QWidget()
-        central_layout = QHBoxLayout(central)
-        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(8, 0, 8, 0)
+        central_layout.setSpacing(0)
         central_layout.addWidget(self.navigation)
         central_layout.addWidget(self.tabs, 1)
         self.setCentralWidget(central)
@@ -165,20 +146,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_status_source"):
             self.statusBar().showMessage(tr(self._status_source), self._status_timeout)
 
-    def navigate_to_item(
-        self, current: QTreeWidgetItem | None, previous: QTreeWidgetItem | None,
-    ) -> None:
-        if current is not None:
-            index = current.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(index, int):
-                self.tabs.setCurrentIndex(index)
-
     def sync_navigation(self, index: int) -> None:
-        item = self._navigation_items.get(index)
-        if item is not None:
-            blocker = QSignalBlocker(self.navigation)
-            self.navigation.setCurrentItem(item)
-            del blocker
+        blocker = QSignalBlocker(self.navigation)
+        self.navigation.setCurrentIndex(index)
+        del blocker
 
     def show_completed(self, title: str, report: dict[str, object]) -> None:
         if self._restoring:

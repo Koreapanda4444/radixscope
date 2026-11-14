@@ -78,7 +78,7 @@ class Workspace(QWidget):
         self.form.setSpacing(8)
         self.form.setContentsMargins(2, 2, 8, 2)
         self.form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-        self.form.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+        self.form.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.form_container = QWidget()
         self.form_container.setLayout(self.form)
         self.form_scroll = QScrollArea()
@@ -104,6 +104,7 @@ class Workspace(QWidget):
         self.result_table.verticalHeader().setVisible(False)
         self.result_table.setAccessibleName(f"{title} output items")
         self.result_table.setAlternatingRowColors(True)
+        self.result_table.setMinimumHeight(80)
         self.result_table.setWordWrap(False)
         self.result_table.verticalHeader().setDefaultSectionSize(27)
         self.result_table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
@@ -147,8 +148,14 @@ class Workspace(QWidget):
         actions.addWidget(self.run_button)
         actions.addWidget(self.cancel_button)
         actions.addWidget(self.status, 1)
-        actions.addWidget(self.copy_selected_button)
-        actions.addWidget(self.copy_button)
+        copies = QHBoxLayout()
+        self._show_details = QCheckBox("Detailed fields")
+        self._show_details.toggled.connect(self.filter_results)
+        copies.addWidget(self._show_details)
+        copies.addStretch(1)
+        copies.addWidget(self.copy_selected_button)
+        copies.addWidget(self.copy_button)
+        results_layout.insertLayout(1, copies)
         self._destination = LocalizedComboBox()
         self._destination.addItems(transfer_destinations(title))
         self._transfer_mode = LocalizedComboBox()
@@ -259,9 +266,17 @@ class Workspace(QWidget):
             values = [self.result_table.item(row, column) for column in (
                 range(self.result_table.columnCount())
             )]
-            self.result_table.setRowHidden(row, bool(query) and not any(
+            filtered = bool(query) and not any(
                 query in item.text().casefold() for item in values if item is not None
-            ))
+            )
+            detailed = False
+            if self.result_table.columnCount() == 2 and row < len(self.report_fields):
+                root = self.report_fields[row].path.split(".")[0]
+                detailed = root in ("neighbors", "boundaries", "field_bits", "trace",
+                                   "underflow_halfway", "overflow_halfway")
+            self.result_table.setRowHidden(
+                row, filtered or (detailed and not self._show_details.isChecked() and not query)
+            )
 
     def set_error(self, message: str) -> None:
         self.clear_output()
@@ -381,7 +396,7 @@ class Workspace(QWidget):
 
     def view_state(self) -> dict[str, object]:
         toggles = {}
-        for name in ("_utility_toggle", "_show_fields", "_show_bits", "_show_special"):
+        for name in ("_utility_toggle", "_show_bits", "_show_special", "_show_details"):
             widget = getattr(self, name, None)
             if isinstance(widget, (QCheckBox, QToolButton)):
                 toggles[name] = widget.isChecked()
@@ -398,7 +413,7 @@ class Workspace(QWidget):
         toggles = state.get("toggles")
         if isinstance(toggles, dict):
             for name, checked in toggles.items():
-                if name not in ("_utility_toggle", "_show_fields", "_show_bits", "_show_special"):
+                if name not in ("_utility_toggle", "_show_bits", "_show_special", "_show_details"):
                     continue
                 widget = getattr(self, name, None)
                 if isinstance(widget, (QCheckBox, QToolButton)) and isinstance(checked, bool):
