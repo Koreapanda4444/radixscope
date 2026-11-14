@@ -194,7 +194,7 @@ def precision_report(source: ExactValue, encoded: IEEE754Value) -> dict[str, obj
     report.update({
         "source_exact": str(source), "exactly_represented": analysis.exactly_represented,
         "rounding_direction": analysis.rounding_direction,
-        "rounding_rule": "nearest, ties to even",
+        "rounding_rule": experiment.rounding.value,
         "overflowed": encoded.classification.value == "infinity",
         "underflowed_to_zero": encoded.classification.value == "zero" and source.numerator != 0,
     })
