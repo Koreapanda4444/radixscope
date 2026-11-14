@@ -14,6 +14,7 @@ class CalculationWorkspace(Workspace):
         super().__init__(
             "Calculation", "Exact expressions and explicit fixed-width integer operations"
         )
+        self.form.setVerticalSpacing(6)
         self.input = QLineEdit("255")
         self.base = base_input()
         self.bit_width = QSpinBox()
@@ -53,6 +54,9 @@ class CalculationWorkspace(Workspace):
         self.bit_editor.pattern_changed.connect(self.edit_bits)
         self.result_ready.connect(self.show_bits)
         self.result_invalidated.connect(self.bit_editor.clear)
+        self.result_invalidated.connect(
+            lambda: self.form.setRowVisible(self.bit_editor, False)
+        )
         self.operation.currentIndexChanged.connect(self.update_controls)
         self.run_button.setText("Calculate")
         self.run_button.setEnabled(True)
@@ -92,10 +96,12 @@ class CalculationWorkspace(Workspace):
         shift = operation in ("shl", "shr", "lshr")
         self.operand_label.setText("Shift count (decimal)" if shift else "Operand")
         for widget in (self.base.parentWidget(), self.pattern.parentWidget(), self.operation,
-                       self.extract, self.bit_editor):
+                       self.extract):
             if widget is not None:
                 self.form.setRowVisible(widget, fixed)
         self.form.setRowVisible(self._range_row, fixed and self.extract.isChecked())
+        # Keep the empty bit editor out of the form until there is a real result.
+        self.form.setRowVisible(self.bit_editor, fixed and self.bit_editor.pattern is not None)
         self.form.setRowVisible(self.targets, not fixed)
         self.form.setRowVisible(self.exact_output, not fixed)
         self.form.setRowVisible(
@@ -118,6 +124,9 @@ class CalculationWorkspace(Workspace):
             width = len(bits)
             fields = {"sign": (width - 1, width - 1)} if self.signed.isChecked() else {}
             self.bit_editor.set_pattern(int(bits, 2), width, fields)
+            self.form.setRowVisible(
+                self.bit_editor, self.calculation_mode.currentText() == "Fixed-width integer"
+            )
 
     def edit_bits(self, pattern: int) -> None:
         value = FixedWidthInteger.from_bit_pattern(
