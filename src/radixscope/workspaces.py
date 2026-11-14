@@ -76,6 +76,9 @@ def migrate_workspace(title: str, state: Mapping[str, object]) -> tuple[str, dic
         result["bit_width"] = 16 if width == "bfloat16" else int(width) if width.isdigit() else 32
         result["pattern"] = result.get("mode") == "decode"
         result["input_mode"] = "Number" if result["pattern"] else "Expression"
+        result["analysis"] = "Format comparison" if result.get("compare") is True else (
+            "Number representation"
+        )
         result["base"] = result.get("base", 16) if result["pattern"] else 10
     elif title == "Conversion" and state.get("mode") == "Expression":
         title = "Calculation"

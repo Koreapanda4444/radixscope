@@ -111,7 +111,7 @@
   "NaN kind": "NaN 종류",
   "Quiet NaN": "Quiet NaN",
   "Raw pattern base": "원시 패턴 진법",
-  "Format comparison": "형식 비교",
+  "Format comparison": "부동소수점 형식 비교",
   "Compare all four formats": "네 형식 비교",
   "Sign · Exponent · Fraction": "부호 · 지수 · 가수부",
   "Previous value": "이전 값",
@@ -498,5 +498,7 @@
   "Expressions use exact rational arithmetic; bitwise operators require integers.": "수식은 유리수로 정확히 계산하며 비트 연산에는 정수가 필요합니다.",
   "operation_result": "연산 결과",
   "mathematical": "정확한 수학적 결과",
-  "wrapped": "래핑 결과"
+  "wrapped": "래핑 결과",
+  "Analysis": "분석 방식",
+  "Number representation": "숫자 표현"
 }

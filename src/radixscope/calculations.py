@@ -9,6 +9,7 @@ from pathlib import Path
 
 from radixscope.cli import run_command
 from radixscope.core import (
+    IEEEFormat,
     RoundingMode,
     convert_bases,
     convert_batch,
@@ -62,15 +63,43 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
         ))
     if workspace == "Number Inspector":
-        expression = state.get("input_mode") == "Expression" and not flag("pattern")
-        source = str(evaluate_expression(input_text)) if expression and (
-            input_text.strip().lower().lstrip("+-") not in ("nan", "inf", "infinity")
-        ) else input_text
-        report = inspection_report(inspect_number(
-            source, base=10 if expression else integer("base"), width=integer("bit_width"),
-            signed=flag("signed"), data_type=text("data_type"), raw=flag("pattern"),
-            byteorder=text("byteorder"),
-        ))
+        raw = flag("pattern") and state.get("analysis") != "Format comparison"
+        special = input_text.strip().lower().lstrip("+-") in ("nan", "inf", "infinity")
+        expression = state.get("input_mode") == "Expression" and not raw
+        source = input_text if special or raw else str(
+            evaluate_expression(input_text) if expression else (
+                parse_number(input_text, integer("base"))
+            )
+        )
+        comparison = state.get("analysis") == "Format comparison"
+        if comparison or (text("data_type") != "integer" and not raw):
+            fmt = text("data_type") if text("data_type") != "integer" else "binary32"
+            report = run_command(argparse.Namespace(
+                command="ieee", mode="compare" if comparison else "encode", value=source,
+                width=fmt, base=integer("base"), byteorder=text("byteorder"),
+                negative_zero=state.get("negative_zero") is True or (
+                    input_text.strip().startswith("-") and not special and parse_number(source, 10)
+                    == parse_number("0", 10)
+                ), payload=int(text("payload")) if special and source.lower().lstrip("+-") == "nan"
+                and not comparison else 0,
+                signaling=state.get("quiet") is False and source.lower().lstrip("+-") == "nan"
+                and not comparison,
+            ))
+            if not comparison:
+                bits = report["bits"]
+                assert isinstance(bits, str)
+                numeric = inspection_report(inspect_number(
+                    str(int(bits, 2)), width=IEEEFormat[fmt.upper()].bit_width,
+                    data_type=fmt, raw=True, byteorder=text("byteorder"),
+                ))
+                numeric.update(report)
+                report = numeric
+        else:
+            report = inspection_report(inspect_number(
+                source, base=integer("base") if raw else 10, width=integer("bit_width"),
+                signed=flag("signed"), data_type=text("data_type"), raw=raw,
+                byteorder=text("byteorder"),
+            ))
         report["input"] = input_text
         return report
     if workspace == "Conversion":
@@ -120,17 +149,6 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             if state.get("extract") is True else None,
         ))
         report["operation"] = operation
-    elif workspace == "IEEE 754":
-        encoding = text("mode") == "encode"
-        nan = input_text.strip().lower().lstrip("+-") == "nan"
-        report = run_command(argparse.Namespace(
-            command="ieee", mode="compare" if state.get("compare") is True else text("mode"),
-            value=input_text,
-            width=text("bit_width"), base=integer("base"), byteorder=text("byteorder"),
-            negative_zero=encoding and not nan and flag("negative_zero"),
-            payload=int(text("payload")) if encoding and nan else 0,
-            signaling=encoding and nan and not flag("quiet"),
-        ))
     else:
         raise ValueError("unknown workspace")
     report["input"] = input_text
