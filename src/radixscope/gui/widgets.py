@@ -42,6 +42,7 @@ from radixscope.gui.i18n import (
     tr,
 )
 from radixscope.reports import ReportField, StructuredReport, render_report
+from radixscope.workspaces import transfer_destinations
 
 
 def control_row(*controls: QWidget | str) -> QWidget:
@@ -149,10 +150,7 @@ class Workspace(QWidget):
         actions.addWidget(self.copy_selected_button)
         actions.addWidget(self.copy_button)
         self._destination = LocalizedComboBox()
-        self._destination.addItems([name for name in (
-            "Number Inspector", "Programmer", "IEEE 754", "Conversion",
-            "Byte Inspector", "Binary Comparison", "Batch Conversion", "Trace",
-        ) if name != title])
+        self._destination.addItems(transfer_destinations(title))
         self._transfer_mode = LocalizedComboBox()
         self._transfer_mode.addItems(["Numeric value", "Raw bits"])
         self._transfer_button = QPushButton("Send to workspace")

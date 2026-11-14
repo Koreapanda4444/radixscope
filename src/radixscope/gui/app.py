@@ -1,4 +1,5 @@
 import sys
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
@@ -42,6 +43,7 @@ from radixscope.gui.programmer import IEEEWorkspace, ProgrammerWorkspace
 from radixscope.gui.widgets import Workspace
 from radixscope.reports import render_report
 from radixscope.settings import SettingsStore
+from radixscope.workspaces import WORKSPACES, navigation_groups, restored_workspace
 
 
 def default_state_path() -> Path:
@@ -60,16 +62,13 @@ class MainWindow(QMainWindow):
         self.resize(1000, 720)
         self.setMinimumSize(640, 480)
         self.tabs = QStackedWidget()
-        self.workspaces: list[Workspace] = [
-            ConversionWorkspace(),
-            TraceWorkspace(),
-            ProgrammerWorkspace(),
-            IEEEWorkspace(),
-            InspectorWorkspace(),
-            ByteInspectorWorkspace(),
-            ComparisonWorkspace(),
-            BatchWorkspace(),
-        ]
+        workspace_factories: dict[str, Callable[[], Workspace]] = {
+            "Conversion": ConversionWorkspace, "Trace": TraceWorkspace,
+            "Programmer": ProgrammerWorkspace, "IEEE 754": IEEEWorkspace,
+            "Number Inspector": InspectorWorkspace, "Byte Inspector": ByteInspectorWorkspace,
+            "Binary Comparison": ComparisonWorkspace, "Batch Conversion": BatchWorkspace,
+        }
+        self.workspaces = [workspace_factories[item.title]() for item in WORKSPACES]
         for index, workspace in enumerate(self.workspaces):
             self.tabs.addWidget(workspace)
             action = QAction(workspace.title, self)
@@ -86,12 +85,8 @@ class MainWindow(QMainWindow):
         self.navigation.setUniformRowHeights(True)
         self.navigation.setItemsExpandable(False)
         self._navigation_items: dict[int, QTreeWidgetItem] = {}
-        groups = {
-            "Inspect": ("Number Inspector", "Byte Inspector", "IEEE 754", "Programmer"),
-            "Calculate": ("Conversion", "Batch Conversion", "Trace"),
-            "Compare": ("Binary Comparison",),
-        }
-        for name, titles in groups.items():
+        definitions = {item.title: item for item in WORKSPACES}
+        for name, titles in navigation_groups().items():
             group = QTreeWidgetItem([name])
             group.setFlags(Qt.ItemFlag.ItemIsEnabled)
             font = group.font(0)
@@ -101,7 +96,7 @@ class MainWindow(QMainWindow):
             for title in titles:
                 index = next(i for i, workspace in enumerate(self.workspaces)
                              if workspace.title == title)
-                label = "Integer operations" if title == "Programmer" else title
+                label = definitions[title].label
                 item = QTreeWidgetItem([label])
                 item.setData(0, Qt.ItemDataRole.UserRole, index)
                 item.setToolTip(0, f"{title} · Ctrl+{index + 1}")
@@ -319,13 +314,10 @@ class MainWindow(QMainWindow):
                 state = states.get(workspace.title)
                 if isinstance(state, dict):
                     workspace.restore_state(state)
-        tab = self.store.preferences.get("active_tab", 0)
-        active = self.store.preferences.get("active_workspace")
-        if isinstance(active, str):
-            tab = next((i for i, workspace in enumerate(self.workspaces)
-                        if workspace.title == active), tab)
-        if isinstance(tab, int) and not isinstance(tab, bool) and 0 <= tab < self.tabs.count():
-            self.tabs.setCurrentIndex(tab)
+        active = restored_workspace(self.store.preferences)
+        self.tabs.setCurrentIndex(next(
+            index for index, workspace in enumerate(self.workspaces) if workspace.title == active
+        ))
         dimensions = (("window_width", self.resize_width), ("window_height", self.resize_height))
         for name, setter in dimensions:
             value = self.store.preferences.get(name)
