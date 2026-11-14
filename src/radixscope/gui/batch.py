@@ -50,6 +50,7 @@ class BatchWorkspace(Workspace):
         self.form.addRow("Rounded output", self._rounding_row)
         self.form.addRow("Maximum rows", self.row_limit)
         self.form.addRow("Batch status", self._summary)
+        self.form.setRowVisible(self._summary, False)
         self.mode.currentIndexChanged.connect(self.update_controls)
         self.exact_output.toggled.connect(self.update_controls)
         self.run_button.setText("Convert lines")
@@ -68,6 +69,7 @@ class BatchWorkspace(Workspace):
     def clear_batch(self) -> None:
         self._rows = []
         self._summary.clear()
+        self.form.setRowVisible(self._summary, False)
 
     def set_result(self, report: dict[str, object], text: str | None = None) -> None:
         super().set_result(report, text)
@@ -93,6 +95,7 @@ class BatchWorkspace(Workspace):
         if report["limited"]:
             message += " · Limit reached; some inputs were not processed"
         self._summary.setText(message)
+        self.form.setRowVisible(self._summary, True)
         self.translate_ui()
 
     @staticmethod
