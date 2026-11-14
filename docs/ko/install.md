@@ -68,25 +68,4 @@ sudo apt-get install -y libegl1 libopengl0 libxkbcommon0
 XCB를 사용하는 데스크톱 환경에는 `libxcb-cursor0`과 배포판의 일반 X11 라이브러리가
 추가로 필요할 수 있습니다. `QT_QPA_PLATFORM=offscreen`은 창을 표시하지 않고 통합 검증을 실행합니다.
 
-## 직접 빌드와 검증
-
-Windows x64의 Python 3.12 환경을 사용합니다. 설치형에는 Inno Setup 6.3 이상이 필요하며,
-`ISCC`를 PATH에 추가하거나 기본 Inno Setup 6 설치 경로를 사용하세요.
-
-```sh
-python -m pip install -e ".[desktop-build]"
-python scripts/build_desktop.py --installer
-python scripts/verify_windows.py
-```
-
-`--installer`를 빼면 압축형 ZIP만 빌드합니다. 결과는 `dist/`에 생성합니다.
-PyInstaller로 런타임을 묶고, 빌드 스크립트는 의존성의 라이선스 파일을
-`licenses/`에 보존합니다.
-
-검증은 실제 ZIP을 임시 경로에 풀어 모든 화면을 실행하고, 다른 임시 경로에 설치한 앱에서
-같은 검사를 수행한 뒤 제거합니다. 한국어·영어 상태, 취소, 설정, 런타임과 아이콘을 확인합니다.
-JSON 결과와 설치 로그는 `build/desktop/verification/`에 저장하며,
-CI에서는 `Windows-distribution-verification` 산출물로 제공합니다.
-CI는 Windows EXE 제품 메타데이터도 확인합니다.
-
-소스 검사 명령은 [README](../../README.ko.md)를 참고하세요.
+빌드와 검증은 [개발 안내](development.md)를 참고하세요.

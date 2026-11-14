@@ -72,26 +72,4 @@ A desktop session using XCB may also require `libxcb-cursor0` and the distributi
 normal X11 libraries. `QT_QPA_PLATFORM=offscreen` runs integration verification
 without opening a visible desktop window.
 
-## Build and verify
-
-On Windows x64, use Python 3.12. Install Inno Setup 6.3 or newer for the installer;
-make `ISCC` available on PATH or use its standard Inno Setup 6 installation location.
-
-```sh
-python -m pip install -e ".[desktop-build]"
-python scripts/build_desktop.py --installer
-python scripts/verify_windows.py
-```
-
-Omit `--installer` to build only the portable ZIP. Outputs are in `dist/`.
-PyInstaller bundles the runtime; the build preserves dependency license files in
-`licenses/`.
-
-Verification extracts the actual ZIP into a temporary directory, runs all desktop
-workspaces, installs setup into another temporary directory, repeats the checks,
-and uninstalls. It checks bilingual UI state, cancellation, settings, runtime
-availability and the icon. JSON receipts and installer logs go to
-`build/desktop/verification/`; CI publishes them as
-`Windows-distribution-verification`. CI also checks Windows EXE product metadata.
-
-For source validation, see the commands in the [README](../README.md).
+For builds and verification, see the [development guide](development.md).

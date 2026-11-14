@@ -1,6 +1,6 @@
 # 데스크톱 앱 사용법
 
-한국어 | [English](../desktop.md)
+한국어 | [English](../usage.md)
 
 `radixscope-gui`, `python -m radixscope.gui` 또는 Windows EXE로 실행합니다.
 사이드바는 분석·계산·비교 도구를 묶어 보여주며 단축키 순서는 다음과 같습니다.

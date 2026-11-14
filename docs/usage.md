@@ -1,6 +1,6 @@
 # Desktop application
 
-English | [한국어](ko/desktop.md)
+English | [한국어](ko/usage.md)
 
 Start with `radixscope-gui`, `python -m radixscope.gui`, or the Windows desktop EXE.
 The sidebar groups inspection, calculation and comparison tools. Workspace shortcuts
