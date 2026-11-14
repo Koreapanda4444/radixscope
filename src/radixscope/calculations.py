@@ -16,7 +16,9 @@ from radixscope.core import (
     convert_bases,
     convert_batch,
     evaluate_expression,
+    experiment_float_arithmetic,
     inspect_number,
+    parse_float_operand,
     parse_number,
     parse_numeric_input,
     trace_value,
@@ -26,6 +28,7 @@ from radixscope.core.formatting import format_preview
 from radixscope.reports import (
     StructuredReport,
     batch_report,
+    float_arithmetic_report,
     inspection_report,
     integer_width_report,
     numeric_comparison_report,
@@ -73,6 +76,16 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
             rounding=RoundingMode(text("rounding")), max_rows=integer("row_limit"),
         ))
     if workspace == "Number Inspector":
+        if state.get("analysis") == "Floating-point arithmetic":
+            fmt = text("data_type")
+            left = parse_float_operand(input_text, fmt, raw=flag("pattern"), base=integer("base"))
+            right = parse_float_operand(text("other_input"), fmt, raw=flag("pattern"),
+                                        base=integer("base"))
+            report = float_arithmetic_report(experiment_float_arithmetic(
+                left, right, text("float_operation"), fmt
+            ), text("byteorder"))
+            report["input"] = input_text
+            return report
         if state.get("analysis") == "Numeric comparison":
             report = numeric_comparison_report(compare_numeric_inputs(
                 input_text, text("other_input"), base=integer("base"), width=integer("bit_width"),

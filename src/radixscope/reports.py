@@ -13,6 +13,7 @@ from radixscope.core import (
 )
 from radixscope.core.batch import BatchConversion
 from radixscope.core.comparison import FloatFormatComparison
+from radixscope.core.float_arithmetic import FloatArithmeticExperiment, FloatArithmeticPath
 from radixscope.core.formatting import format_preview
 from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
 from radixscope.core.inspection import NumberInspection
@@ -343,4 +344,42 @@ def numeric_comparison_report(
             a, b = left[key], right[key]
             assert isinstance(a, int) and isinstance(b, int)
             result[key + "_difference"] = a - b
+    return result
+
+
+def float_arithmetic_report(
+    experiment: FloatArithmeticExperiment, byteorder: str = "big",
+) -> dict[str, object]:
+    def compact(value: IEEE754Value) -> dict[str, object]:
+        return {"format": value.format.label, "exact": str(value.exact)
+                if value.exact is not None else None, "bits": value.bits,
+                "hexadecimal": value.hexadecimal, "classification": value.classification.value,
+                "sign": value.sign_bit, "nan_payload": value.nan_payload,
+                "quiet_nan": value.is_quiet_nan,
+                "bytes": value.to_bytes(byteorder).hex(" ").upper()}
+    reference = experiment.exact_then_round.exact
+    def path(value: FloatArithmeticPath) -> dict[str, object]:
+        report: dict[str, object] = {
+            "exact_operation": str(value.exact) if value.exact is not None else None,
+                  "result": compact(value.value), "flags": asdict(value.flags)}
+        if reference is not None:
+            report["error_against_original_math"] = precision_report(reference, value.value)
+        if value.exact is not None:
+            report["operation_rounding_error"] = precision_report(value.exact, value.value)
+        return report
+    result = ieee_report(experiment.rounded_operands.value, byteorder)
+    result.update({
+        "operation": experiment.operation.value,
+        "rounding_rule": "nearest, ties to even",
+        "tininess_rule": "after rounding with an unbounded exponent range",
+        "left_operand": compact(experiment.left), "right_operand": compact(experiment.right),
+        "left_input_flags": asdict(experiment.left_conversion),
+        "right_input_flags": asdict(experiment.right_conversion),
+        "rounded_operands": path(experiment.rounded_operands),
+        "exact_then_round": path(experiment.exact_then_round),
+        "paths_differ": (experiment.rounded_operands.value.pattern
+                         != experiment.exact_then_round.value.pattern),
+    })
+    if reference is not None:
+        result.update(precision_report(reference, experiment.rounded_operands.value))
     return result

@@ -47,7 +47,10 @@ class InspectorWorkspace(Workspace):
         self.byteorder = LocalizedComboBox()
         self.byteorder.addItems(["big", "little"])
         self.analysis = LocalizedComboBox()
-        self.analysis.addItems(["Number representation", "Format comparison", "Numeric comparison"])
+        self.analysis.addItems(["Number representation", "Format comparison", "Numeric comparison",
+                                "Floating-point arithmetic"])
+        self.float_operation = LocalizedComboBox()
+        self.float_operation.addItems(["add", "subtract", "multiply", "divide"])
         self.other_input = QLineEdit("256")
         self._numeric_transfer = LocalizedComboBox()
         self._numeric_transfer.addItems(["First number", "Other number"])
@@ -69,6 +72,7 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("Input format", self.input_mode)
         self.form.addRow("Analysis", self.analysis)
         self.form.addRow("Other number", self.other_input)
+        self.form.addRow("Floating-point operation", self.float_operation)
         self.form.addRow("Number to reuse", self._numeric_transfer)
         self.form.addRow("Representation", control_row("Base", self.base, self.data_type,
                                                        "Width", self.bit_width))
@@ -128,19 +132,25 @@ class InspectorWorkspace(Workspace):
             checkbox.toggled.connect(lambda: self.refresh_timer.start())
 
     def update_controls(self) -> None:
+        arithmetic = self.analysis.currentText() == "Floating-point arithmetic"
+        if arithmetic and self.data_type.currentText() == "integer":
+            self.data_type.setCurrentText("binary32")
+        self.form.setRowVisible(self.float_operation, arithmetic)
         integer = self.data_type.currentText() == "integer"
         comparison = self.analysis.currentText() == "Format comparison"
         numeric = self.analysis.currentText() == "Numeric comparison"
-        self.form.setRowVisible(self.other_input, numeric)
+        self.form.setRowVisible(self.other_input, numeric or arithmetic)
         self.form.setRowVisible(self._numeric_transfer, numeric)
         self.form.setRowVisible(self._other_bits, numeric and self._show_bits.isChecked())
-        self.bit_editor.read_only = numeric
+        self.bit_editor.read_only = numeric or arithmetic
         raw = self.pattern.isChecked() and not comparison
         self.bit_width.setEnabled(integer and not comparison)
         self.signed.setEnabled(integer and not comparison)
         self.pattern.setEnabled(not comparison)
         self.data_type.setEnabled(not comparison)
-        self.input_mode.setEnabled(not raw)
+        self.input_mode.setEnabled(not raw and not arithmetic)
+        if arithmetic and not raw:
+            self.input_mode.setCurrentText("Expression")
         self.base.setEnabled(raw or self.input_mode.currentText() == "Number")
         nan = self.input.text().strip().lower().lstrip("+-") == "nan"
         special = self._show_special.isChecked() or nan
@@ -155,15 +165,18 @@ class InspectorWorkspace(Workspace):
             and self._show_bits.isChecked()
         )
         self.form.setRowVisible(self._show_special, not integer and not raw
-                                and not comparison and not numeric)
+                                and not comparison and not numeric and not arithmetic)
         self.form.setRowVisible(
             self.negative_zero, not integer and not raw and special and not numeric
+            and not arithmetic
         )
         self.form.setRowVisible(
-            self.payload, not integer and not raw and special and not comparison and not numeric
+            self.payload, not integer and not raw and special and not comparison
+            and not numeric and not arithmetic
         )
         self.form.setRowVisible(
-            self.quiet, not integer and not raw and special and not comparison and not numeric
+            self.quiet, not integer and not raw and special and not comparison
+            and not numeric and not arithmetic
         )
         if not integer and not comparison:
             self.bit_width.setValue(IEEEFormat[self.data_type.currentText().upper()].bit_width)

@@ -18,6 +18,8 @@ from radixscope.core import (
     encode_ieee754,
     encode_ieee754_special,
     evaluate_expression,
+    experiment_float_arithmetic,
+    parse_float_operand,
     parse_integer,
     parse_number,
     trace_value,
@@ -31,6 +33,7 @@ from radixscope.exports import batch_report_csv, json_safe
 from radixscope.reports import (
     batch_report,
     comparison_report,
+    float_arithmetic_report,
     ieee_report,
     inspection_report,
     integer_report,
@@ -70,6 +73,18 @@ def build_parser() -> argparse.ArgumentParser:
     output = batch.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true")
     output.add_argument("--csv", action="store_true")
+    arithmetic = commands.add_parser(
+        "float-op", help="experiment with rounded floating-point arithmetic"
+    )
+    arithmetic.add_argument("operation", choices=["add", "subtract", "multiply", "divide"])
+    arithmetic.add_argument("left")
+    arithmetic.add_argument("right")
+    arithmetic.add_argument("--format", default="binary32",
+                            choices=["binary16", "bfloat16", "binary32", "binary64"])
+    arithmetic.add_argument("--patterns", action="store_true", help="decode raw operand patterns")
+    arithmetic.add_argument("--base", type=int, default=16, help="base of raw patterns")
+    arithmetic.add_argument("--byteorder", choices=["big", "little"], default="big")
+    _output_options(arithmetic)
     comparison = commands.add_parser("compare-numbers", help="compare numeric values and patterns")
     comparison.add_argument("left")
     comparison.add_argument("right")
@@ -238,6 +253,12 @@ def _ieee_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def run_command(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "float-op":
+        left = parse_float_operand(args.left, args.format, raw=args.patterns, base=args.base)
+        right = parse_float_operand(args.right, args.format, raw=args.patterns, base=args.base)
+        return float_arithmetic_report(experiment_float_arithmetic(
+            left, right, args.operation, args.format
+        ), args.byteorder)
     if args.command == "compare-numbers":
         return numeric_comparison_report(compare_numeric_inputs(
             args.left, args.right, base=args.base, width=args.width, signed=args.signed,

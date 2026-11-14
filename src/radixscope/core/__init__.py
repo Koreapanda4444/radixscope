@@ -113,8 +113,12 @@ __all__ = [
     "ExpressionNode",
     "ExpressionToken",
     "FixedWidthInteger",
+    "FloatArithmeticExperiment",
+    "FloatArithmeticPath",
     "FloatClass",
+    "FloatFlags",
     "FloatFormatComparison",
+    "FloatOperation",
     "FloatPrecisionAnalysis",
     "FractionMultiplicationStep",
     "IEEE754Value",
@@ -165,6 +169,7 @@ __all__ = [
     "encode_twos_complement",
     "evaluate_expression",
     "evaluate_parsed_expression",
+    "experiment_float_arithmetic",
     "float_boundaries",
     "format_exact",
     "format_integer",
@@ -177,6 +182,7 @@ __all__ = [
     "parse_bit_pattern",
     "parse_expression",
     "parse_finite",
+    "parse_float_operand",
     "parse_integer",
     "parse_literal",
     "parse_number",
@@ -195,6 +201,14 @@ __all__ = [
     "validate_width",
 ]
 from radixscope.core.conversion import convert_bases, convert_text
+from radixscope.core.float_arithmetic import (
+    FloatArithmeticExperiment,
+    FloatArithmeticPath,
+    FloatFlags,
+    FloatOperation,
+    experiment_float_arithmetic,
+    parse_float_operand,
+)
 from radixscope.core.numeric_comparison import (
     NumericComparison,
     compare_numeric_inputs,
