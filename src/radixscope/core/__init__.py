@@ -1,5 +1,4 @@
 from radixscope.core.batch import BatchConversion, BatchEntry, convert_batch
-from radixscope.core.byte_inspection import ByteInterpretation, parse_byte_input, select_bytes
 from radixscope.core.comparison import FloatFormatComparison, compare_float_formats
 from radixscope.core.digits import (
     DIGIT_ALPHABET,
@@ -105,7 +104,6 @@ __all__ = [
     "BatchConversion",
     "BatchEntry",
     "BinaryExpression",
-    "ByteInterpretation",
     "ByteOrder",
     "ByteRepresentation",
     "ConversionTrace",
@@ -170,7 +168,6 @@ __all__ = [
     "integer_bounds",
     "interpret_bit_pattern",
     "parse_bit_pattern",
-    "parse_byte_input",
     "parse_expression",
     "parse_finite",
     "parse_integer",
@@ -182,7 +179,6 @@ __all__ = [
     "parse_scientific",
     "parse_twos_complement",
     "represent_bytes",
-    "select_bytes",
     "tokenize_expression",
     "trace_text",
     "trace_value",

@@ -18,7 +18,6 @@ WORKSPACES = (
     WorkspaceDefinition("Programmer", "Integer operations", "Inspect", 3),
     WorkspaceDefinition("IEEE 754", "IEEE 754", "Inspect", 2),
     WorkspaceDefinition("Number Inspector", "Number Inspector", "Inspect", 0),
-    WorkspaceDefinition("Byte Inspector", "Byte Inspector", "Inspect", 1),
     WorkspaceDefinition("Batch Conversion", "Batch Conversion", "Calculate", 5),
 )
 LEGACY_WORKSPACE_ORDER = (
@@ -26,10 +25,10 @@ LEGACY_WORKSPACE_ORDER = (
     "Byte Inspector", "Binary Comparison", "Batch Conversion",
 )
 TRANSFER_ORDER = (
-    "Number Inspector", "Programmer", "IEEE 754", "Conversion", "Byte Inspector",
+    "Number Inspector", "Programmer", "IEEE 754", "Conversion",
     "Batch Conversion", "Trace",
 )
-RETIRED_WORKSPACES = frozenset({"Binary Comparison"})
+RETIRED_WORKSPACES = frozenset({"Binary Comparison", "Byte Inspector"})
 
 
 def workspace_titles() -> tuple[str, ...]:

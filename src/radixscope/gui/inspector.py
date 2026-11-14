@@ -1,5 +1,5 @@
 from PySide6.QtCore import QSignalBlocker, QTimer
-from PySide6.QtWidgets import QCheckBox, QLineEdit, QSpinBox
+from PySide6.QtWidgets import QApplication, QCheckBox, QLineEdit, QPushButton, QSpinBox
 
 from radixscope.core import (
     ExactValue,
@@ -45,6 +45,17 @@ class InspectorWorkspace(Workspace):
         self.form.addRow("Interpretation", control_row(self.pattern, self.signed, "Bytes",
                                                        self.byteorder))
         self.form.addRow("Hex pattern", self.raw_hex)
+        self._byte_preview = QLineEdit()
+        self._byte_preview.setReadOnly(True)
+        self._byte_preview.setPlaceholderText("Bytes in the selected byte order")
+        self._copy_bytes = QPushButton("Copy bytes")
+        self._copy_bytes.setEnabled(False)
+        self._copy_bytes.clicked.connect(
+            lambda: QApplication.clipboard().setText(self._byte_preview.text())
+        )
+        self.form.addRow("Byte representation", control_row(self._byte_preview, self._copy_bytes))
+        self.result_invalidated.connect(lambda: self._byte_preview.clear())
+        self.result_invalidated.connect(lambda: self._copy_bytes.setEnabled(False))
         self.bit_editor = BitEditor()
         self.bit_editor.setToolTip("Raw result bits; numeric conversion uses the input above")
         self.form.addRow(self.bit_editor)
@@ -84,6 +95,8 @@ class InspectorWorkspace(Workspace):
             self.bit_width.setValue(IEEEFormat[self.data_type.currentText().upper()].bit_width)
 
     def show_bits(self, title: str, report: dict[str, object]) -> None:
+        self._byte_preview.setText(str(report.get("bytes", "")))
+        self._copy_bytes.setEnabled(bool(self._byte_preview.text()))
         bits = report.get("bits")
         if isinstance(bits, str):
             width = len(bits)

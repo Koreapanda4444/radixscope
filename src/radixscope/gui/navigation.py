@@ -1,6 +1,5 @@
 from typing import Literal
 
-from radixscope.core import FixedWidthInteger, encode_bytes, encode_ieee754
 from radixscope.reports import StructuredReport
 
 
@@ -49,23 +48,6 @@ def transfer_state(
         elif target == "IEEE 754" and len(bits) in (16, 32, 64):
             format_name = "bfloat16" if report.get("format") == "bfloat16" else str(len(bits))
             result.update({"mode": "decode", "bit_width": format_name, "compare": False})
-        elif target == "Byte Inspector":
-            data = int(bits, 2).to_bytes((len(bits) + 7) // 8, order)
-            result.update({"input": data.hex(" ").upper(), "input_format": "hex"})
-            if target == "Byte Inspector":
-                interpretation = (
-                    str(report.get("format", "unsigned integer"))
-                    if ("classification" in report)
-                    else ("signed integer" if report.get("signed") is True else "unsigned integer")
-                )
-                result.update(
-                    {
-                        "offset": 0,
-                        "length": len(data),
-                        "all_bytes": False,
-                        "interpret_as": interpretation,
-                    }
-                )
         elif target in ("Conversion", "Batch Conversion", "Trace"):
             result["source_base"] = 16
             if target != "Trace":
@@ -82,27 +64,6 @@ def transfer_state(
         result["source_base"] = 10
         if target != "Trace":
             result["mode"] = "Number"
-    elif target == "Byte Inspector":
-        if exact.is_integer:
-            signed = exact.numerator < 0
-            width = ((_integer_width(exact.numerator) + 7) // 8) * 8
-            data = encode_bytes(FixedWidthInteger.from_exact(exact, width, signed), order)
-            interpretation = "signed integer" if signed else "unsigned integer"
-        else:
-            destination_format = report.get("format", "binary64")
-            floating = encode_ieee754(exact, destination_format)
-            data = floating.to_bytes(order)
-            interpretation = floating.format.label
-        result.update({"input": data.hex(" ").upper(), "input_format": "hex", "byteorder": order})
-        if target == "Byte Inspector":
-            result.update(
-                {
-                    "offset": 0,
-                    "length": len(data),
-                    "all_bytes": False,
-                    "interpret_as": interpretation,
-                }
-            )
     elif target in ("Number Inspector", "Programmer"):
         if target == "Programmer" and not exact.is_integer:
             raise ValueError("Programmer requires an integer; use Number Inspector for fractions")

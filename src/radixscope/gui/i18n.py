@@ -120,7 +120,7 @@ def tr(text: str) -> str:
         if text.startswith(prefix):
             return translated + tr(text[len(prefix):])
     for name in (
-        "Number Inspector", "Byte Inspector", "Programmer", "Conversion", "Trace",
+        "Number Inspector", "Programmer", "Conversion", "Trace",
         "IEEE 754", "Batch Conversion",
     ):
         for suffix, translated in (

@@ -33,8 +33,6 @@ representations of the same input. Inspect sign, exponent, significand, signed z
 and NaN payloads, then explore absolute/relative error, ULP spacing, neighboring
 values and normal/subnormal boundaries.
 
-### Bytes
-
 ### Batch work, history and exports
 
 Convert multiple values or expressions together while retaining per-line results

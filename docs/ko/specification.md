@@ -295,13 +295,6 @@ assert analysis.absolute_error == ExactValue(1, 671088640)
 assert analysis.error_ulps == ExactValue(1, 5)
 ```
 
-## 원시 버퍼·필드·차이
-
-`parse_byte_input`은 Hex·Binary·Base64·UTF-8을 바이트로 변환합니다.
-`select_bytes`는 오프셋·길이를 검사하고 `ByteInterpretation`을 반환합니다.
-부호 있는 값과 없는 값, ASCII·UTF-8 미리보기와 길이가 맞는 부동소수점을 해석합니다.
-UTF-8 대체 미리보기는 원본 버퍼를 바꾸지 않으며 유효성은 `utf8_valid`로 구분합니다.
-
 ## 일괄 처리와 구조화된 보고서
 
 `convert_batch`는 숫자·수식·자동 모드로 빈 줄을 제외한 입력을 처리하고,

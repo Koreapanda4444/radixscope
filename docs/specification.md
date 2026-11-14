@@ -294,13 +294,6 @@ assert analysis.absolute_error == ExactValue(1, 671088640)
 assert analysis.error_ulps == ExactValue(1, 5)
 ```
 
-## Raw buffers, fields and differences
-
-`parse_byte_input` accepts Hex, Binary, Base64 or UTF-8 and returns bytes.
-`select_bytes` validates offset/length and returns a `ByteInterpretation`
-with signed/unsigned integers, ASCII/UTF-8 previews and compatible float interpretations.
-UTF-8 replacement previews do not modify the buffer; `utf8_valid` distinguishes invalid input.
-
 ## Batch and structured reports
 
 `convert_batch` processes nonempty lines with number/expression/auto modes, retaining

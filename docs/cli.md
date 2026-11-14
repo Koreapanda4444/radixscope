@@ -68,19 +68,6 @@ when defined, adjacent values and boundaries. Compare encodes the same exact sou
 directly in all four formats and indicates differences caused by intermediate rounding.
 NaN payload/signaling options apply only to single-format NaN encoding.
 
-## Bytes
-
-```sh
-radixscope bytes "3F 80 00 00" --byteorder big
-radixscope bytes "00 FF 80 01" --offset 1 --length 2 --byteorder little
-radixscope bytes "hello" --input-format utf8 --json
-```
-
-Input formats are `hex`, `binary`, `base64` and `utf8`. Hex accepts contiguous
-pairs or whitespace/comma/colon-separated groups, with optional `0x` prefixes.
-Integer interpretation covers the selected bytes; float interpretation is available
-for selections of 2, 4 or 8 bytes. UTF-8 replacement previews include a separate validity flag.
-
 ## Batch conversion and exports
 
 ```sh

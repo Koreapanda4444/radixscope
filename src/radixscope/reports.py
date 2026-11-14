@@ -11,7 +11,6 @@ from radixscope.core import (
     represent_bytes,
 )
 from radixscope.core.batch import BatchConversion
-from radixscope.core.byte_inspection import parse_byte_input, select_bytes
 from radixscope.core.comparison import FloatFormatComparison
 from radixscope.core.ieee754 import FloatClass, IEEEFormat, convert_ieee754, encode_ieee754
 from radixscope.core.inspection import NumberInspection
@@ -229,39 +228,6 @@ def comparison_report(comparison: FloatFormatComparison) -> dict[str, object]:
             "comparison": rows, "rounding_rule": "nearest, ties to even"}
 
 
-def byte_report(
-    text: str, input_format: str = "hex", byteorder: str = "big", offset: int = 0,
-    length: int | None = None,
-) -> dict[str, object]:
-    data = parse_byte_input(text, input_format)
-    selection = select_bytes(data, offset, length, byteorder)
-    floating = []
-    for value in selection.floating:
-        exact = value.exact
-        floating.append({
-            "format": value.format.label, "hexadecimal": value.hexadecimal,
-            "classification": value.classification.value,
-            "exact": str(exact) if exact is not None else None,
-            "quiet_nan": value.is_quiet_nan, "nan_payload": value.nan_payload,
-        })
-    return {
-        "input_format": input_format, "byteorder": byteorder, "total_length": len(data),
-        "offset": offset, "length": len(selection.data), "width": len(selection.data) * 8,
-        "bytes": selection.data.hex(" ").upper(),
-        "bits": "".join(f"{byte:08b}" for byte in (
-            selection.data if byteorder == "big" else selection.data[::-1]
-        )),
-        "unsigned": str(ExactValue(selection.unsigned)),
-        "exact": str(ExactValue(selection.unsigned)), "data_type": "integer", "signed": False,
-        "hexadecimal": format(selection.unsigned, f"0{len(selection.data) * 2}X"),
-        "twos_complement": str(ExactValue(selection.signed)),
-        "ascii": selection.ascii_preview, "utf8": selection.utf8_preview,
-        "utf8_valid": selection.utf8_valid, "floating": floating,
-        "rows": [{"offset": position, "hex": data[position:position + 16].hex(" ").upper(),
-                  "ascii": "".join(chr(byte) if 32 <= byte <= 126 else "."
-                                   for byte in data[position:position + 16])}
-                 for position in range(0, len(data), 16)],
-    }
 
 
 def trace_report(trace: ConversionTrace) -> dict[str, object]:

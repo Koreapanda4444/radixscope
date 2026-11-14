@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
 from radixscope import __version__
 from radixscope.exports import report_json, table_csv, write_export
 from radixscope.gui.batch import BatchWorkspace
-from radixscope.gui.byte_inspector import ByteInspectorWorkspace
 from radixscope.gui.conversion import ConversionWorkspace, TraceWorkspace
 from radixscope.gui.i18n import (
     LocalizedComboBox,
@@ -64,7 +63,7 @@ class MainWindow(QMainWindow):
         workspace_factories: dict[str, Callable[[], Workspace]] = {
             "Conversion": ConversionWorkspace, "Trace": TraceWorkspace,
             "Programmer": ProgrammerWorkspace, "IEEE 754": IEEEWorkspace,
-            "Number Inspector": InspectorWorkspace, "Byte Inspector": ByteInspectorWorkspace,
+            "Number Inspector": InspectorWorkspace,
             "Batch Conversion": BatchWorkspace,
         }
         self.workspaces = [workspace_factories[item.title]() for item in WORKSPACES]

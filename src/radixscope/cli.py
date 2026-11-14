@@ -29,7 +29,6 @@ from radixscope.core.limits import MAX_INPUT_CHARS
 from radixscope.exports import batch_report_csv, json_safe
 from radixscope.reports import (
     batch_report,
-    byte_report,
     comparison_report,
     ieee_report,
     inspection_report,
@@ -68,14 +67,6 @@ def build_parser() -> argparse.ArgumentParser:
     output = batch.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true")
     output.add_argument("--csv", action="store_true")
-    byte_parser = commands.add_parser("bytes", help="interpret raw bytes and selected ranges")
-    byte_parser.add_argument("value")
-    byte_parser.add_argument("--input-format", choices=["hex", "binary", "base64", "utf8"],
-                             default="hex")
-    byte_parser.add_argument("--byteorder", choices=["big", "little"], default="big")
-    byte_parser.add_argument("--offset", type=int, default=0)
-    byte_parser.add_argument("--length", type=int)
-    _output_options(byte_parser)
     inspect = commands.add_parser("inspect", help="inspect numeric, bit and byte representations")
     inspect.add_argument("value")
     inspect.add_argument("--base", type=int, default=10)
@@ -241,11 +232,6 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             precision=None if args.exact else args.precision, rounding=RoundingMode(args.rounding),
             max_rows=args.limit,
         ))
-    if args.command == "bytes":
-        report = byte_report(
-            args.value, args.input_format, args.byteorder, args.offset, args.length
-        )
-        return report
     if args.command == "inspect":
         return inspection_report(inspect_number(
             args.value, base=args.base, width=args.width, signed=args.signed,

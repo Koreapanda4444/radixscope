@@ -13,7 +13,6 @@ retain the following order:
 | Ctrl+3 | Integer operations / Programmer | Fixed-width integer operations |
 | Ctrl+4 | IEEE 754 | Float precision and four-format comparison |
 | Ctrl+5 | Number Inspector | Synchronized numeric, raw-bit and byte views |
-| Ctrl+6 | Byte Inspector | Byte selections |
 | Ctrl+7 | Batch Conversion | One value or expression per line |
 | Ctrl+H | Recent panel | Search and restore history |
 
@@ -85,14 +84,6 @@ zero, the smallest subnormal, minimum normal, maximum finite and infinity patter
 Compare formats creates a table for the same source across all four formats,
 including effective significand bits and intermediate-rounding differences.
 Select a comparison row before copying or transferring it.
-
-## Bytes
-
-Byte Inspector accepts Hex, Binary, Base64 and UTF-8. Use Offset/Length or table
-selection to choose bytes. Whole-buffer mode interprets from offset through the end.
-The byte table shows offset, Hex and ASCII, paged in groups of 256 bytes.
-Select an interpretation and endian order; float selection length must match its format.
-Copy selected bytes or convert the buffer to another input format without changing bytes.
 
 ## Batch conversion
 
