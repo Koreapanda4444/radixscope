@@ -76,6 +76,3 @@ Python, Qt and required notices are inside that runtime folder.
 - [Command line](docs/cli.md)
 - [Numeric models and Python API](docs/specification.md)
 
-For development verification, run `python scripts/check_numeric.py`; add `--desktop`
-for Qt checks or `--exhaustive` to check all binary16 and bfloat16 encodings.
-The Windows validation workflow invokes the same BAT and checks the resulting EXE.
