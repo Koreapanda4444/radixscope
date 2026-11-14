@@ -14,6 +14,20 @@ class RoundingMode(StrEnum):
     CEILING = "ceiling"
 
 
+def compare_rounding(value: ExactValue, base: object, precision: object) -> dict[RoundingMode, str]:
+    """Compare every rounding rule at one radix/precision using the original exact value.
+
+    Precision counts fractional digits in the target radix. Dictionary order follows
+    RoundingMode; results have exactly the same semantics as format_rounded().
+    """
+    checked_base = validate_base(base)
+    checked_precision = _validated_precision(precision)
+    return {
+        mode: format_rounded(value, checked_base, checked_precision, mode)
+        for mode in RoundingMode
+    }
+
+
 def format_integer(value: ExactValue, base: object) -> str:
     checked_base = validate_base(base)
     if not isinstance(value, ExactValue):

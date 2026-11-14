@@ -45,6 +45,7 @@ from radixscope.core.fixed_width import (
 )
 from radixscope.core.formatting import (
     RoundingMode,
+    compare_rounding,
     format_exact,
     format_integer,
     format_rounded,
@@ -148,6 +149,7 @@ __all__ = [
     "compare_float_formats",
     "compare_numeric_inputs",
     "compare_numeric_values",
+    "compare_rounding",
     "convert_bases",
     "convert_batch",
     "convert_ieee754",
