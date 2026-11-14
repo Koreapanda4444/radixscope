@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from radixscope.core import ExactValue, RoundingMode, parse_number
+from radixscope.core import ExactValue, RoundingMode
 from radixscope.core.input_syntax import detect_input_syntax
 from radixscope.gui.i18n import UI_TEXT_ROLE, LocalizedComboBox, tr
 from radixscope.gui.widgets import Workspace, control_row
@@ -29,7 +29,7 @@ def base_input(value: int = 10) -> QSpinBox:
 
 class ConversionWorkspace(Workspace):
     def __init__(self) -> None:
-        super().__init__("Conversion", "Convert exact numbers between bases 2 through 36")
+        super().__init__("Conversion")
         self.form.setVerticalSpacing(4)
         self.form_container.setStyleSheet(
             "QLineEdit, QSpinBox, QComboBox { min-height: 20px; }"
@@ -37,8 +37,6 @@ class ConversionWorkspace(Workspace):
         self.input = QLineEdit("255")
         self.mode = LocalizedComboBox()
         self.mode.addItems(["Number", "Auto"])
-        self._syntax_hint = QLabel()
-        self._syntax_hint.setWordWrap(True)
         self._detect_button = QPushButton("Use automatic input")
         self._detect_button.clicked.connect(lambda: self.mode.setCurrentText("Auto"))
         self.input.textChanged.connect(self.update_input_hint)
@@ -68,7 +66,6 @@ class ConversionWorkspace(Workspace):
         self.form.addRow("Input", self.input)
         self.form.addRow("Input format", control_row(self.mode, "Base", self.source_base,
                                                      self._detect_button))
-        self.form.addRow(self._syntax_hint)
         # Presets and a quick swap are alternate ways to change the same bases.
         self._swap_target.setToolTip("Target base for quick swap")
         self.form.addRow("Preset", control_row(self.preset, self._swap_target,
@@ -157,7 +154,6 @@ class ConversionWorkspace(Workspace):
         self.update_controls()
         self.update_input_hint()
         self.update_swap_targets()
-        self.source_base.valueChanged.connect(self.update_input_hint)
         self.mode.currentIndexChanged.connect(self.update_input_hint)
         self.bind_inputs()
 
@@ -175,20 +171,9 @@ class ConversionWorkspace(Workspace):
         self.form.setRowVisible(self._rounding_row, rounded)
 
     def update_input_hint(self) -> None:
-        syntax = detect_input_syntax(self.input.text())
-        description = syntax.description
-        if self.mode.currentText() == "Number":
-            if len(self.input.text()) > 4096:
-                description = tr("Run to validate long input")
-            else:
-                try:
-                    parse_number(self.input.text(), self.source_base.value())
-                    description = tr("Valid number in selected base")
-                except (ValueError, TypeError) as error:
-                    description = tr(str(error))
-            description = f"{self.source_base.value()} · " + description
-        self._syntax_hint.setText(description)
-        self._detect_button.setEnabled(syntax.kind != "invalid")
+        self._detect_button.setEnabled(
+            detect_input_syntax(self.input.text()).kind != "invalid"
+        )
 
     def mark_custom(self) -> None:
         blocker = QSignalBlocker(self.preset)
