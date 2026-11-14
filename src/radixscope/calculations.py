@@ -9,6 +9,7 @@ from pathlib import Path
 
 from radixscope.cli import run_command
 from radixscope.core import (
+    ByteOrder,
     IEEEFormat,
     IntegerRangeError,
     RoundingMode,
@@ -20,6 +21,7 @@ from radixscope.core import (
     experiment_float_arithmetic,
     inspect_number,
     parse_float_operand,
+    parse_integer,
     parse_number,
     parse_numeric_input,
     trace_value,
@@ -202,38 +204,58 @@ def calculate(workspace: str, state: dict[str, object]) -> dict[str, object]:
         return report
     if workspace == "Calculation":
         operation = text("operation")
-        report = run_command(argparse.Namespace(
-            command="integer", value=input_text, base=integer("base"),
-            width=integer("bit_width"), signed=flag("signed"), pattern=flag("pattern"),
-            byteorder=text("byteorder"), op=None if operation == "inspect" else operation,
-            operand=text("operand") if operation not in ("inspect", "not") else None,
-            extract=(integer("extract_offset"), integer("extract_width"))
-            if state.get("extract") is True else None,
-        ))
+        if operation not in ("inspect", "add", "subtract", "multiply", "and", "or", "xor",
+                             "not", "shl", "shr", "lshr"):
+            raise ValueError("unsupported integer operation: " + operation)
+        base, width = integer("base"), integer("bit_width")
+        signed, pattern = flag("signed"), flag("pattern")
+        byteorder = text("byteorder")
+        operand = text("operand") if operation not in ("inspect", "not") else None
+        comparing = state.get("compare_widths") is True
+        if comparing:
+            # Validate width-independent syntax even if no width can hold the input.
+            # The RHS remains a numeric same-base operand; only shift counts use decimal.
+            parse_integer(input_text, base)
+            ByteOrder(byteorder)
+            if operand is not None:
+                shift = operation in ("shl", "shr", "lshr")
+                other = parse_integer(operand, 10 if shift else base)
+                if shift and other.numerator < 0:
+                    raise ValueError("shift count cannot be negative")
+
+        def at_width(bits: int, *, selected: bool = False) -> dict[str, object]:
+            return run_command(argparse.Namespace(
+                command="integer", value=input_text, base=base, width=bits,
+                signed=signed, pattern=pattern, byteorder=byteorder,
+                op=None if operation == "inspect" else operation, operand=operand,
+                extract=(integer("extract_offset"), integer("extract_width"))
+                if selected and state.get("extract") is True else None,
+            ))
+
+        try:
+            report = at_width(width, selected=True)
+        except IntegerRangeError as error:
+            if not comparing:
+                raise
+            # This is a partial calculation, not a fabricated value at another width.
+            report = {"width": width, "signed": signed, "byteorder": byteorder,
+                      "selected_width_error": str(error)}
         report["operation"] = operation
-        if state.get("compare_widths") is True:
+        if comparing:
             comparisons = []
-            for width in (8, 16, 32, 64):
+            for bits in (8, 16, 32, 64):
                 try:
-                    version = run_command(argparse.Namespace(
-                        command="integer", value=input_text, base=integer("base"),
-                        width=width, signed=flag("signed"), pattern=flag("pattern"),
-                        byteorder=text("byteorder"),
-                        op=None if operation == "inspect" else operation,
-                        operand=text("operand") if operation not in ("inspect", "not") else None,
-                        extract=None,
-                    ))
+                    version = at_width(bits)
                     comparisons.append({
-                        "width": width, "value": version["value"],
+                        "width": bits, "value": version["value"],
                         "mathematical": version.get("exact_result"),
                         "overflow": version.get("overflowed"),
                         "hexadecimal": version["hexadecimal"],
                         "bits": version["bits"], "error": None,
                     })
-                except (ValueError, ArithmeticError) as error:
-                    # A value may be representable at 32 bits but not at 8.
+                except IntegerRangeError as error:
                     comparisons.append({
-                        "width": width, "value": None, "mathematical": None,
+                        "width": bits, "value": None, "mathematical": None,
                         "overflow": None, "hexadecimal": None, "bits": None,
                         "error": str(error),
                     })
