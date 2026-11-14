@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <rect width="256" height="256" rx="48" fill="#17202b"/>
-  <path d="M48 64h92v30H78v22h54v30H78v46H48z" fill="#68b8ff"/>
-  <path d="M158 64h50v30h-20v22h20v76h-50v-30h20v-22h-20z" fill="#76d9ad"/>
-  <path d="M104 160h30v32h-30z" fill="#68b8ff"/>
+  <title>RadixScope</title>
+  <rect x="8" y="8" width="240" height="240" rx="44" fill="#0b0f15" stroke="#687383" stroke-width="1"/>
+  <path d="M108 92 123 77H181V68L196 81 181 94V85H127L120 92Z" fill="#f4f6fa"/>
+  <path d="M68 96H116L130 110 127 127 119 135H109L128 161H112L94 136H87L90 123H114L117 111 113 108H66ZM68 113H81L74 161H60Z" fill="#f4f6fa"/>
+  <path d="M146 104H191L188 116H153L149 128H183L190 137 187 157 179 166H141L128 183H80V192L63 178 80 164V174H123L138 153H174L176 141H140L133 132 139 113Z" fill="#3988e8"/>
 </svg>

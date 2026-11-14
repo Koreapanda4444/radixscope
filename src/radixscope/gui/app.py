@@ -1,10 +1,11 @@
+import ctypes
 import sys
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
 from PySide6.QtCore import QSignalBlocker, QStandardPaths, Qt
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QIcon, QKeySequence, QPalette
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -33,6 +34,7 @@ from radixscope.gui.i18n import (
     set_language,
     tr,
 )
+from radixscope.gui.icon import application_icon
 from radixscope.gui.inspector import InspectorWorkspace
 from radixscope.gui.navigation import transfer_state
 from radixscope.gui.preferences import PreferencesDialog
@@ -55,6 +57,7 @@ class MainWindow(QMainWindow):
         self._restoring = False
         self.system_palette = QPalette(self.palette())
         self.setWindowTitle(f"RadixScope {__version__}")
+        self.setWindowIcon(application_icon())
         self.resize(1000, 720)
         self.setMinimumSize(640, 480)
         self.tabs = QStackedWidget()
@@ -406,15 +409,20 @@ class MainWindow(QMainWindow):
 
 
 def create_application() -> QApplication:
+    if sys.platform == "win32":
+        # Stable identity groups source and packaged windows under the same taskbar icon.
+        shell = ctypes.windll.shell32
+        shell.SetCurrentProcessExplicitAppUserModelID.argtypes = [ctypes.c_wchar_p]
+        shell.SetCurrentProcessExplicitAppUserModelID.restype = ctypes.c_long
+        result = shell.SetCurrentProcessExplicitAppUserModelID("Koreapanda4444.RadixScope")
+        if result < 0:
+            raise OSError("could not set the Windows application identity")
     existing = QApplication.instance()
-    if isinstance(existing, QApplication):
-        return existing
-    application = QApplication(sys.argv)
+    application = existing if isinstance(existing, QApplication) else QApplication(sys.argv)
     application.setApplicationName("RadixScope")
     application.setOrganizationName("Koreapanda4444")
     application.setApplicationVersion(__version__)
-    icon = Path(__file__).resolve().parents[1] / "assets/radixscope.svg"
-    application.setWindowIcon(QIcon(str(icon)))
+    application.setWindowIcon(application_icon())
     return application
 
 

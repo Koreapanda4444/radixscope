@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>RadixScope</title>
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="#0b0f15"/>
+  <path d="M13 9 16 6H24V4L29 8 24 12V10H17L16 11H12Z" fill="#f4f6fa"/>
+  <path d="M6 12H13L16 15 15 18H13L16 23H12L9 18H8L8 23H5L6 16H9L9 17H12L13 15H6Z" fill="#f4f6fa"/>
+  <path d="M20 13H28L27 16H21L20 18H26L28 20 27 24H20L17 28H9V30L4 26 9 22V24H16L19 21H24L24 20H18L17 18 18 15Z" fill="#3988e8"/>
+</svg>

@@ -4,34 +4,22 @@ import struct
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPainter
-from PySide6.QtSvg import QSvgRenderer
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from radixscope import __version__
+from radixscope.gui.icon import ICON_SIZES, icon_image
 
 
 def make_icon(source: Path, destination: Path) -> None:
-    renderer = QSvgRenderer(str(source))
-    if not renderer.isValid():
-        raise ValueError("invalid application icon")
     images: list[tuple[int, bytes]] = []
-    for size in (16, 32, 48, 256):
-        image = QImage(size, size, QImage.Format.Format_ARGB32)
-        image.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(image)
-        renderer.render(painter)
-        painter.end()
-        temporary = destination.with_name(f"{destination.stem}-{size}.png")
-        try:
-            if not image.save(str(temporary)):
-                raise OSError("could not render application icon")
-            images.append((size, temporary.read_bytes()))
-        finally:
-            temporary.unlink(missing_ok=True)
+    for size in ICON_SIZES:
+        image = icon_image(size, source)
+        png = destination.with_name(f"{destination.stem}-{size}.png")
+        if not image.save(str(png)):
+            raise OSError("could not render application icon")
+        images.append((size, png.read_bytes()))
     offset = 6 + 16 * len(images)
     entries: list[bytes] = []
     for size, data in images:
